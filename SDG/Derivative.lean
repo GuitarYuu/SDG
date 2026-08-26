@@ -161,6 +161,85 @@ theorem sderiv_pow {R} [IsKockLawvere_one R] (x : R) (n : ℕ) :
     _ = 0 := by ring
 
 
+/-! ## 导数的四则运算
+
+导数的基本运算律（和、负、差、数乘、积）。均由 Kock-Lawvere 公理的唯一性直接
+得出：验证某个 $b$ 满足 $f(x+d) = f(x) + b \cdot d$（$\forall d \in D$），再调用
+`IsKockLawvere_one.isKockLawvere_one` 的唯一性。这些运算律是 `SDG.Integration`
+中证明原函数线性性的基础。 -/
+
+/-- 和的导数：$(f + g)' = f' + g'$。 -/
+theorem sderiv_add {R} [IsKockLawvere_one R] (f g : R → R) (x : R) :
+    sderiv (fun t ↦ f t + g t) x = sderiv f x + sderiv g x := by
+  symm
+  apply (IsKockLawvere_one.isKockLawvere_one
+    (fun d : D R ↦ f (x + (d : R)) + g (x + (d : R)))).2.2
+      (sderiv f x + sderiv g x)
+  intro d
+  have hf : f (x + (d : R)) = f x + sderiv f x * (d : R) := sderiv_spec f x d
+  have hg : g (x + (d : R)) = g x + sderiv g x * (d : R) := sderiv_spec g x d
+  simp only [hf, hg, zero_coeD, add_zero]
+  ring
+
+/-- 取负的导数：$(-f)' = -f'$。 -/
+theorem sderiv_neg {R} [IsKockLawvere_one R] (f : R → R) (x : R) :
+    sderiv (fun t ↦ -f t) x = -sderiv f x := by
+  symm
+  apply (IsKockLawvere_one.isKockLawvere_one
+    (fun d : D R ↦ -(f (x + (d : R))))).2.2 (-sderiv f x)
+  intro d
+  have hf : f (x + (d : R)) = f x + sderiv f x * (d : R) := sderiv_spec f x d
+  simp only [hf, zero_coeD, add_zero]
+  ring
+
+/-- 差的导数：$(f - g)' = f' - g'$。 -/
+theorem sderiv_sub {R} [IsKockLawvere_one R] (f g : R → R) (x : R) :
+    sderiv (fun t ↦ f t - g t) x = sderiv f x - sderiv g x := by
+  calc
+    sderiv (fun t ↦ f t - g t) x
+        = sderiv (fun t ↦ f t + (-g t)) x := by
+            congr 1
+            funext t
+            rw [sub_eq_add_neg]
+    _ = sderiv f x + sderiv (fun t ↦ -g t) x := sderiv_add f (fun t ↦ -g t) x
+    _ = sderiv f x + (-sderiv g x) := by rw [sderiv_neg g x]
+    _ = sderiv f x - sderiv g x := by rw [sub_eq_add_neg]
+
+/-- 数乘的导数：$(c \cdot f)' = c \cdot f'$。 -/
+theorem sderiv_smul {R} [IsKockLawvere_one R] (c : R) (f : R → R) (x : R) :
+    sderiv (fun t ↦ c * f t) x = c * sderiv f x := by
+  symm
+  apply (IsKockLawvere_one.isKockLawvere_one
+    (fun d : D R ↦ c * f (x + (d : R)))).2.2 (c * sderiv f x)
+  intro d
+  have hf : f (x + (d : R)) = f x + sderiv f x * (d : R) := sderiv_spec f x d
+  simp only [hf, zero_coeD, add_zero]
+  ring
+
+/-- 积的导数（莱布尼茨法则）：$(f \cdot g)' = f' \cdot g + f \cdot g'$。 -/
+theorem sderiv_mul {R} [IsKockLawvere_one R] (f g : R → R) (x : R) :
+    sderiv (fun t ↦ f t * g t) x = sderiv f x * g x + f x * sderiv g x := by
+  symm
+  apply (IsKockLawvere_one.isKockLawvere_one
+    (fun d : D R ↦ f (x + (d : R)) * g (x + (d : R)))).2.2
+      (sderiv f x * g x + f x * sderiv g x)
+  intro d
+  have hP0 : f (x + (0 : D R)) * g (x + (0 : D R)) = f x * g x := by simp
+  rw [hP0]
+  have hf : f (x + (d : R)) = f x + sderiv f x * (d : R) := sderiv_spec f x d
+  have hg : g (x + (d : R)) = g x + sderiv g x * (d : R) := sderiv_spec g x d
+  have hd : (d : R) * (d : R) = 0 := D.mul_eq_zero R d
+  calc
+    f (x + (d : R)) * g (x + (d : R))
+        = (f x + sderiv f x * (d : R)) * (g x + sderiv g x * (d : R)) := by
+            rw [hf, hg]
+    _ = f x * g x + (sderiv f x * g x + f x * sderiv g x) * (d : R)
+          + sderiv f x * sderiv g x * ((d : R) * (d : R)) := by ring
+    _ = f x * g x + (sderiv f x * g x + f x * sderiv g x) * (d : R) := by
+            rw [hd]
+            ring
+
+
 /-! ## n元偏导数 (Partial Derivatives)
 
 在多变量微分中，$n$ 元函数 $f : \mathbb{R}^n \to \mathbb{R}$（表示为 $f : \text{Fin } n \to R \to R$）

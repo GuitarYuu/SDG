@@ -8,6 +8,8 @@ import SDG.Taylor
 import SDG.KockLawvereDkn
 import SDG.WeilAlgebra
 import SDG.Rational
+import SDG.Order
+import SDG.Integration
 
 /-!
 # SDG.Basic
@@ -29,4 +31,9 @@ import SDG.Rational
 * `SDG.Rational` — **无选择公理的有理数**：从整数商构造 $\mathbb{Q}$，
   得到无选择公理的 `CommRing` 与 `NontrivialRatCommAlgebra`（SDG 基环的实例）。
   （Mathlib 的 `Rat.commRing` 依赖 `Classical.choice`，故本项目自建。）
+* `SDG.Order` — **序结构**：光滑直线 $R$ 上的非严格序 `≤`（有序交换环），
+  以及 SDG 特有的无穷小量公理（$d \in D$ 非负则 $d = 0$，即无穷小量不参与序）；
+* `SDG.Integration` — **积分公理**：每个 $f : R \to R$ 有唯一原函数
+  $g$（$g(0)=0$ 且 $g' = f$），据此定义原函数 `primitive f` 与定积分
+  $\int_a^b f$，并证明微积分基本定理与线性性/区间可加性。
 -/
