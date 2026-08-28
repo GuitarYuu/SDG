@@ -736,6 +736,129 @@ lemma toFun_bijective {n : ℕ} (π : FinPerm n) : Function.Bijective π.toFun :
   · intro w
     exact ⟨π.inv w, π.map_inv w⟩
 
+lemma ext_toFun : ∀ {n : ℕ} (π₁ π₂ : FinPerm n), π₁.toFun = π₂.toFun → π₁ = π₂ := by
+  intro n
+  induction n with
+  | zero =>
+      intro π₁ π₂ _h
+      cases π₁ <;> cases π₂ <;> rfl
+  | succ n ih =>
+      intro π₁ π₂ h
+      cases π₁ with
+      | cons σ₁ i₁ =>
+          cases π₂ with
+          | cons σ₂ i₂ =>
+              have h0 : i₁ = i₂ := by
+                have h1 := congrFun h 0
+                rw [toFun_cons_zero, toFun_cons_zero] at h1
+                exact h1
+              have hs : σ₁.toFun = σ₂.toFun := by
+                funext k
+                have hk := congrFun h k.succ
+                rw [toFun_cons_succ, toFun_cons_succ, h0] at hk
+                exact insertAt_injective i₂ hk
+              rw [ih σ₁ σ₂ hs, h0]
+
+/-! ### 坐标交换的编码表示 -/
+
+lemma swapFin_comm {n : ℕ} (i j k : Fin n) :
+    swapFin i j k = swapFin j i k := by
+  unfold swapFin
+  by_cases h1 : k = i <;> by_cases h2 : k = j
+  · rw [if_pos h1, if_pos h2]
+    exact (h1.symm.trans h2).symm
+  · rw [if_pos h1, if_neg h2, if_pos h1]
+  · rw [if_neg h1, if_pos h2, if_pos h2]
+  · rw [if_neg h1, if_neg h2, if_neg h2, if_neg h1]
+
+lemma swapFin_involutive {n : ℕ} (i j : Fin n) (k : Fin n) :
+    swapFin i j (swapFin i j k) = k := by
+  rw [swapFin_comm i j (swapFin i j k)]
+  exact swapFin_leftInverse i j k
+
+/-- 置换编码经坐标交换的左复合表示。 -/
+def compSwap {n : ℕ} (i j : Fin n) (π : FinPerm n) : FinPerm n :=
+  encode (fun k ↦ π.toFun (swapFin i j k))
+    (π.toFun_injective.comp (swapFin_injective i j))
+
+lemma toFun_compSwap {n : ℕ} (i j : Fin n) (π : FinPerm n) :
+    (π.compSwap i j).toFun = fun k ↦ π.toFun (swapFin i j k) :=
+  toFun_encode _ _
+
+lemma compSwap_involutive {n : ℕ} (i j : Fin n) (π : FinPerm n) :
+    (π.compSwap i j).compSwap i j = π := by
+  have hX : ((π.compSwap i j).compSwap i j).toFun = π.toFun := by
+    rw [toFun_compSwap, toFun_compSwap]
+    funext k
+    change π.toFun (swapFin i j (swapFin i j k)) = π.toFun k
+    rw [swapFin_involutive]
+  exact ext_toFun _ _ hX
+
+/-! ### 单射自映射的计数 -/
+
+/-- 单射自映射是满射。 -/
+lemma surjective_of_injective_self {n : ℕ} {f : Fin n → Fin n}
+    (hf : Function.Injective f) : Function.Surjective f := by
+  have hb := (FinPerm.encode f hf).toFun_bijective
+  have hEq : f = (FinPerm.encode f hf).toFun := (FinPerm.toFun_encode f hf).symm
+  rw [hEq]
+  exact hb.2
+
+/-- 单射自映射下，取值等于 `c` 的指标恰有一个。 -/
+lemma finSum_indicator_eq_one {n : ℕ} {f : Fin n → Fin n}
+    (hf : Function.Injective f) (c : Fin n) :
+    finSum ℕ n (fun k ↦ if f k = c then 1 else 0) = 1 := by
+  obtain ⟨k₀, hk₀⟩ := surjective_of_injective_self hf c
+  have heq : (fun k : Fin n ↦ if f k = c then (1:ℕ) else 0) =
+      (fun k : Fin n ↦ if k = k₀ then (1:ℕ) else 0) := by
+    funext k
+    by_cases h : k = k₀
+    · subst k
+      simp [hk₀]
+    · have hne : f k ≠ c := by
+        intro hc
+        exact h (hf (hc.trans hk₀.symm))
+      simp [hne, h]
+  rw [heq]
+  exact finSum_eq_single ℕ k₀ 1
+
+/-- 单射自映射下，取值小于 `i` 的指标恰有 `i` 个。 -/
+lemma finSum_count_lt {n : ℕ} {f : Fin n → Fin n} (hf : Function.Injective f) :
+    ∀ (m : ℕ), m ≤ n →
+      finSum ℕ n (fun k ↦ if (f k : ℕ) < m then (1:ℕ) else 0) = m := by
+  intro m
+  induction m with
+  | zero =>
+      intro _
+      rw [finSum_eq_zero]
+      intro k
+      simp
+  | succ m ih =>
+      intro hm
+      have hmn : m < n := by omega
+      have hsplit : (fun k : Fin n ↦ if (f k : ℕ) < m + 1 then (1:ℕ) else 0) =
+          (fun k : Fin n ↦ (if (f k : ℕ) < m then (1:ℕ) else 0) +
+            (if (f k : ℕ) = m then 1 else 0)) := by
+        funext k
+        by_cases h : (f k : ℕ) < m
+        · rw [if_pos (by omega : (f k : ℕ) < m + 1), if_pos h,
+            if_neg (by omega : ¬((f k : ℕ) = m))]
+        · by_cases h2 : (f k : ℕ) = m
+          · rw [if_pos (by omega : (f k : ℕ) < m + 1), if_neg h, if_pos h2]
+          · rw [if_neg (by omega : ¬((f k : ℕ) < m + 1)), if_neg h, if_neg h2]
+      have hval : (fun k : Fin n ↦ if (f k : ℕ) = m then (1:ℕ) else 0) =
+          (fun k : Fin n ↦ if f k = (⟨m, hmn⟩ : Fin n) then 1 else 0) := by
+        funext k
+        by_cases h2 : (f k : ℕ) = m
+        · have heq : f k = (⟨m, hmn⟩ : Fin n) := Fin.ext (by simpa using h2)
+          simp [heq]
+        · have hne : f k ≠ (⟨m, hmn⟩ : Fin n) := by
+            intro hc
+            exact h2 (congrArg Fin.val hc)
+          simp [h2, hne]
+      rw [hsplit, finSum_add, hval,
+        finSum_indicator_eq_one hf (⟨m, hmn⟩ : Fin n), ih (by omega)]
+
 end FinPerm
 
 end SDG.DifferentialForms
