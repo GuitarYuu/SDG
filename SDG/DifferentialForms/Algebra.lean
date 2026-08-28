@@ -903,10 +903,14 @@ lemma insertAt_gt_pivot_iff {n : ℕ} (i : Fin (n + 1)) (k : Fin n) :
 def invCount (π : FinPerm n) : ℕ :=
   finSum ℕ n (fun j : Fin n ↦
     finSum ℕ n (fun a : Fin n ↦
-      if (a : ℕ) < (j : ℕ) ∧ (π.toFun a : ℕ) > (π.toFun j : ℕ) then 1 else 0))
+      if (a : ℕ) < (j : ℕ) then
+        if (π.toFun a : ℕ) > (π.toFun j : ℕ) then 1 else 0
+      else 0))
 
 lemma invCount_zero : invCount (FinPerm.nil : FinPerm 0) = 0 := by
   rfl
+
+lemma nat_gt_iff_lt {x y : ℕ} : x > y ↔ y < x := Iff.rfl
 
 end FinPerm
 
