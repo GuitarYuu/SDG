@@ -859,6 +859,55 @@ lemma finSum_count_lt {n : ℕ} {f : Fin n → Fin n} (hf : Function.Injective f
       rw [hsplit, finSum_add, hval,
         finSum_indicator_eq_one hf (⟨m, hmn⟩ : Fin n), ih (by omega)]
 
+/-! ### `insertAt` 的序性质（逆序数分析用） -/
+
+/-- `insertAt i k` 的数值展开。 -/
+lemma insertAt_val {n : ℕ} (i : Fin (n + 1)) (k : Fin n) :
+    ((insertAt i k : Fin (n + 1)) : ℕ) =
+      if (k : ℕ) < (i : ℕ) then (k : ℕ) else (k : ℕ) + 1 := by
+  unfold insertAt
+  split <;> rfl
+
+/-- `insertAt` 保持严格序。 -/
+lemma insertAt_lt_iff {n : ℕ} (i : Fin (n + 1)) (k k' : Fin n) :
+    ((insertAt i k : Fin (n + 1)) : ℕ) < ((insertAt i k' : Fin (n + 1)) : ℕ) ↔
+      (k : ℕ) < (k' : ℕ) := by
+  rw [insertAt_val, insertAt_val]
+  by_cases h1 : (k : ℕ) < (i : ℕ) <;> by_cases h2 : (k' : ℕ) < (i : ℕ)
+  · rw [if_pos h1, if_pos h2]
+  · rw [if_pos h1, if_neg h2]
+    exact ⟨fun h => by omega, fun h => by omega⟩
+  · rw [if_neg h1, if_pos h2]
+    exact ⟨fun h => by omega, fun h => by omega⟩
+  · rw [if_neg h1, if_neg h2]
+    exact ⟨fun h => by omega, fun h => by omega⟩
+
+/-- 插入值落在枢轴之前当且仅当原值在枢轴之前。 -/
+lemma insertAt_lt_pivot_iff {n : ℕ} (i : Fin (n + 1)) (k : Fin n) :
+    ((insertAt i k : Fin (n + 1)) : ℕ) < (i : ℕ) ↔ (k : ℕ) < (i : ℕ) := by
+  rw [insertAt_val]
+  by_cases h : (k : ℕ) < (i : ℕ)
+  · rw [if_pos h]
+  · rw [if_neg h]
+    exact ⟨fun hc => by omega, fun hc => by omega⟩
+
+/-- 插入值落在枢轴之后当且仅当原值不小于枢轴。 -/
+lemma insertAt_gt_pivot_iff {n : ℕ} (i : Fin (n + 1)) (k : Fin n) :
+    (i : ℕ) < ((insertAt i k : Fin (n + 1)) : ℕ) ↔ (i : ℕ) ≤ (k : ℕ) := by
+  rw [insertAt_val]
+  split
+  · exact ⟨fun h => by omega, fun h => by omega⟩
+  · exact ⟨fun h => by omega, fun h => by omega⟩
+
+/-- 标准逆序计数：数所有满足 `a < j` 且 `π a > π j` 的对（无选择公理）。 -/
+def invCount (π : FinPerm n) : ℕ :=
+  finSum ℕ n (fun j : Fin n ↦
+    finSum ℕ n (fun a : Fin n ↦
+      if (a : ℕ) < (j : ℕ) ∧ (π.toFun a : ℕ) > (π.toFun j : ℕ) then 1 else 0))
+
+lemma invCount_zero : invCount (FinPerm.nil : FinPerm 0) = 0 := by
+  rfl
+
 end FinPerm
 
 end SDG.DifferentialForms
