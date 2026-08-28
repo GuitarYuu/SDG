@@ -386,4 +386,172 @@ lemma wedgeOneOne_pullback {Y : Type u} [Microlinear R Y] (f : X → Y)
 
 end FiberwiseDifferentialForm
 
+/-! ## 构造性有限置换
+
+Mathlib 的 `Equiv.Perm` 有限指标实例与 `List.permutations` 均传递依赖
+`Classical.choice`；这里给出 `Fin n` 置换的构造性归纳编码，用于后续
+一般次数 shuffle 楔积，全程通过 no-choice linter。
+
+编码方式：`cons σ i` 表示由 `Fin n` 的置换 `σ` 扩张出的 `Fin (n+1)` 置换，
+其中新增元素（编码为坐标 `0`）落在第 `i` 个位置，其余分量经 Mathlib
+无选择的 `Fin.succAbove` 嵌入并跳过 `i`。 -/
+
+inductive FinPerm : ℕ → Type where
+  | nil : FinPerm 0
+  | cons {n : ℕ} (σ : FinPerm n) (i : Fin (n + 1)) : FinPerm (n + 1)
+
+namespace FinPerm
+
+/-- 把 `k : Fin n` 插入 `Fin (n+1)` 并跳过位置 `i`（纯 ℕ 比较，无选择公理）。 -/
+def insertAt {n : ℕ} (i : Fin (n + 1)) (k : Fin n) : Fin (n + 1) :=
+  if (k : ℕ) < (i : ℕ) then ⟨(k : ℕ), by have := k.isLt; omega⟩
+  else ⟨(k : ℕ) + 1, by have := k.isLt; omega⟩
+
+lemma insertAt_ne {n : ℕ} (i : Fin (n + 1)) (k : Fin n) :
+    insertAt i k ≠ i := by
+  have h1 := k.isLt
+  have hi := i.isLt
+  by_cases hl : (k : ℕ) < (i : ℕ)
+  · intro hEq
+    rw [insertAt, if_pos hl] at hEq
+    have hv : (k : ℕ) = (i : ℕ) := congrArg Fin.val hEq
+    omega
+  · intro hEq
+    rw [insertAt, if_neg hl] at hEq
+    have hv : (k : ℕ) + 1 = (i : ℕ) := congrArg Fin.val hEq
+    omega
+
+lemma insertAt_injective {n : ℕ} (i : Fin (n + 1)) :
+    Function.Injective (insertAt i) := by
+  intro k₁ k₂ hEq
+  have h1 := k₁.isLt
+  have h2 := k₂.isLt
+  have hi := i.isLt
+  by_cases hl₁ : (k₁ : ℕ) < (i : ℕ) <;> by_cases hl₂ : (k₂ : ℕ) < (i : ℕ)
+  · rw [insertAt, if_pos hl₁, insertAt, if_pos hl₂] at hEq
+    exact Fin.ext (by simpa using congrArg Fin.val hEq)
+  · rw [insertAt, if_pos hl₁, insertAt, if_neg hl₂] at hEq
+    have hv : (k₁ : ℕ) = (k₂ : ℕ) + 1 := by
+      simpa using congrArg Fin.val hEq
+    omega
+  · rw [insertAt, if_neg hl₁, insertAt, if_pos hl₂] at hEq
+    have hv : (k₁ : ℕ) + 1 = (k₂ : ℕ) := by
+      simpa using congrArg Fin.val hEq
+    omega
+  · rw [insertAt, if_neg hl₁, insertAt, if_neg hl₂] at hEq
+    exact Fin.ext (by simpa using congrArg Fin.val hEq)
+
+/-- 置换在 `Fin n` 上的作用：`0 ↦ i`，后继分量经 `insertAt` 嵌入。 -/
+def toFun {n : ℕ} : FinPerm n → Fin n → Fin n
+  | .nil, j => j
+  | .cons σ i, j => Fin.cases i (fun k ↦ insertAt i (σ.toFun k)) j
+
+lemma toFun_nil (j : Fin 0) :
+    toFun (FinPerm.nil : FinPerm 0) j = j := rfl
+
+lemma toFun_cons_zero {n : ℕ} (σ : FinPerm n) (i : Fin (n + 1)) :
+    toFun (cons σ i) 0 = i := rfl
+
+lemma toFun_cons_succ {n : ℕ} (σ : FinPerm n) (i : Fin (n + 1)) (k : Fin n) :
+    toFun (cons σ i) k.succ = insertAt i (σ.toFun k) := rfl
+
+/-- 置换作用是单射（归纳于编码）。 -/
+lemma toFun_injective : ∀ {n : ℕ} (π : FinPerm n), Function.Injective π.toFun := by
+  intro n π
+  induction π with
+  | nil =>
+      intro j₁ j₂ h
+      simpa only [toFun] using h
+  | cons σ i ih =>
+      intro a b hab
+      cases a using Fin.cases with
+      | zero =>
+          cases b using Fin.cases with
+          | zero => rfl
+          | succ b' =>
+              rw [toFun_cons_zero, toFun_cons_succ] at hab
+              exact absurd hab.symm (insertAt_ne i (σ.toFun b'))
+      | succ a' =>
+          cases b using Fin.cases with
+          | zero =>
+              rw [toFun_cons_succ, toFun_cons_zero] at hab
+              exact absurd hab (insertAt_ne i (σ.toFun a'))
+          | succ b' =>
+              rw [toFun_cons_succ, toFun_cons_succ] at hab
+              exact congrArg Fin.succ (ih (insertAt_injective i hab))
+
+/-- 逆序数：插入到第 `i` 位贡献 `i` 个逆序。 -/
+def depth : FinPerm n → ℕ
+  | .nil => 0
+  | .cons σ i => depth σ + (i : ℕ)
+
+lemma depth_nil : depth (FinPerm.nil : FinPerm 0) = 0 := rfl
+
+lemma depth_cons {n : ℕ} (σ : FinPerm n) (i : Fin (n + 1)) :
+    depth (cons σ i) = depth σ + (i : ℕ) := rfl
+
+/-- 置换符号：`-1` 的逆序数次幂。 -/
+def sign (R : Type u) [CommRing R] {n : ℕ} (π : FinPerm n) : R :=
+  (-1 : R) ^ (depth π)
+
+lemma sign_nil (R : Type u) [CommRing R] :
+    sign R (FinPerm.nil : FinPerm 0) = 1 := by
+  show (-1 : R) ^ (depth (FinPerm.nil : FinPerm 0)) = 1
+  rw [depth_nil, pow_zero]
+
+lemma sign_cons (R : Type u) [CommRing R] {n : ℕ} (σ : FinPerm n) (i : Fin (n + 1)) :
+    sign R (cons σ i) = sign R σ * (-1 : R) ^ (i : ℕ) := by
+  rw [sign, sign, depth_cons, pow_add]
+
+lemma sign_cons_zero (R : Type u) [CommRing R] {n : ℕ} (σ : FinPerm n) :
+    sign R (cons σ 0) = sign R σ := by
+  rw [sign_cons]
+  simp
+
+/-- `finSum` 对常值函数求和等于数乘。 -/
+lemma finSum_const (R : Type u) [AddCommMonoid R] (k : ℕ) (x : R) :
+    finSum R k (fun _ : Fin k ↦ x) = k • x := by
+  induction k with
+  | zero => rw [finSum_zero, zero_smul]
+  | succ k ih =>
+      rw [finSum_succ, ih, succ_nsmul']
+
+/-- 对所有 `Fin n` 置换求和（无选择公理：递归展开为项目的 `finSum`）。 -/
+def permSum (R : Type u) [AddCommMonoid R] : {n : ℕ} → (FinPerm n → R) → R
+  | 0, f => f .nil
+  | n + 1, f => finSum R (n + 1) (fun i ↦ permSum R (fun σ : FinPerm n ↦ f (.cons σ i)))
+
+lemma permSum_zero (R : Type u) [AddCommMonoid R] (f : FinPerm 0 → R) :
+    permSum R f = f .nil := rfl
+
+lemma permSum_succ (R : Type u) [AddCommMonoid R] (n : ℕ)
+    (f : FinPerm (n + 1) → R) :
+    permSum R f =
+      finSum R (n + 1) (fun i ↦ permSum R (fun σ : FinPerm n ↦ f (.cons σ i))) := rfl
+
+/-- 置换和关于函数加法可分配。 -/
+lemma permSum_add (R : Type u) [AddCommMonoid R] {n : ℕ}
+    (f g : FinPerm n → R) :
+    permSum R (fun π ↦ f π + g π) = permSum R f + permSum R g := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+      simp only [permSum_succ, ih, finSum_add]
+
+/-- 常值置换和：`n!` 项之和。 -/
+lemma permSum_const (R : Type u) [AddCommMonoid R] (n : ℕ) (c : R) :
+    permSum R (fun _ : FinPerm n ↦ c) = Nat.factorial n • c := by
+  induction n with
+  | zero => simp [permSum_zero]
+  | succ n ih =>
+      rw [permSum_succ]
+      have hterm : (fun _i : Fin (n + 1) ↦
+          permSum R (fun σ : FinPerm n ↦ (fun _p : FinPerm (n + 1) ↦ c) (.cons σ _i))) =
+          (fun _i : Fin (n + 1) ↦ Nat.factorial n • c) := by
+        funext i
+        exact ih
+      rw [hterm, finSum_const, Nat.factorial_succ, smul_smul]
+
+end FinPerm
+
 end SDG.DifferentialForms
