@@ -912,6 +912,79 @@ lemma invCount_zero : invCount (FinPerm.nil : FinPerm 0) = 0 := by
 
 lemma nat_gt_iff_lt {x y : ℕ} : x > y ↔ y < x := Iff.rfl
 
+/-- 归纳步骤：插入编码的逆序数 = 剩余部分逆序数 + 插入位置贡献。
+
+所有 toForm 重写都在具体点（`finSum_succ` 分离出的字面量与逐点 `funext`）
+上进行，函数级替换一律经 `congrArg` 传递，避免 ite 的 `Decidable`
+实例在 lambda 内不同步的问题。 -/
+lemma invCount_cons {n : ℕ} (σ : FinPerm n) (i : Fin (n + 1)) :
+    invCount (cons σ i) = invCount σ + (i : ℕ) := by
+  unfold invCount
+  rw [finSum_succ (R := ℕ) (n := n) (f := fun j : Fin (n + 1) ↦
+      finSum ℕ (n + 1) (fun a : Fin (n + 1) ↦
+        if (a : ℕ) < (j : ℕ) then
+          if ((cons σ i).toFun a : ℕ) > ((cons σ i).toFun j : ℕ) then 1 else 0
+        else 0))]
+  have h0 : (finSum ℕ (n + 1) (fun a : Fin (n + 1) ↦
+      if (a : ℕ) < ((0 : Fin (n + 1)) : ℕ) then
+        if ((cons σ i).toFun a : ℕ) > ((cons σ i).toFun 0 : ℕ) then 1 else 0
+      else 0) : ℕ) = 0 := by
+    rw [finSum_eq_zero]
+    intro a
+    simp
+  rw [h0, zero_add]
+  have hstep : ∀ j' : Fin n,
+      (finSum ℕ (n + 1) (fun a : Fin (n + 1) ↦
+          if (a : ℕ) < ((j'.succ : Fin (n + 1)) : ℕ) then
+            if ((cons σ i).toFun a : ℕ) >
+              ((cons σ i).toFun (j'.succ : Fin (n + 1)) : ℕ) then 1 else 0
+          else 0) : ℕ) =
+        (if (σ.toFun j' : ℕ) < (i : ℕ) then (1 : ℕ) else 0) +
+        (finSum ℕ n (fun a' : Fin n ↦
+          if (a' : ℕ) < (j' : ℕ) then
+            if (σ.toFun a' : ℕ) > (σ.toFun j' : ℕ) then 1 else 0
+          else 0) : ℕ) := by
+    intro j'
+    rw [finSum_succ (R := ℕ) (n := n) (f := fun a : Fin (n + 1) ↦
+        if (a : ℕ) < ((j'.succ : Fin (n + 1)) : ℕ) then
+          if ((cons σ i).toFun a : ℕ) >
+            ((cons σ i).toFun (j'.succ : Fin (n + 1)) : ℕ) then 1 else 0
+        else 0)]
+    have hzp : (0 : ℕ) < ((j'.succ : Fin (n + 1)) : ℕ) := by
+      show 0 < (j' : ℕ) + 1
+      omega
+    rw [Fin.val_zero, if_pos hzp, toFun_cons_zero, toFun_cons_succ]
+    have hcond0 : ((i : ℕ) > ((insertAt i (σ.toFun j') : Fin (n + 1)) : ℕ)) ↔
+        ((σ.toFun j' : ℕ) < (i : ℕ)) := by
+      rw [nat_gt_iff_lt, insertAt_lt_pivot_iff]
+    simp only [hcond0]
+    have hin' : ∀ a' : Fin n,
+        (if ((a'.succ : Fin (n + 1)) : ℕ) < ((j'.succ : Fin (n + 1)) : ℕ) then
+            if ((cons σ i).toFun (a'.succ : Fin (n + 1)) : ℕ) >
+              ((cons σ i).toFun (j'.succ : Fin (n + 1)) : ℕ) then 1 else 0
+          else 0) =
+        (if (a' : ℕ) < (j' : ℕ) then
+            if (σ.toFun a' : ℕ) > (σ.toFun j' : ℕ) then 1 else 0
+          else 0) := by
+      intro a'
+      simp only [toFun_cons_succ, Fin.val_succ, Nat.succ_lt_succ_iff,
+        nat_gt_iff_lt, insertAt_lt_iff]
+    exact congrArg (fun x : ℕ ↦ (if (σ.toFun j' : ℕ) < (i : ℕ) then (1 : ℕ) else 0) + x)
+      (congrArg (finSum ℕ n) (funext hin'))
+  simp only [hstep]
+  rw [finSum_add]
+  have hcount : (finSum ℕ n (fun j' : Fin n ↦
+      if (σ.toFun j' : ℕ) < (i : ℕ) then (1 : ℕ) else 0) : ℕ) = (i : ℕ) :=
+    finSum_count_lt σ.toFun_injective (i : ℕ) (Nat.lt_succ_iff.mp i.isLt)
+  rw [hcount]
+  omega
+
+/-- 插入深度与标准逆序计数一致。 -/
+lemma depth_eq_invCount {n : ℕ} (π : FinPerm n) : depth π = invCount π := by
+  induction π with
+  | nil => rfl
+  | cons σ i ih => rw [depth_cons, ih, invCount_cons]
+
 end FinPerm
 
 end SDG.DifferentialForms
