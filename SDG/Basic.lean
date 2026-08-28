@@ -24,8 +24,8 @@ import SDG.Integration
 * `SDG.Microlinear` — 微线性对象 `Microlinear` 与典范映射 $\Phi_n$；
 * `SDG.TangentBundle` — 切从、切向量运算（加法/数乘/零）及切纤维上的 $R$-模结构；
 * `SDG.LieBracket` — Property W、向量场无穷小变换的交换子，以及由此定义的李括号；
-* `SDG.DifferentialForms` — 微分形式核心：同基点切向量组、齐次/交错/规范化形式，
-  以及 $0$-形式的外微分；
+* `SDG.DifferentialForms` — 微分形式核心：同基点切向量组、兼容的齐次/交错/规范化形式，
+  以及逐点严格交错多线性形式、拉回和 $0$-形式的外微分；
 * `SDG.Derivative` — Kock-Lawvere 公理、合成导数 `sderiv`、微商消去律、
   偏导数与混合偏导数及其交换律（Schwarz 定理）；
 * `SDG.Taylor` — $D_k$ 上的 Kock-Lawvere 公理（Axiom 1'）与 Taylor 公式；
