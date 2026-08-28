@@ -552,6 +552,120 @@ lemma permSum_const (R : Type u) [AddCommMonoid R] (n : ℕ) (c : R) :
         exact ih
       rw [hterm, finSum_const, Nat.factorial_succ, smul_smul]
 
+/-! ### 从单射函数恢复置换编码
+
+`insertAt` 与 `unshift` 互逆，从而任何单射自映射（即 `Fin n` 的置换）
+都由插入编码给出。这是「编码枚举全部置换」的构造性证明，也是
+swap 配对消去论证的基础。 -/
+
+/-- `insertAt i` 的右逆方向辅助：把 `w ≠ i` 压回 `Fin n`
+（大于 `i` 的坐标减一，小于 `i` 的坐标不变）。 -/
+def unshift {n : ℕ} (i : Fin (n + 1)) (w : Fin (n + 1)) (hw : w ≠ i) : Fin n :=
+  dite ((i : ℕ) < (w : ℕ))
+    (fun hlt => ⟨(w : ℕ) - 1, by have := w.isLt; have := i.isLt; omega⟩)
+    (fun hge => ⟨(w : ℕ), by
+      have := w.isLt
+      have := i.isLt
+      have hne : (w : ℕ) ≠ (i : ℕ) := by
+        intro hc
+        exact hw (Fin.ext hc)
+      omega⟩)
+
+lemma insertAt_unshift {n : ℕ} (i : Fin (n + 1)) (w : Fin (n + 1)) (hw : w ≠ i) :
+    insertAt i (unshift i w hw) = w := by
+  have hi := i.isLt
+  have hw2 := w.isLt
+  have hne : (i : ℕ) ≠ (w : ℕ) := by
+    intro hc
+    exact hw (Fin.ext hc).symm
+  unfold insertAt unshift
+  by_cases hlt : (i : ℕ) < (w : ℕ)
+  · rw [dif_pos hlt]
+    by_cases h2 : ((w : ℕ) - 1 : ℕ) < (i : ℕ)
+    · exfalso
+      omega
+    · rw [if_neg h2]
+      have hsum : (w : ℕ) - 1 + 1 = (w : ℕ) := by omega
+      exact Fin.ext (by simpa using hsum)
+  · rw [dif_neg hlt]
+    by_cases h2 : ((w : ℕ) : ℕ) < (i : ℕ)
+    · rw [if_pos h2]
+    · exact absurd (Fin.ext (by omega)) hw
+
+lemma unshift_injective {n : ℕ} (i : Fin (n + 1)) {w₁ w₂ : Fin (n + 1)}
+    (hw₁ : w₁ ≠ i) (hw₂ : w₂ ≠ i) (hEq : unshift i w₁ hw₁ = unshift i w₂ hw₂) :
+    w₁ = w₂ := by
+  have hi := i.isLt
+  have h1 := w₁.isLt
+  have h2 := w₂.isLt
+  have hne₁ : (w₁ : ℕ) ≠ (i : ℕ) := by
+    intro hc
+    exact hw₁ (Fin.ext hc)
+  have hne₂ : (w₂ : ℕ) ≠ (i : ℕ) := by
+    intro hc
+    exact hw₂ (Fin.ext hc)
+  unfold unshift at hEq
+  by_cases hlt₁ : (i : ℕ) < (w₁ : ℕ) <;> by_cases hlt₂ : (i : ℕ) < (w₂ : ℕ)
+  · rw [dif_pos hlt₁, dif_pos hlt₂] at hEq
+    have hv : (w₁ : ℕ) - 1 = (w₂ : ℕ) - 1 := by
+      simpa using congrArg Fin.val hEq
+    exact Fin.ext (by omega)
+  · rw [dif_pos hlt₁, dif_neg hlt₂] at hEq
+    have hv : (w₁ : ℕ) - 1 = (w₂ : ℕ) := by
+      simpa using congrArg Fin.val hEq
+    exact absurd (Fin.ext (by omega)) hw₂
+  · rw [dif_neg hlt₁, dif_pos hlt₂] at hEq
+    have hv : (w₁ : ℕ) = (w₂ : ℕ) - 1 := by
+      simpa using congrArg Fin.val hEq
+    exact absurd (Fin.ext (by omega)) hw₁
+  · rw [dif_neg hlt₁, dif_neg hlt₂] at hEq
+    exact Fin.ext (by simpa using congrArg Fin.val hEq)
+
+/-- 从单射自映射恢复插入编码：`FinPerm` 枚举全部单射自映射。 -/
+def encode : {n : ℕ} → (f : Fin n → Fin n) → Function.Injective f → FinPerm n
+  | 0, _f, _hf => .nil
+  | n + 1, f, hf =>
+      have hsucc : Function.Injective (fun k : Fin n ↦ f k.succ) :=
+        hf.comp (Fin.succ_injective n)
+      have hne : ∀ k : Fin n, f k.succ ≠ f 0 := by
+        intro k hEq
+        exact Fin.succ_ne_zero k (hf hEq)
+      have hg : Function.Injective
+          (fun k : Fin n ↦ unshift (f 0) (f k.succ) (hne k)) := by
+        intro k₁ k₂ hEq
+        exact Fin.succ_injective n
+          (hf (unshift_injective (f 0) (hne k₁) (hne k₂) hEq))
+      .cons (encode (fun k : Fin n ↦ unshift (f 0) (f k.succ) (hne k)) hg) (f 0)
+
+lemma toFun_encode : ∀ {n : ℕ} (f : Fin n → Fin n) (hf : Function.Injective f),
+    (encode f hf).toFun = f := by
+  intro n f hf
+  induction n with
+  | zero =>
+      funext j
+      exact Fin.elim0 j
+  | succ n ih =>
+      have hsucc : Function.Injective (fun k : Fin n ↦ f k.succ) :=
+        hf.comp (Fin.succ_injective n)
+      have hne : ∀ k : Fin n, f k.succ ≠ f 0 := by
+        intro k hEq
+        exact Fin.succ_ne_zero k (hf hEq)
+      have hg : Function.Injective
+          (fun k : Fin n ↦ unshift (f 0) (f k.succ) (hne k)) := by
+        intro k₁ k₂ hEq
+        exact Fin.succ_injective n
+          (hf (unshift_injective (f 0) (hne k₁) (hne k₂) hEq))
+      have henc := ih (fun k : Fin n ↦ unshift (f 0) (f k.succ) (hne k)) hg
+      have hcons : (encode f hf).toFun =
+          (FinPerm.cons
+            (encode (fun k : Fin n ↦ unshift (f 0) (f k.succ) (hne k)) hg) (f 0)).toFun := rfl
+      funext j
+      cases j using Fin.cases with
+      | zero => rfl
+      | succ k =>
+          rw [hcons, toFun_cons_succ, henc]
+          exact insertAt_unshift (f 0) (f k.succ) (hne k)
+
 end FinPerm
 
 end SDG.DifferentialForms
