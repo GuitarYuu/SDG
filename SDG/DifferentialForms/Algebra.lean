@@ -396,6 +396,43 @@ Mathlib 的 `Equiv.Perm` 有限指标实例与 `List.permutations` 均传递依�
 其中新增元素（编码为坐标 `0`）落在第 `i` 个位置，其余分量经 Mathlib
 无选择的 `Fin.succAbove` 嵌入并跳过 `i`。 -/
 
+/-- 交换 `Fin n` 中两个坐标的自映射（构造性定义，无选择公理）。 -/
+def swapFin {n : ℕ} (i j : Fin n) : Fin n → Fin n :=
+  fun k => if k = i then j else if k = j then i else k
+
+lemma swapFin_self_left {n : ℕ} (i j : Fin n) :
+    swapFin i j i = j := by
+  simp [swapFin]
+
+lemma swapFin_self_right {n : ℕ} (i j : Fin n) :
+    swapFin i j j = i := by
+  by_cases h : j = i
+  · unfold swapFin
+    rw [if_pos h]
+    exact h
+  · unfold swapFin
+    rw [if_neg h]
+    simp
+
+lemma swapFin_of_ne {n : ℕ} {i j k : Fin n} (h1 : k ≠ i) (h2 : k ≠ j) :
+    swapFin i j k = k := by
+  simp only [swapFin, if_neg h1, if_neg h2]
+
+lemma swapFin_leftInverse {n : ℕ} (i j : Fin n) :
+    Function.LeftInverse (swapFin j i) (swapFin i j) := by
+  intro k
+  by_cases h1 : k = i
+  · subst k
+    rw [swapFin_self_left, swapFin_self_left]
+  · by_cases h2 : k = j
+    · subst k
+      rw [swapFin_self_right, swapFin_self_right]
+    · rw [swapFin_of_ne h1 h2, swapFin_of_ne h2 h1]
+
+lemma swapFin_injective {n : ℕ} (i j : Fin n) :
+    Function.Injective (swapFin i j) :=
+  Function.LeftInverse.injective (swapFin_leftInverse i j)
+
 inductive FinPerm : ℕ → Type where
   | nil : FinPerm 0
   | cons {n : ℕ} (σ : FinPerm n) (i : Fin (n + 1)) : FinPerm (n + 1)
@@ -665,6 +702,39 @@ lemma toFun_encode : ∀ {n : ℕ} (f : Fin n → Fin n) (hf : Function.Injectiv
       | succ k =>
           rw [hcons, toFun_cons_succ, henc]
           exact insertAt_unshift (f 0) (f k.succ) (hne k)
+
+/-- 置换作用的构造性逆映射。 -/
+def inv : {n : ℕ} → FinPerm n → Fin n → Fin n
+  | 0, .nil => fun w => w
+  | n + 1, .cons σ i => fun w =>
+      dite (w = i) (fun _ => 0) (fun hw => Fin.succ (inv σ (unshift i w hw)))
+
+/-- 逆映射是右逆：`π.toFun (π.inv w) = w`。 -/
+lemma map_inv : ∀ {n : ℕ} (π : FinPerm n) (w : Fin n), π.toFun (π.inv w) = w := by
+  intro n
+  induction n with
+  | zero =>
+      intro π w
+      cases π
+      exact Fin.elim0 w
+  | succ n ih =>
+      intro π w
+      cases π with
+      | cons σ i =>
+          simp only [inv]
+          by_cases hw : w = i
+          · rw [dif_pos hw, hw, toFun_cons_zero]
+          · rw [dif_neg hw, toFun_cons_succ]
+            have hun := ih σ (unshift i w hw)
+            rw [hun]
+            exact insertAt_unshift i w hw
+
+/-- 置换作用是双射。 -/
+lemma toFun_bijective {n : ℕ} (π : FinPerm n) : Function.Bijective π.toFun := by
+  constructor
+  · exact π.toFun_injective
+  · intro w
+    exact ⟨π.inv w, π.map_inv w⟩
 
 end FinPerm
 
