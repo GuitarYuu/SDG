@@ -1168,6 +1168,60 @@ lemma depth_eq_invCount {n : ℕ} (π : FinPerm n) : depth π = invCount π := b
   | nil => rfl
   | cons σ i ih => rw [depth_cons, ih, invCount_cons]
 
+/-! ### finSum 在相邻交换下的重参数化 -/
+
+/-- `swapFin 0 1` 的三个求值性质（`Fin (n+2)` 上 0 和 1 总可用）。 -/
+lemma swap01_zero {n : ℕ} :
+    swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2)) (0 : Fin (n + 2)) = (1 : Fin (n + 2)) := by
+  simp [swapFin]
+
+lemma swap01_one {n : ℕ} :
+    swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2)) (1 : Fin (n + 2)) = (0 : Fin (n + 2)) := by
+  simp [swapFin]
+
+lemma swap01_rest {n : ℕ} (k : Fin (n + 2)) (hk : (k : ℕ) ≥ 2) :
+    swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2)) k = k := by
+  have hk0 : (k : Fin (n + 2)) ≠ (0 : Fin (n + 2)) := by
+    intro hc
+    have hv : (k : ℕ) = 0 := by simpa using congrArg Fin.val hc
+    omega
+  have hk1 : (k : Fin (n + 2)) ≠ (1 : Fin (n + 2)) := by
+    intro hc
+    have hv : (k : ℕ) = 1 := by simpa using congrArg Fin.val hc
+    omega
+  simp only [swapFin, if_neg hk0, if_neg hk1]
+
+/-- `finSum` 在交换前两个位置的相邻对换下不变。
+
+这是 sign 变号的核心基础设施。当前证明需要 finSum 重参数化理论，
+暂留为后续工作；d² = 0 的证明通过面算子恒等式绕开此引理。 -/
+lemma finSum_swap01 {n : ℕ} (f : Fin (n + 2) → ℕ) (hn : 2 ≤ n) :
+    finSum ℕ (n + 2) f =
+    finSum ℕ (n + 2) (fun a ↦ f (swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2)) a)) := by
+  -- 外层分离
+  rw [finSum_succ (R := ℕ) (n := n + 1) (f := f)]
+  rw [finSum_succ (R := ℕ) (n := n + 1)
+    (f := fun a : Fin (n + 2) ↦ f (swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2)) a))]
+  -- 首项：swap 0 = 1
+  rw [swap01_zero]
+  -- 内层分离
+  rw [finSum_succ (R := ℕ) (n := n) (f := fun i : Fin (n + 1) ↦ f i.succ)]
+  rw [finSum_succ (R := ℕ) (n := n) (f := fun i : Fin (n + 1) ↦
+    f (swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2)) i.succ))]
+  -- 内层尾部
+  have hrest : ∀ j : Fin n,
+      swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2)) j.succ.succ = j.succ.succ := by
+    intro j
+    apply swap01_rest
+    have hv : ((j.succ.succ : Fin (n+2)) : ℕ) = (j : ℕ) + 2 := rfl
+    omega
+  simp only [hrest]
+  -- 归一化并处理所有 swapFin 残余
+  have heq : (Fin.succ (0 : Fin (n + 1)) : Fin (n + 2)) = (1 : Fin (n + 2)) := rfl
+  rw [heq]
+  rw [swap01_one]
+  abel
+
 end FinPerm
 
 end SDG.DifferentialForms
