@@ -917,6 +917,66 @@ lemma compSwap_involutive {n : ℕ} (i j : Fin n) (π : FinPerm n) :
     rw [swapFin_involutive]
   exact ext_toFun _ _ hX
 
+/-! ### 构造性置换的复合代数 -/
+
+/-- 恒等置换的构造性编码。 -/
+def identity {n : ℕ} : FinPerm n :=
+  encode id Function.injective_id
+
+lemma toFun_identity {n : ℕ} :
+    (identity : FinPerm n).toFun = id :=
+  toFun_encode _ _
+
+/-- 两个构造性置换的复合。 -/
+def compose {n : ℕ} (π₁ π₂ : FinPerm n) : FinPerm n :=
+  encode (fun k ↦ π₁.toFun (π₂.toFun k))
+    (π₁.toFun_injective.comp π₂.toFun_injective)
+
+lemma toFun_compose {n : ℕ} (π₁ π₂ : FinPerm n) :
+    (compose π₁ π₂).toFun = fun k ↦ π₁.toFun (π₂.toFun k) :=
+  toFun_encode _ _
+
+lemma compose_identity_left {n : ℕ} (π : FinPerm n) :
+    compose identity π = π := by
+  apply ext_toFun _ _
+  rw [toFun_compose, toFun_identity]
+  funext k
+  rfl
+
+lemma compose_identity_right {n : ℕ} (π : FinPerm n) :
+    compose π identity = π := by
+  apply ext_toFun _ _
+  rw [toFun_compose, toFun_identity]
+  funext k
+  rfl
+
+lemma compose_assoc {n : ℕ} (π₁ π₂ π₃ : FinPerm n) :
+    compose (compose π₁ π₂) π₃ = compose π₁ (compose π₂ π₃) := by
+  apply ext_toFun _ _
+  rw [toFun_compose, toFun_compose, toFun_compose, toFun_compose]
+
+/-- 交换两个 `Fin n` 坐标的构造性置换。 -/
+def swapPerm {n : ℕ} (i j : Fin n) : FinPerm n :=
+  encode (swapFin i j) (swapFin_injective i j)
+
+lemma toFun_swapPerm {n : ℕ} (i j : Fin n) :
+    (swapPerm i j).toFun = swapFin i j :=
+  toFun_encode _ _
+
+lemma swapPerm_involutive {n : ℕ} (i j : Fin n) :
+    compose (swapPerm i j) (swapPerm i j) = identity := by
+  apply ext_toFun _ _
+  rw [toFun_compose, toFun_identity]
+  simp only [toFun_swapPerm, id_eq]
+  funext k
+  change swapFin i j (swapFin i j k) = k
+  rw [swapFin_involutive]
+
+lemma compSwap_eq_compose_swapPerm {n : ℕ} (i j : Fin n) (π : FinPerm n) :
+    π.compSwap i j = compose π (swapPerm i j) := by
+  apply ext_toFun _ _
+  rw [toFun_compSwap, toFun_compose, toFun_swapPerm]
+
 /-! ### 单射自映射的计数 -/
 
 /-- 单射自映射是满射。 -/
