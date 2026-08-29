@@ -384,6 +384,129 @@ lemma wedgeOneOne_pullback {Y : Type u} [Microlinear R Y] (f : X → Y)
     wedgeOneOneFun (pullback f ω x) (pullback f η x) v
   rfl
 
+/-! ### 严格零形式与任意次数形式的楔积 -/
+
+/-- 严格零形式从左作用在任意次数严格形式上。 -/
+def wedgeZeroLeft {n : ℕ} (f : FiberwiseDifferentialForm R X 0)
+    (ω : FiberwiseDifferentialForm R X n) : FiberwiseDifferentialForm R X n :=
+  fun x ↦ toFunction f x • ω x
+
+@[simp]
+lemma wedgeZeroLeft_apply {n : ℕ} (f : FiberwiseDifferentialForm R X 0)
+    (ω : FiberwiseDifferentialForm R X n) (x : X)
+    (v : Fin n → TangentFiber R X x) :
+    wedgeZeroLeft f ω x v = toFunction f x * ω x v := rfl
+
+/-- 在交换系数环上，严格零形式的右作用使用同一逐点乘法。 -/
+def wedgeZeroRight {n : ℕ} (ω : FiberwiseDifferentialForm R X n)
+    (f : FiberwiseDifferentialForm R X 0) : FiberwiseDifferentialForm R X n :=
+  wedgeZeroLeft f ω
+
+@[simp]
+lemma wedgeZeroRight_apply {n : ℕ} (ω : FiberwiseDifferentialForm R X n)
+    (f : FiberwiseDifferentialForm R X 0) (x : X)
+    (v : Fin n → TangentFiber R X x) :
+    wedgeZeroRight ω f x v = ω x v * toFunction f x := by
+  rw [wedgeZeroRight, wedgeZeroLeft_apply, mul_comm]
+
+/-- 常值函数 `1` 对应的严格零形式。 -/
+def oneZeroForm : FiberwiseDifferentialForm R X 0 := ofFunction (fun _ ↦ 1)
+
+@[simp]
+lemma toFunction_oneZeroForm : toFunction (oneZeroForm : FiberwiseDifferentialForm R X 0) =
+    (fun _ ↦ 1) := by
+  exact toFunction_ofFunction (fun _ ↦ 1)
+
+lemma wedgeZeroLeft_one {n : ℕ} (ω : FiberwiseDifferentialForm R X n) :
+    wedgeZeroLeft oneZeroForm ω = ω := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  simp only [wedgeZeroLeft_apply, toFunction_oneZeroForm, one_mul]
+
+lemma wedgeZeroRight_one {n : ℕ} (ω : FiberwiseDifferentialForm R X n) :
+    wedgeZeroRight ω oneZeroForm = ω := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  simp only [wedgeZeroRight_apply, toFunction_oneZeroForm, mul_one]
+
+lemma wedgeZeroLeft_zero {n : ℕ} (ω : FiberwiseDifferentialForm R X n) :
+    wedgeZeroLeft (0 : FiberwiseDifferentialForm R X 0) ω = 0 := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  simp only [wedgeZeroLeft_apply, toFunction, Pi.zero_apply, AlternatingMap.zero_apply,
+    zero_mul]
+
+lemma wedgeZeroRight_zero {n : ℕ} (f : FiberwiseDifferentialForm R X 0) :
+    wedgeZeroRight (0 : FiberwiseDifferentialForm R X n) f = 0 := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  simp only [wedgeZeroRight_apply, Pi.zero_apply, AlternatingMap.zero_apply, zero_mul]
+
+lemma wedgeZeroLeft_add_left {n : ℕ} (f g : FiberwiseDifferentialForm R X 0)
+    (ω : FiberwiseDifferentialForm R X n) :
+    wedgeZeroLeft (f + g) ω = wedgeZeroLeft f ω + wedgeZeroLeft g ω := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  simp only [wedgeZeroLeft_apply, toFunction, Pi.add_apply, AlternatingMap.add_apply]
+  ring
+
+lemma wedgeZeroLeft_add_right {n : ℕ} (f : FiberwiseDifferentialForm R X 0)
+    (ω η : FiberwiseDifferentialForm R X n) :
+    wedgeZeroLeft f (ω + η) = wedgeZeroLeft f ω + wedgeZeroLeft f η := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  simp only [wedgeZeroLeft_apply, Pi.add_apply, AlternatingMap.add_apply]
+  ring
+
+lemma wedgeZeroLeft_smul_left {n : ℕ} (c : R)
+    (f : FiberwiseDifferentialForm R X 0) (ω : FiberwiseDifferentialForm R X n) :
+    wedgeZeroLeft (c • f) ω = c • wedgeZeroLeft f ω := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  simp only [wedgeZeroLeft_apply, toFunction, Pi.smul_apply, AlternatingMap.smul_apply,
+    smul_eq_mul]
+  ring
+
+lemma wedgeZeroLeft_smul_right {n : ℕ} (c : R)
+    (f : FiberwiseDifferentialForm R X 0) (ω : FiberwiseDifferentialForm R X n) :
+    wedgeZeroLeft f (c • ω) = c • wedgeZeroLeft f ω := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  simp only [wedgeZeroLeft_apply, Pi.smul_apply, AlternatingMap.smul_apply, smul_eq_mul]
+  ring
+
+lemma toFunction_pullback {Y : Type u} [Microlinear R Y] (h : X → Y)
+    (f : FiberwiseDifferentialForm R Y 0) :
+    toFunction (pullback h f) = toFunction f ∘ h := by
+  funext x
+  unfold toFunction
+  change f (h x) (fun i ↦ tangentMapAtLinear R h (Fin.elim0 i)) =
+    f (h x) (fun i ↦ Fin.elim0 i)
+  congr 1
+  funext i
+  exact Fin.elim0 i
+
+lemma wedgeZeroLeft_pullback {Y : Type u} [Microlinear R Y] (h : X → Y)
+    {n : ℕ} (f : FiberwiseDifferentialForm R Y 0)
+    (ω : FiberwiseDifferentialForm R Y n) :
+    pullback h (wedgeZeroLeft f ω) =
+      wedgeZeroLeft (pullback h f) (pullback h ω) := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  change toFunction f (h x) * ω (h x) (fun i ↦ tangentMapAtLinear R h (v i)) =
+    toFunction (pullback h f) x * pullback h ω x v
+  rw [congrFun (toFunction_pullback h f) x]
+  rfl
+
 end FiberwiseDifferentialForm
 
 /-! ## 构造性有限置换
