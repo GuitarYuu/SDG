@@ -1,5 +1,6 @@
 import SDG.DifferentialForms.Core
 import SDG.DifferentialForms.Algebra
+import SDG.DifferentialForms.Simplicial
 
 /-!
 # SDG.DifferentialForms
