@@ -1225,4 +1225,35 @@ lemma finSum_swap01 {n : ℕ} (f : Fin (n + 2) → ℕ) (hn : 2 ≤ n) :
 
 end FinPerm
 
+/-! ### `1 ∧ n` 楔积的原始函数公式 -/
+
+section WedgeOneAny
+
+variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
+
+/-- `1 ∧ n` 楔积的原始函数。
+
+Kock I.14 (14.7) 公式：
+`(ω ∧ η)(v₀,…,vₙ) = Σᵢ₌₀ⁿ (-1)ⁱ · ω(vᵢ) · η(v₀,…,v̂ᵢ,…,vₙ)`
+
+其中 `v̂ᵢ` 表示用 `Fin.removeNth` 删除第 `i` 个分量。
+此函数尚未打包为 `AlternatingMap`（交错性证明需要 η 的置换变号理论，
+留作后续工作）；但公式本身已完整定义且无选择公理。 -/
+def wedgeOneAnyFun {n : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
+    (v : Fin (n + 1) → TangentFiber R X x) : R :=
+  finSum R (n + 1) (fun i : Fin (n + 1) ↦
+    (-1 : R) ^ (i : ℕ) * FiberwiseDifferentialForm.oneArg ω (v i) * η (i.removeNth v))
+
+lemma wedgeOneAnyFun_eq {n : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
+    (v : Fin (n + 1) → TangentFiber R X x) :
+    wedgeOneAnyFun ω η v =
+      finSum R (n + 1) (fun i : Fin (n + 1) ↦
+        (-1 : R) ^ (i : ℕ) * FiberwiseDifferentialForm.oneArg ω (v i) * η (i.removeNth v)) := rfl
+
+end WedgeOneAny
+
 end SDG.DifferentialForms
