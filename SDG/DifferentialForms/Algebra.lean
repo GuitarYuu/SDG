@@ -1304,6 +1304,101 @@ lemma d0_apply {R : Type u} [CommRing R] {X : Type u} (f : X → R)
 lemma finSum_three (R : Type u) [AddCommMonoid R] (g : Fin 3 → R) :
     finSum R 3 g = g 0 + (g 1 + (g 2 + 0)) := rfl
 
+/-- `finSum R 4` 的显式展开。 -/
+lemma finSum_four (R : Type u) [AddCommMonoid R] (g : Fin 4 → R) :
+    finSum R 4 g = g 0 + (g 1 + (g 2 + (g 3 + 0))) := rfl
+
+/- **∂² = 0 对 1-上链**：对 `c : Cochain X 1`，`∂(∂c)(σ) = 0`。
+
+数学证明：展开 4×3=12 项双重求和，6 对面复合恒等式使每一对正负抵消。
+6 对面复合等式已在下方证明（`fcc1` 至 `fcc6`）；完整的 12 项代数配对
+消去需要 `finSum` 展开后 `simp` 能评估 Fin 系数幂运算，当前 tactic
+基础设施暂不支持。后续可通过专用 `norm_num` 扩展或手工展开解决。 -/
+
+/-- 面复合等式 1：`F(0,0) = F(1,0)`。 -/
+lemma fcc1 {X : Type u} (σ : Fin 4 → X) :
+    (fun k : Fin 2 ↦ σ ((0:Fin 4).succAbove ((0:Fin 3).succAbove k)))
+    = (fun k : Fin 2 ↦ σ ((1:Fin 4).succAbove ((0:Fin 3).succAbove k))) := by
+  funext k
+  have h : ((0:Fin 4).succAbove ((0:Fin 3).succAbove k) : Fin 4) =
+           ((1:Fin 4).succAbove ((0:Fin 3).succAbove k) : Fin 4) := by
+    cases k using Fin.cases with
+    | zero => decide
+    | succ m => cases m using Fin.cases with
+      | zero => decide
+      | succ m => exact Fin.elim0 m
+  rw [h]
+
+/-- 面复合等式 2：`F(0,1) = F(2,0)`。 -/
+lemma fcc2 {X : Type u} (σ : Fin 4 → X) :
+    (fun k : Fin 2 ↦ σ ((0:Fin 4).succAbove ((1:Fin 3).succAbove k)))
+    = (fun k : Fin 2 ↦ σ ((2:Fin 4).succAbove ((0:Fin 3).succAbove k))) := by
+  funext k
+  have h : ((0:Fin 4).succAbove ((1:Fin 3).succAbove k) : Fin 4) =
+           ((2:Fin 4).succAbove ((0:Fin 3).succAbove k) : Fin 4) := by
+    cases k using Fin.cases with
+    | zero => decide
+    | succ m => cases m using Fin.cases with
+      | zero => decide
+      | succ m => exact Fin.elim0 m
+  rw [h]
+
+/-- 面复合等式 3：`F(0,2) = F(3,0)`。 -/
+lemma fcc3 {X : Type u} (σ : Fin 4 → X) :
+    (fun k : Fin 2 ↦ σ ((0:Fin 4).succAbove ((2:Fin 3).succAbove k)))
+    = (fun k : Fin 2 ↦ σ ((3:Fin 4).succAbove ((0:Fin 3).succAbove k))) := by
+  funext k
+  have h : ((0:Fin 4).succAbove ((2:Fin 3).succAbove k) : Fin 4) =
+           ((3:Fin 4).succAbove ((0:Fin 3).succAbove k) : Fin 4) := by
+    cases k using Fin.cases with
+    | zero => decide
+    | succ m => cases m using Fin.cases with
+      | zero => decide
+      | succ m => exact Fin.elim0 m
+  rw [h]
+
+/-- 面复合等式 4：`F(1,1) = F(2,1)`。 -/
+lemma fcc4 {X : Type u} (σ : Fin 4 → X) :
+    (fun k : Fin 2 ↦ σ ((1:Fin 4).succAbove ((1:Fin 3).succAbove k)))
+    = (fun k : Fin 2 ↦ σ ((2:Fin 4).succAbove ((1:Fin 3).succAbove k))) := by
+  funext k
+  have h : ((1:Fin 4).succAbove ((1:Fin 3).succAbove k) : Fin 4) =
+           ((2:Fin 4).succAbove ((1:Fin 3).succAbove k) : Fin 4) := by
+    cases k using Fin.cases with
+    | zero => decide
+    | succ m => cases m using Fin.cases with
+      | zero => decide
+      | succ m => exact Fin.elim0 m
+  rw [h]
+
+/-- 面复合等式 5：`F(1,2) = F(3,1)`。 -/
+lemma fcc5 {X : Type u} (σ : Fin 4 → X) :
+    (fun k : Fin 2 ↦ σ ((1:Fin 4).succAbove ((2:Fin 3).succAbove k)))
+    = (fun k : Fin 2 ↦ σ ((3:Fin 4).succAbove ((1:Fin 3).succAbove k))) := by
+  funext k
+  have h : ((1:Fin 4).succAbove ((2:Fin 3).succAbove k) : Fin 4) =
+           ((3:Fin 4).succAbove ((1:Fin 3).succAbove k) : Fin 4) := by
+    cases k using Fin.cases with
+    | zero => decide
+    | succ m => cases m using Fin.cases with
+      | zero => decide
+      | succ m => exact Fin.elim0 m
+  rw [h]
+
+/-- 面复合等式 6：`F(2,2) = F(3,2)`。 -/
+lemma fcc6 {X : Type u} (σ : Fin 4 → X) :
+    (fun k : Fin 2 ↦ σ ((2:Fin 4).succAbove ((2:Fin 3).succAbove k)))
+    = (fun k : Fin 2 ↦ σ ((3:Fin 4).succAbove ((2:Fin 3).succAbove k))) := by
+  funext k
+  have h : ((2:Fin 4).succAbove ((2:Fin 3).succAbove k) : Fin 4) =
+           ((3:Fin 4).succAbove ((2:Fin 3).succAbove k) : Fin 4) := by
+    cases k using Fin.cases with
+    | zero => decide
+    | succ m => cases m using Fin.cases with
+      | zero => decide
+      | succ m => exact Fin.elim0 m
+  rw [h]
+
 /-- **d² = 0 对 0-形式**：`(∂(d₀f))(x₀,x₁,x₂) = 0`。
 
 纯代数恒等式：`[f(x₂)-f(x₁)] - [f(x₂)-f(x₀)] + [f(x₁)-f(x₀)] = 0`。 -/
