@@ -607,6 +607,60 @@ theorem exteriorDerivative0_const_apply {R : Type u} {X : Type u} [IsKockLawvere
   change directionalDerivative (fun _ : X ↦ c) (x := F.basePoint) (F.vector 0) = 0
   exact directionalDerivative_const c (F.vector 0)
 
+/-- **Leibniz 乘法法则**：方向导数满足乘积公式。
+`d(f·g)(v) = f(x)·dg(v) + g(x)·df(v)`。
+
+证明：KL 公理的唯一性 + D 中元素满足 d·d = 0。 -/
+theorem directionalDerivative_mul {R : Type u} {X : Type u} [IsKockLawvere_one R]
+    (f g : X → R) {x : X} (v : TangentFiber R X x) :
+    directionalDerivative (fun y ↦ f y * g y) v =
+      f x * directionalDerivative g v + g x * directionalDerivative f v := by
+  unfold directionalDerivative
+  symm
+  apply (IsKockLawvere_one.isKockLawvere_one
+    (fun d : D R ↦ f (v.1 d) * g (v.1 d))).2.2 _
+  intro d
+  have hf := directionalDerivative_spec f v d
+  have hg := directionalDerivative_spec g v d
+  have hdd : (d : R) * (d : R) = 0 := D.mul_eq_zero R d
+  have hv0 : v.1 0 = x := v.2
+  -- 用 calc 分步证明，避免全局 rw 引起 motive 问题
+  have hbase : f (v.1 0) * g (v.1 0) = f x * g x := by rw [hv0]
+  have hlhs : f (v.1 d) * g (v.1 d) =
+      (f x + directionalDerivative f v * (d : R)) *
+      (g x + directionalDerivative g v * (d : R)) := by
+    rw [hf, hg]
+  have hexp : (f x + directionalDerivative f v * (d : R)) *
+              (g x + directionalDerivative g v * (d : R)) =
+              f x * g x +
+              (f x * directionalDerivative g v + g x * directionalDerivative f v) * (d : R) := by
+    have hfull : (f x + directionalDerivative f v * (d : R)) *
+                (g x + directionalDerivative g v * (d : R)) =
+                f x * g x +
+                (f x * directionalDerivative g v + g x * directionalDerivative f v) * (d : R) +
+                directionalDerivative f v * directionalDerivative g v * ((d : R) * (d : R)) := by ring
+    rw [hfull, hdd, mul_zero, add_zero]
+  calc f (v.1 d) * g (v.1 d)
+      = (f x + directionalDerivative f v * (d : R)) *
+        (g x + directionalDerivative g v * (d : R)) := hlhs
+    _ = f x * g x +
+        (f x * directionalDerivative g v + g x * directionalDerivative f v) * (d : R) := hexp
+    _ = f (v.1 0) * g (v.1 0) +
+        (f x * directionalDerivative g v + g x * directionalDerivative f v) * (d : R) := by
+        rw [hbase]
+
+/-- **0-形式外微分的 Leibniz 法则**：
+`d(f·g) = f·dg + g·df`。 -/
+theorem exteriorDerivative0_leibniz {R : Type u} {X : Type u} [IsKockLawvere_one R]
+    (f g : Differential0Form R X) (F : TangentFrame R X 1) :
+    exteriorDerivative0 (fun y ↦ f y * g y) F =
+      f F.basePoint * exteriorDerivative0 g F +
+      g F.basePoint * exteriorDerivative0 f F := by
+  show directionalDerivative (fun y ↦ f y * g y)
+    (x := F.basePoint) (F.vector 0) = _
+  rw [directionalDerivative_mul]
+  simp only [exteriorDerivative0]
+
 /-! ## 严格逐点交错多线性形式
 
 `DifferentialForm` 保留了 PR #2 的切向量组 API。下面的
