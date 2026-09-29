@@ -1256,4 +1256,78 @@ lemma wedgeOneAnyFun_eq {n : ℕ} {x : X}
 
 end WedgeOneAny
 
+/-! ## 奇异上链与 de Rham 复形
+
+在单纯形方法中，n-上链是从 (n+1)-点组到 R 的函数。
+余边界算子 ∂ 通过面删除的交错和定义：∂c 的值 = Σ(-1)ⁱ c(删除第 i 个顶点)。
+∂² = 0 是纯组合恒等式（成对消去），不需要切向量传输。 -/
+
+section DeRham
+
+variable {R : Type u} [CommRing R] {X : Type u}
+
+/-- n-单纯形的 (n+1) 个顶点。 -/
+abbrev SimplexPts (X : Type u) (n : ℕ) := Fin (n + 1) → X
+
+/-- n-上链：从 n-单纯形到 R 的函数。 -/
+abbrev Cochain (R : Type u) [CommRing R] (X : Type u) (n : ℕ) :=
+  SimplexPts X n → R
+
+/-- 第 i 个面：从 (n+1)-单纯形中删除第 i 个顶点，得到 n-单纯形。 -/
+def coFace {X : Type u} {n : ℕ} (σ : SimplexPts X (n + 1)) (i : Fin (n + 2)) :
+    SimplexPts X n :=
+  fun k ↦ σ (i.succAbove k)
+
+/-- 余边界算子 ∂ : Cⁿ → Cⁿ⁺¹。 -/
+def coboundary {R : Type u} [CommRing R] {X : Type u} {n : ℕ}
+    (c : Cochain R X n) : Cochain R X (n + 1) :=
+  fun σ ↦ finSum R (n + 2) (fun i : Fin (n + 2) ↦
+    (-1 : R) ^ (i : ℕ) * c (coFace σ i))
+
+lemma coboundary_apply {R : Type u} [CommRing R] {X : Type u} {n : ℕ}
+    (c : Cochain R X n) (σ : SimplexPts X (n + 1)) :
+    coboundary c σ = finSum R (n + 2) (fun i : Fin (n + 2) ↦
+      (-1 : R) ^ (i : ℕ) * c (coFace σ i)) := rfl
+
+/-! ### 0-形式的余边界 -/
+
+/-- 0-形式 `f : X → R` 的余边界：`df(x₀,x₁) = f(x₁) - f(x₀)`。 -/
+def d0 {R : Type u} [CommRing R] {X : Type u} (f : X → R) :
+    Cochain R X 1 :=
+  fun σ ↦ f (σ 1) - f (σ 0)
+
+lemma d0_apply {R : Type u} [CommRing R] {X : Type u} (f : X → R)
+    (σ : SimplexPts X 1) :
+    d0 f σ = f (σ 1) - f (σ 0) := rfl
+
+/-- `finSum R 3` 的显式展开（关键辅助引理：避免 `Fin.succ` 索引问题）。 -/
+lemma finSum_three (R : Type u) [AddCommMonoid R] (g : Fin 3 → R) :
+    finSum R 3 g = g 0 + (g 1 + (g 2 + 0)) := rfl
+
+/-- **d² = 0 对 0-形式**：`(∂(d₀f))(x₀,x₁,x₂) = 0`。
+
+纯代数恒等式：`[f(x₂)-f(x₁)] - [f(x₂)-f(x₀)] + [f(x₁)-f(x₀)] = 0`。 -/
+theorem coboundary_d0 {R : Type u} [CommRing R] {X : Type u}
+    (f : X → R) (σ : SimplexPts X 2) :
+    coboundary (d0 f) σ = 0 := by
+  unfold coboundary
+  rw [finSum_three]
+  simp only [d0, coFace]
+  have e00 : ((0:Fin 3).succAbove (0:Fin 2) : Fin 3) = 1 := by decide
+  have e01 : ((0:Fin 3).succAbove (1:Fin 2) : Fin 3) = 2 := by decide
+  have e10 : ((1:Fin 3).succAbove (0:Fin 2) : Fin 3) = 0 := by decide
+  have e11 : ((1:Fin 3).succAbove (1:Fin 2) : Fin 3) = 2 := by decide
+  have e20 : ((2:Fin 3).succAbove (0:Fin 2) : Fin 3) = 0 := by decide
+  have e21 : ((2:Fin 3).succAbove (1:Fin 2) : Fin 3) = 1 := by decide
+  simp only [e00, e01, e10, e11, e20, e21]
+  have c0 : ((0:Fin 3):ℕ) = 0 := rfl
+  have c1 : ((1:Fin 3):ℕ) = 1 := rfl
+  have c2 : ((2:Fin 3):ℕ) = 2 := rfl
+  simp only [c0, c1, c2]
+  simp only [pow_zero, pow_one, pow_two]
+  simp only [neg_mul, add_zero]
+  ring
+
+end DeRham
+
 end SDG.DifferentialForms
