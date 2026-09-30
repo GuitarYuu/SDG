@@ -1698,4 +1698,43 @@ end CupZeroAlgebra
 与不同次数的 cupProduct 交互展开。 -/
 -- theorem coboundary_mul_zero ... (deferred)
 
+/-! ## d₀ 算子的导子性质 -/
+
+/-- **d₀ 是逐点乘法的导子**：`d₀(f·g) = g·d₀f + f(σ₀)·d₀g`。
+
+这是 de Rham 复形在 0-层面的 Leibniz 法则。 -/
+theorem d0_mul {R : Type u} [CommRing R] {X : Type u}
+    (f g : X → R) (σ : SimplexPts X 1) :
+    d0 (fun x ↦ f x * g x) σ =
+      g (σ 1) * d0 f σ + f (σ 0) * d0 g σ := by
+  unfold d0
+  ring
+
+/-- **d₀ 消灭常值函数**：`d₀c = 0`。 -/
+theorem d0_const {R : Type u} [CommRing R] {X : Type u}
+    (c : R) :
+    d0 (fun _ : X ↦ c) = 0 := by
+  funext σ
+  unfold d0
+  simp only [Pi.zero_apply]
+  ring
+
+/-- **d₀ 的加法性**：`d₀(f+g) = d₀f + d₀g`。 -/
+theorem d0_add {R : Type u} [CommRing R] {X : Type u}
+    (f g : X → R) :
+    d0 (fun x ↦ f x + g x) = d0 f + d0 g := by
+  funext σ
+  unfold d0
+  simp only [Pi.add_apply]
+  abel
+
+/-- **d₀ 的数乘性**：`d₀(a·f) = a·d₀f`。 -/
+theorem d0_smul {R : Type u} [CommRing R] {X : Type u}
+    (a : R) (f : X → R) :
+    d0 (fun x ↦ a * f x) = a • d0 f := by
+  funext σ
+  unfold d0
+  simp only [Pi.smul_apply, smul_eq_mul]
+  ring
+
 end SDG.DifferentialForms
