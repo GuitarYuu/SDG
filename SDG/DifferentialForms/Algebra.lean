@@ -1578,4 +1578,44 @@ lemma cup_zero_right {p q : ℕ} (c₁ : Cochain R X p) :
 
 end CupProduct
 
+/-! ## 余边界与 0-形式微分的相容性 -/
+
+section CochainOfFun
+
+variable {R : Type u} [CommRing R] {X : Type u}
+
+/-- 将函数 `f : X → R` 嵌入为 0-上链。 -/
+def cochainOfFun (f : X → R) : Cochain R X 0 :=
+  fun σ ↦ f (σ 0)
+
+/-- `finSum R 2` 的显式展开。 -/
+lemma finSum_two (R : Type u) [AddCommMonoid R] (g : Fin 2 → R) :
+    finSum R 2 g = g 0 + (g 1 + 0) := rfl
+
+/-- **余边界在 0-上链上退化为 d₀**：`∂(cochainOfFun f) = d₀ f`。 -/
+theorem coboundary_eq_d0 (f : X → R) (σ : SimplexPts X 1) :
+    coboundary (cochainOfFun f) σ = d0 f σ := by
+  unfold coboundary d0 coFace cochainOfFun
+  rw [finSum_two]
+  simp only [pow_zero, pow_one, add_zero]
+  have h0 : (((0 : Fin 2).succAbove (0 : Fin 1) : Fin 2)) = 1 := by decide
+  have h1 : (((1 : Fin 2).succAbove (0 : Fin 1) : Fin 2)) = 0 := by decide
+  rw [h0, h1]
+  have c0 : (((0 : Fin 2) : ℕ)) = 0 := rfl
+  have c1 : (((1 : Fin 2) : ℕ)) = 1 := rfl
+  rw [c0, c1]
+  simp only [pow_zero, pow_one, add_zero]
+  ring
+
+/-- 0-上链的余边界满足 ∂² = 0。 -/
+lemma coboundary_zero_of_cochainOfFun (f : X → R) (σ : SimplexPts X 2) :
+    coboundary (coboundary (cochainOfFun f)) σ = 0 := by
+  have h : coboundary (cochainOfFun f) = d0 f := by
+    funext τ
+    exact coboundary_eq_d0 f τ
+  rw [h]
+  exact coboundary_d0 f σ
+
+end CochainOfFun
+
 end SDG.DifferentialForms
