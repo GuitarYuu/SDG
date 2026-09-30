@@ -1618,4 +1618,11 @@ lemma coboundary_zero_of_cochainOfFun (f : X → R) (σ : SimplexPts X 2) :
 
 end CochainOfFun
 
+/-! ## 上积的单位律
+
+注：`cupRight 0 q k = k` 和 `cupLeft 0 q 0 = 0` 在数学上成立，但
+`0 + q` 和 `q` 在 Lean 4 中不是 syntactic 相等（需要 `Nat.zero_add`），
+导致类型层面的不匹配。这些引理需要通过 `Fin.cast` 显式转换后证明，
+留作后续工作。 -/
+
 end SDG.DifferentialForms
