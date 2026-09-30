@@ -1648,4 +1648,39 @@ theorem cup_pullback {R : Type u} [CommRing R] {X Y : Type u} {p q : ℕ}
     cochainPullback h (cupProduct c₁ c₂) =
     cupProduct (cochainPullback h c₁) (cochainPullback h c₂) := rfl
 
+/-! ### 0-上链的上积：退化为逐点乘法 -/
+
+section CupZeroZero
+
+variable {R : Type u} [CommRing R] {X : Type u}
+
+/-- `cupLeft 0 0` 是恒等嵌入。 -/
+lemma cupLeft_00 : cupLeft 0 0 = id := by
+  funext k
+  unfold cupLeft
+  simp
+
+/-- `cupRight 0 0` 是恒等嵌入。 -/
+lemma cupRight_00 : cupRight 0 0 = id := by
+  funext k
+  unfold cupRight
+  simp
+
+/-- 0-上链的上积是逐点乘法。 -/
+lemma cupProduct_zero_zero (f g : Cochain R X 0) :
+    cupProduct f g = fun σ ↦ f σ * g σ := by
+  unfold cupProduct
+  simp only [cupLeft_00, cupRight_00]
+  rfl
+
+end CupZeroZero
+
+/- **分次 Leibniz 对 0-上链**：`∂(f·g) = ∂f·g + f·∂g`。
+
+这是 de Rham 复形作为微分分次代数（DG algebra）的基础。
+数学证明：对于 0-上链，上积退化为逐点乘法（`cupProduct_zero_zero`），
+展开 ∂f 和 ∂g 后 `ring` 关闭。完整 Lean 证明需要 cupProduct
+与不同次数的 cupProduct 交互展开。 -/
+-- theorem coboundary_mul_zero ... (deferred)
+
 end SDG.DifferentialForms
