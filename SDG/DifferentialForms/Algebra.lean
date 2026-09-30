@@ -1616,6 +1616,20 @@ lemma coboundary_zero_of_cochainOfFun (f : X → R) (σ : SimplexPts X 2) :
   rw [h]
   exact coboundary_d0 f σ
 
+/-- **常值函数的余边界为零**：∂c = 0 对常值函数 c。
+
+这是 de Rham 复形中「常值函数是闭形式」的形式化。 -/
+theorem coboundary_const {R : Type u} [CommRing R] {X : Type u}
+    (c : R) :
+    coboundary (cochainOfFun (fun _ : X ↦ c)) = 0 := by
+  have h : coboundary (cochainOfFun (fun _ : X ↦ c)) = d0 (fun _ : X ↦ c) := by
+    funext τ
+    exact coboundary_eq_d0 (fun _ : X ↦ c) τ
+  rw [h]
+  funext σ
+  unfold d0
+  simp
+
 end CochainOfFun
 
 /-! ## 上积的单位律
