@@ -1675,6 +1675,21 @@ lemma cupProduct_zero_zero (f g : Cochain R X 0) :
 
 end CupZeroZero
 
+/-! ### 0-上链上积的代数性质 -/
+
+section CupZeroAlgebra
+
+variable {R : Type u} [CommRing R] {X : Type u}
+
+/-- 0-上链的上积是交换的。 -/
+lemma cupProduct_comm (f g : Cochain R X 0) :
+    cupProduct f g = cupProduct g f := by
+  rw [cupProduct_zero_zero, cupProduct_zero_zero]
+  funext σ
+  ring
+
+end CupZeroAlgebra
+
 /- **分次 Leibniz 对 0-上链**：`∂(f·g) = ∂f·g + f·∂g`。
 
 这是 de Rham 复形作为微分分次代数（DG algebra）的基础。
