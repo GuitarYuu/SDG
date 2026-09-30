@@ -1625,4 +1625,13 @@ end CochainOfFun
 导致类型层面的不匹配。这些引理需要通过 `Fin.cast` 显式转换后证明，
 留作后续工作。 -/
 
+/-- **上积与拉回交换（函子性质）**：`h⁎(c₁ ∪ c₂) = h⁎c₁ ∪ h⁎c₂`。
+
+由定义直接可得（`rfl`）：两边都计算为
+`c₁(h ∘ σ ∘ cupLeft) · c₂(h ∘ σ ∘ cupRight)`。 -/
+theorem cup_pullback {R : Type u} [CommRing R] {X Y : Type u} {p q : ℕ}
+    (h : X → Y) (c₁ : Cochain R Y p) (c₂ : Cochain R Y q) :
+    cochainPullback h (cupProduct c₁ c₂) =
+    cupProduct (cochainPullback h c₁) (cochainPullback h c₂) := rfl
+
 end SDG.DifferentialForms
