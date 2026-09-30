@@ -1399,6 +1399,29 @@ lemma fcc6 {X : Type u} (σ : Fin 4 → X) :
       | succ m => exact Fin.elim0 m
   rw [h]
 
+/-- **∂² = 0 对 1-上链**：对 `c : Cochain X 1`，`∂(∂c)(σ) = 0`。
+
+展开 4×3=12 项双重求和，用 `fcc1`-`fcc6` 配对面复合，
+`norm_num` 评估 Fin 系数幂，`ring` 关闭。 -/
+theorem coboundary_coboundary_one {R : Type u} [CommRing R] {X : Type u}
+    (c : Cochain R X 1) (σ : SimplexPts X 3) :
+    coboundary (coboundary c) σ = 0 := by
+  unfold coboundary coFace
+  rw [finSum_four]
+  repeat rw [finSum_three]
+  simp only [fcc1, fcc2, fcc3, fcc4, fcc5, fcc6]
+  have c0 : (((0 : Fin 4) : ℕ)) = 0 := rfl
+  have c1 : (((1 : Fin 4) : ℕ)) = 1 := rfl
+  have c2 : (((2 : Fin 4) : ℕ)) = 2 := rfl
+  have c3 : (((3 : Fin 4) : ℕ)) = 3 := rfl
+  have d0' : (((0 : Fin 3) : ℕ)) = 0 := rfl
+  have d1' : (((1 : Fin 3) : ℕ)) = 1 := rfl
+  have d2' : (((2 : Fin 3) : ℕ)) = 2 := rfl
+  simp only [c0, c1, c2, c3, d0', d1', d2']
+  simp only [pow_zero, pow_one, pow_two]
+  simp only [neg_mul, add_zero]
+  ring
+
 /-- **d² = 0 对 0-形式**：`(∂(d₀f))(x₀,x₁,x₂) = 0`。
 
 纯代数恒等式：`[f(x₂)-f(x₁)] - [f(x₂)-f(x₀)] + [f(x₁)-f(x₀)] = 0`。 -/
