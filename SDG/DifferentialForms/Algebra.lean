@@ -1490,4 +1490,92 @@ theorem coboundary_pullback {R : Type u} [CommRing R] {X Y : Type u} {n : ℕ}
 
 end DeRham
 
+/-! ## 上积（cup product）与分次 Leibniz 法则
+
+上积是 de Rham 复形上链代数的乘法结构：
+`(c₁ ∪ c₂)(σ₀,…,σ_{p+q}) = c₁(σ₀,…,σ_p) · c₂(σ_p,…,σ_{p+q})`。
+
+分次 Leibniz：`∂(c₁ ∪ c₂) = ∂c₁ ∪ c₂ + (-1)^p c₁ ∪ ∂c₂`。 -/
+
+section CupProduct
+
+variable {R : Type u} [CommRing R] {X : Type u}
+
+/-- 上积左嵌入：取前 `p+1` 个点。 -/
+def cupLeft (p q : ℕ) : Fin (p + 1) → Fin (p + q + 1) :=
+  fun k ↦ Fin.cast (by omega) (Fin.castAdd q k)
+
+/-- 上积右嵌入：取后 `q+1` 个点。 -/
+def cupRight (p q : ℕ) : Fin (q + 1) → Fin (p + q + 1) :=
+  fun k ↦ Fin.cast (by omega) (Fin.natAdd p k)
+
+/-- 上积：`(c₁ ∪ c₂)(σ₀,…,σ_{p+q}) = c₁(σ₀,…,σ_p) · c₂(σ_p,…,σ_{p+q})`。 -/
+def cupProduct {p q : ℕ} (c₁ : Cochain R X p) (c₂ : Cochain R X q) :
+    Cochain R X (p + q) :=
+  fun σ ↦ c₁ (fun k : Fin (p + 1) ↦ σ (cupLeft p q k)) *
+         c₂ (fun k : Fin (q + 1) ↦ σ (cupRight p q k))
+
+lemma cupProduct_apply {p q : ℕ} (c₁ : Cochain R X p) (c₂ : Cochain R X q)
+    (σ : SimplexPts X (p + q)) :
+    cupProduct c₁ c₂ σ =
+      c₁ (fun k : Fin (p + 1) ↦ σ (cupLeft p q k)) *
+      c₂ (fun k : Fin (q + 1) ↦ σ (cupRight p q k)) := rfl
+
+/-- 上积对第一个因子加法。 -/
+lemma cup_add_left {p q : ℕ} (c₁ c₂ : Cochain R X p) (η : Cochain R X q) :
+    cupProduct (c₁ + c₂) η = cupProduct c₁ η + cupProduct c₂ η := by
+  funext σ
+  unfold cupProduct
+  simp only [Pi.add_apply]
+  ring
+
+/-- 上积对第二个因子加法。 -/
+lemma cup_add_right {p q : ℕ} (c₁ : Cochain R X p) (η₁ η₂ : Cochain R X q) :
+    cupProduct c₁ (η₁ + η₂) = cupProduct c₁ η₁ + cupProduct c₁ η₂ := by
+  funext σ
+  unfold cupProduct
+  simp only [Pi.add_apply]
+  ring
+
+/-- 上积对第一个因子数乘。 -/
+lemma cup_smul_left {p q : ℕ} (a : R) (c₁ : Cochain R X p) (η : Cochain R X q) :
+    cupProduct (a • c₁) η = a • cupProduct c₁ η := by
+  funext σ
+  unfold cupProduct
+  simp only [Pi.smul_apply, smul_eq_mul, mul_assoc]
+
+/-- 上积对第二个因子数乘。 -/
+lemma cup_smul_right {p q : ℕ} (a : R) (c₁ : Cochain R X p) (η : Cochain R X q) :
+    cupProduct c₁ (a • η) = a • cupProduct c₁ η := by
+  funext σ
+  unfold cupProduct
+  simp only [Pi.smul_apply, smul_eq_mul, mul_left_comm]
+
+/-- 上积左零。 -/
+lemma cup_zero_left {p q : ℕ} (η : Cochain R X q) :
+    cupProduct (0 : Cochain R X p) η = 0 := by
+  funext σ
+  unfold cupProduct
+  simp
+
+/-- 上积右零。 -/
+lemma cup_zero_right {p q : ℕ} (c₁ : Cochain R X p) :
+    cupProduct c₁ (0 : Cochain R X q) = 0 := by
+  funext σ
+  unfold cupProduct
+  simp
+
+/- **分次 Leibniz 法则**：`∂(c₁ ∪ c₂) = ∂c₁ ∪ c₂ + (-1)^{p+1} c₁ ∪ ∂c₂`。
+
+证明：展开 ∂ 的交错和，利用面复合恒等式将各项分为三组：
+1. 内部面（同时在前 p+1 和后 q+1 中）——成对消去
+2. 前 p+1 面——恰好组成 ∂c₁ ∪ c₂
+3. 后 q+1 面——符号配对后组成 (-1)^{p+1} c₁ ∪ ∂c₂
+
+当前 Lean 证明需要 `finSum` 重参数化的一般理论（任意相邻交换），
+暂留为后续工作；0-形式情形（p=0）已由 `coboundary_d0` 间接覆盖。 -/
+-- theorem coboundary_cup_product ... (deferred)
+
+end CupProduct
+
 end SDG.DifferentialForms
