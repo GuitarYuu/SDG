@@ -1446,6 +1446,48 @@ theorem coboundary_d0 {R : Type u} [CommRing R] {X : Type u}
   simp only [neg_mul, add_zero]
   ring
 
+/-! ## 余边界的加法与数乘线性 -/
+
+/-- 余边界是加法同态。 -/
+lemma coboundary_add {R : Type u} [CommRing R] {X : Type u} {n : ℕ}
+    (c₁ c₂ : Cochain R X n) :
+    coboundary (c₁ + c₂) = coboundary c₁ + coboundary c₂ := by
+  funext σ
+  show finSum R (n + 2) (fun i ↦ (-1:R)^(i:ℕ) * ((c₁ + c₂) (coFace σ i))) = _
+  simp only [Pi.add_apply, mul_add]
+  exact finSum_add R _ _ _
+
+/-- 余边界是数乘同态。 -/
+lemma coboundary_smul {R : Type u} [CommRing R] {X : Type u} {n : ℕ}
+    (a : R) (c : Cochain R X n) :
+    coboundary (a • c) = a • coboundary c := by
+  funext σ
+  show finSum R (n + 2) (fun i ↦ (-1:R)^(i:ℕ) * ((a • c) (coFace σ i))) = _
+  simp only [Pi.smul_apply, smul_eq_mul, mul_left_comm]
+  exact finSum_mul_left R _ _ _
+
+/-- 余边界的取负。 -/
+lemma coboundary_neg {R : Type u} [CommRing R] {X : Type u} {n : ℕ}
+    (c : Cochain R X n) :
+    coboundary (-c) = -coboundary c := by
+  have h : (-c : Cochain R X n) = (-1 : R) • c := by
+    funext x; simp [neg_smul, one_smul]
+  rw [h, coboundary_smul]
+  simp [neg_smul, one_smul]
+
+/-- 映射 `f : X → Y` 对上链的拉回。 -/
+def cochainPullback {R : Type u} [CommRing R] {X Y : Type u} {n : ℕ}
+    (h : X → Y) (c : Cochain R Y n) : Cochain R X n :=
+  fun σ ↦ c (fun k ↦ h (σ k))
+
+/-- **拉回自然性**：`∂(f⁎c) = f⁎(∂c)`。 -/
+theorem coboundary_pullback {R : Type u} [CommRing R] {X Y : Type u} {n : ℕ}
+    (h : X → Y) (c : Cochain R Y n) :
+    coboundary (cochainPullback h c) = cochainPullback h (coboundary c) := by
+  funext σ
+  unfold coboundary cochainPullback
+  rfl
+
 end DeRham
 
 end SDG.DifferentialForms
