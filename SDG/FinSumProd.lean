@@ -158,6 +158,15 @@ lemma finSum_eq_single (R : Type u) [AddCommMonoid R] {n : ℕ} (k : Fin n) (a :
           exact congrArg (fun φ : Fin n → R ↦ finSum R n φ) (funext hij)]
         simpa using ih j a
 
+/-- 逐项相等则和相等。 -/
+lemma finSum_congr (R : Type u) [AddCommMonoid R] {n : ℕ} {f g : Fin n → R}
+    (h : ∀ i, f i = g i) : finSum R n f = finSum R n g := by
+  induction n with
+  | zero => rfl
+  | succ m ih =>
+      rw [finSum_succ, finSum_succ]
+      rw [h (0 : Fin (m + 1)), ih (fun i ↦ h i.succ)]
+
 /-- 加法同态穿过求和：$g\,(\mathrm{finSum}\ f) = \mathrm{finSum}\ (g \circ f)$。 -/
 lemma map_finSum (A B : Type u) [AddCommMonoid A] [AddCommMonoid B]
     (g : A →+ B) (n : ℕ) (f : Fin n → A) :
