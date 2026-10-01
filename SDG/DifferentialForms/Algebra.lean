@@ -1236,34 +1236,34 @@ section SwapFinAdj
 variable {R : Type u} [AddCommMonoid R]
 
 /-- 交换 `Fin (n+2)` 中位置 `j` 与 `j+1` 的构造性自映射。 -/
-def swapFinAdj {n : ℕ} (j : Fin (n + 1)) (a : Fin (n + 2)) : Fin (n + 2) :=
-  if (a : ℕ) = (j : ℕ) then ⟨(j : ℕ) + 1, Nat.succ_lt_succ j.isLt⟩
-  else if (a : ℕ) = (j : ℕ) + 1 then ⟨(j : ℕ), Nat.lt_succ_of_lt j.isLt⟩
+def swapFinAdj {n : ℕ} (j : Fin n) (a : Fin (n + 1)) : Fin (n + 1) :=
+  if (a : ℕ) = (j : ℕ) then ⟨(j : ℕ) + 1, by have := j.isLt; omega⟩
+  else if (a : ℕ) = (j : ℕ) + 1 then ⟨(j : ℕ), by have := j.isLt; omega⟩
   else a
 
-lemma swapFinAdj_eq {n : ℕ} {j : Fin (n + 1)} {a : Fin (n + 2)} (h : (a : ℕ) = (j : ℕ)) :
-    swapFinAdj j a = ⟨(j : ℕ) + 1, Nat.succ_lt_succ j.isLt⟩ := if_pos h
+lemma swapFinAdj_eq {n : ℕ} {j : Fin n} {a : Fin (n + 1)} (h : (a : ℕ) = (j : ℕ)) :
+    swapFinAdj j a = ⟨(j : ℕ) + 1, by have := j.isLt; omega⟩ := if_pos h
 
-lemma swapFinAdj_eq_one {n : ℕ} {j : Fin (n + 1)} {a : Fin (n + 2)}
+lemma swapFinAdj_eq_one {n : ℕ} {j : Fin n} {a : Fin (n + 1)}
     (h : (a : ℕ) = (j : ℕ) + 1) :
-    swapFinAdj j a = ⟨(j : ℕ), Nat.lt_succ_of_lt j.isLt⟩ := by
+    swapFinAdj j a = ⟨(j : ℕ), by have := j.isLt; omega⟩ := by
   rw [swapFinAdj, if_neg (show (a : ℕ) ≠ (j : ℕ) by omega), if_pos h]
 
-lemma swapFinAdj_of_ne {n : ℕ} {j : Fin (n + 1)} {a : Fin (n + 2)}
+lemma swapFinAdj_of_ne {n : ℕ} {j : Fin n} {a : Fin (n + 1)}
     (h₁ : (a : ℕ) ≠ (j : ℕ)) (h₂ : (a : ℕ) ≠ (j : ℕ) + 1) :
     swapFinAdj j a = a := by
   rw [swapFinAdj, if_neg h₁, if_neg h₂]
 
-lemma swapFinAdj_of_lt {n : ℕ} {j : Fin (n + 1)} {a : Fin (n + 2)}
+lemma swapFinAdj_of_lt {n : ℕ} {j : Fin n} {a : Fin (n + 1)}
     (h : (a : ℕ) < (j : ℕ)) : swapFinAdj j a = a :=
   swapFinAdj_of_ne (by omega) (by omega)
 
-lemma swapFinAdj_of_gt {n : ℕ} {j : Fin (n + 1)} {a : Fin (n + 2)}
+lemma swapFinAdj_of_gt {n : ℕ} {j : Fin n} {a : Fin (n + 1)}
     (h : (a : ℕ) > (j : ℕ) + 1) : swapFinAdj j a = a :=
   swapFinAdj_of_ne (by omega) (by omega)
 
-lemma swapFinAdj_val {n : ℕ} (j : Fin (n + 1)) (a : Fin (n + 2)) :
-    ((swapFinAdj j a : Fin (n + 2)) : ℕ) =
+lemma swapFinAdj_val {n : ℕ} (j : Fin n) (a : Fin (n + 1)) :
+    ((swapFinAdj j a : Fin (n + 1)) : ℕ) =
       if (a : ℕ) = (j : ℕ) then (j : ℕ) + 1
       else if (a : ℕ) = (j : ℕ) + 1 then (j : ℕ) else (a : ℕ) := by
   by_cases h₁ : (a : ℕ) = (j : ℕ)
@@ -1272,32 +1272,32 @@ lemma swapFinAdj_val {n : ℕ} (j : Fin (n + 1)) (a : Fin (n + 2)) :
     · rw [swapFinAdj_eq_one h₂, if_neg h₁, if_pos h₂]
     · rw [swapFinAdj_of_ne h₁ h₂, if_neg h₁, if_neg h₂]
 
-lemma swapFinAdj_self {n : ℕ} (j : Fin (n + 1)) (a : Fin (n + 2)) :
+lemma swapFinAdj_self {n : ℕ} (j : Fin n) (a : Fin (n + 1)) :
     swapFinAdj j (swapFinAdj j a) = a := by
   apply Fin.ext
   by_cases h₁ : (a : ℕ) = (j : ℕ)
-  · have hval : ((swapFinAdj j a : Fin (n + 2)) : ℕ) = (j : ℕ) + 1 := by
+  · have hval : ((swapFinAdj j a : Fin (n + 1)) : ℕ) = (j : ℕ) + 1 := by
       rw [swapFinAdj_val, if_pos h₁]
     rw [swapFinAdj_val, hval, if_neg (by omega), if_pos rfl]
     omega
   · by_cases h₂ : (a : ℕ) = (j : ℕ) + 1
-    · have hval : ((swapFinAdj j a : Fin (n + 2)) : ℕ) = (j : ℕ) := by
+    · have hval : ((swapFinAdj j a : Fin (n + 1)) : ℕ) = (j : ℕ) := by
         rw [swapFinAdj_val, if_neg h₁, if_pos h₂]
       rw [swapFinAdj_val, hval, if_pos (by omega)]
       omega
-    · have hval : ((swapFinAdj j a : Fin (n + 2)) : ℕ) = (a : ℕ) := by
+    · have hval : ((swapFinAdj j a : Fin (n + 1)) : ℕ) = (a : ℕ) := by
         rw [swapFinAdj_val, if_neg h₁, if_neg h₂]
       rw [swapFinAdj_val, hval, if_neg (by omega), if_neg (by omega)]
 
-/-- 相邻对换与后继交换：在 `Fin (n+3)` 中对换位置 `j+1, j+2`，等价于先在
-`Fin (n+2)` 中对换 `j, j+1` 再整体后移一格。 -/
-lemma swapFinAdj_succ {n : ℕ} (j : Fin (n + 1)) (i : Fin (n + 2)) :
+/-- 相邻对换与后继交换：在 `Fin (n+2)` 中对换位置 `j+1, j+2`，等价于先在
+`Fin (n+1)` 中对换 `j, j+1` 再整体后移一格。 -/
+lemma swapFinAdj_succ {n : ℕ} (j : Fin n) (i : Fin (n + 1)) :
     swapFinAdj (j.succ) (i.succ) = (swapFinAdj j i).succ := by
   apply Fin.ext
-  have hjv : ((j.succ : Fin (n + 2)) : ℕ) = (j : ℕ) + 1 := rfl
-  have hiv : ((i.succ : Fin (n + 3)) : ℕ) = (i : ℕ) + 1 := rfl
-  have hs : (((swapFinAdj j i).succ : Fin (n + 3)) : ℕ)
-      = ((swapFinAdj j i : Fin (n + 2)) : ℕ) + 1 := rfl
+  have hjv : ((j.succ : Fin (n + 1)) : ℕ) = (j : ℕ) + 1 := rfl
+  have hiv : ((i.succ : Fin (n + 2)) : ℕ) = (i : ℕ) + 1 := rfl
+  have hs : (((swapFinAdj j i).succ : Fin (n + 2)) : ℕ)
+      = ((swapFinAdj j i : Fin (n + 1)) : ℕ) + 1 := rfl
   rw [swapFinAdj_val, hiv, hjv, hs, swapFinAdj_val]
   by_cases h₁ : (i : ℕ) = (j : ℕ)
   · rw [h₁, if_pos rfl, if_pos rfl]
@@ -1333,39 +1333,36 @@ lemma finSum_swapFinAdj_zero {n : ℕ} (f : Fin (n + 2) → R) :
 
 /-- **`finSum` 在相邻对换下不变**：对任意位置 `j`（交换 `j, j+1` 两项），
 无选择求和保持不变。 -/
-lemma finSum_swapFinAdj : ∀ (n : ℕ) (f : Fin (n + 2) → R) (j : Fin (n + 1)),
-    finSum R (n + 2) f = finSum R (n + 2) (fun a ↦ f (swapFinAdj j a))
-  | 0, f, j => by
-      have hj : j = (0 : Fin 1) := Fin.ext (by have := j.isLt; omega)
-      subst hj
-      exact finSum_swapFinAdj_zero f
+lemma finSum_swapFinAdj : ∀ (n : ℕ) (f : Fin (n + 1) → R) (j : Fin n),
+    finSum R (n + 1) f = finSum R (n + 1) (fun a ↦ f (swapFinAdj j a))
+  | 0, f, j => j.elim0
   | n + 1, f, j => by
       by_cases h0 : (j : ℕ) = 0
-      · have hfun : swapFinAdj j = swapFinAdj (0 : Fin (n + 2)) := by
+      · have hfun : swapFinAdj j = swapFinAdj (0 : Fin (n + 1)) := by
           funext a
           apply Fin.ext
           rw [swapFinAdj_val, swapFinAdj_val]
-          have hv0 : ((0 : Fin (n + 2)) : ℕ) = 0 := rfl
+          have hv0 : ((0 : Fin (n + 1)) : ℕ) = 0 := rfl
           rw [hv0, h0]
         rw [hfun]
         exact finSum_swapFinAdj_zero f
-      · obtain ⟨j', rfl⟩ : ∃ k : Fin (n + 1), j = k.succ :=
+      · obtain ⟨j', rfl⟩ : ∃ k : Fin n, j = k.succ :=
             ⟨⟨(j : ℕ) - 1, by have := j.isLt; omega⟩, by
               apply Fin.ext
               simp only [Fin.val_succ]
               omega⟩
-        rw [finSum_succ (R := R) (n := n + 2) (f := f),
-            finSum_succ (R := R) (n := n + 2)
-              (f := fun a : Fin (n + 3) ↦ f (swapFinAdj j'.succ a))]
-        have hhead : swapFinAdj j'.succ (0 : Fin (n + 3)) = (0 : Fin (n + 3)) :=
+        have hhead : swapFinAdj j'.succ (0 : Fin (n + 2)) = (0 : Fin (n + 2)) :=
           swapFinAdj_of_ne (by simp only [Fin.val_zero, Fin.val_succ]; omega)
             (by simp only [Fin.val_zero, Fin.val_succ]; omega)
-        rw [hhead]
-        rw [show (fun i : Fin (n + 2) ↦ f (swapFinAdj j'.succ i.succ)) =
-            (fun i : Fin (n + 2) ↦ f ((swapFinAdj j' i).succ)) from by
-          funext i
-          exact congrArg f (swapFinAdj_succ j' i)]
-        rw [finSum_swapFinAdj n (fun i : Fin (n + 2) ↦ f i.succ) j']
+        rw [finSum_succ (R := R) (n := n + 1) (f := f),
+            finSum_succ (R := R) (n := n + 1)
+              (f := fun a : Fin (n + 2) ↦ f (swapFinAdj j'.succ a)),
+            hhead,
+            show (fun i : Fin (n + 1) ↦ f (swapFinAdj j'.succ i.succ)) =
+              (fun i : Fin (n + 1) ↦ f ((swapFinAdj j' i).succ)) from by
+              funext i
+              exact congrArg f (swapFinAdj_succ j' i),
+            finSum_swapFinAdj n (fun i : Fin (n + 1) ↦ f i.succ) j']
 
 end SwapFinAdj
 
@@ -1375,30 +1372,534 @@ section WedgeOneAny
 
 variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
 
+/-- `1 ∧ n` 楔积展开式的第 `i` 项：`(-1)ⁱ · ω(vᵢ) · η(v₀,…,v̂ᵢ,…,vₙ)`。 -/
+def wedgeOneAnyTerm {n : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
+    (v : Fin (n + 1) → TangentFiber R X x) (i : Fin (n + 1)) : R :=
+  (-1 : R) ^ (i : ℕ) * FiberwiseDifferentialForm.oneArg ω (v i) * η (i.removeNth v)
+
+@[simp]
+lemma wedgeOneAnyTerm_apply {n : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
+    (v : Fin (n + 1) → TangentFiber R X x) (i : Fin (n + 1)) :
+    wedgeOneAnyTerm ω η v i =
+      (-1 : R) ^ (i : ℕ) * FiberwiseDifferentialForm.oneArg ω (v i) * η (i.removeNth v) := rfl
+
 /-- `1 ∧ n` 楔积的原始函数。
 
 Kock I.14 (14.7) 公式：
 `(ω ∧ η)(v₀,…,vₙ) = Σᵢ₌₀ⁿ (-1)ⁱ · ω(vᵢ) · η(v₀,…,v̂ᵢ,…,vₙ)`
 
-其中 `v̂ᵢ` 表示用 `Fin.removeNth` 删除第 `i` 个分量。
-此函数尚未打包为 `AlternatingMap`（交错性证明需要 η 的置换变号理论，
-留作后续工作）；但公式本身已完整定义且无选择公理。 -/
+其中 `v̂ᵢ` 表示用 `Fin.removeNth` 删除第 `i` 个分量。 -/
 def wedgeOneAnyFun {n : ℕ} {x : X}
     (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
     (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
     (v : Fin (n + 1) → TangentFiber R X x) : R :=
-  finSum R (n + 1) (fun i : Fin (n + 1) ↦
-    (-1 : R) ^ (i : ℕ) * FiberwiseDifferentialForm.oneArg ω (v i) * η (i.removeNth v))
+  finSum R (n + 1) (wedgeOneAnyTerm ω η v)
 
 lemma wedgeOneAnyFun_eq {n : ℕ} {x : X}
     (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
     (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
     (v : Fin (n + 1) → TangentFiber R X x) :
-    wedgeOneAnyFun ω η v =
-      finSum R (n + 1) (fun i : Fin (n + 1) ↦
-        (-1 : R) ^ (i : ℕ) * FiberwiseDifferentialForm.oneArg ω (v i) * η (i.removeNth v)) := rfl
+    wedgeOneAnyFun ω η v = finSum R (n + 1) (wedgeOneAnyTerm ω η v) := rfl
 
 end WedgeOneAny
+
+/-! ## 一般 `1 ∧ n` 楔积：交错性的无选择证明
+
+方法：`1 ∧ n` 展开式的逐项配对。相邻对换反交换中，`i ∉ {j, j+1}` 的项由
+η 的对换变号承担（自证极化恒等式，避开 Mathlib `map_swap` 的经典依赖），
+`i ∈ {j, j+1}` 的项由 `(-1)ⁱ` 的错位承担；求和经 `finSum_swapFinAdj` 重排。
+任意两槽相等的消去经冒泡归纳化归到相邻情形，配对消去对任意特征成立。 -/
+
+section WedgeOneAnyGen
+
+variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
+
+/-! ### ℕ-下标的相邻对换与交错形式的变号 -/
+
+/-- 交换 `Fin L` 中位置 `t` 与 `t+1`（ℕ-下标版，`t+1 < L`）。 -/
+def swapFinAdj' (L t : ℕ) (ht : t + 1 < L) : Fin L → Fin L :=
+  fun a => if (a : ℕ) = t then ⟨t + 1, by omega⟩
+    else if (a : ℕ) = t + 1 then ⟨t, by omega⟩ else a
+
+lemma swapFinAdj'_val {L t : ℕ} (ht : t + 1 < L) (a : Fin L) :
+    ((swapFinAdj' L t ht a : Fin L) : ℕ) =
+      if (a : ℕ) = t then t + 1 else if (a : ℕ) = t + 1 then t else (a : ℕ) := by
+  by_cases h₁ : (a : ℕ) = t
+  · rw [swapFinAdj', if_pos h₁, if_pos h₁]
+  · by_cases h₂ : (a : ℕ) = t + 1
+    · rw [swapFinAdj', if_neg h₁, if_pos h₂, if_neg h₁, if_pos h₂]
+    · rw [swapFinAdj', if_neg h₁, if_neg h₂, if_neg h₁, if_neg h₂]
+
+lemma swapFinAdj'_of_ne {L t : ℕ} (ht : t + 1 < L) {a : Fin L} (h₁ : (a : ℕ) ≠ t)
+    (h₂ : (a : ℕ) ≠ t + 1) : swapFinAdj' L t ht a = a := by
+  rw [swapFinAdj', if_neg h₁, if_neg h₂]
+
+/-- 交错形式的相邻对换变号（极化恒等式，构造性，无选择公理）：
+`η` 在位置 `t, t+1` 的对换下变号。对半幺环 `M` 即可（无需减法）。 -/
+lemma alternatingMap_swapFinAdj' {R : Type u} [CommRing R] {M : Type u} [AddCommMonoid M]
+    [Module R M] {L : ℕ} (η : M [⋀^Fin L]→ₗ[R] R) (t : ℕ) (ht : t + 1 < L)
+    (w : Fin L → M) :
+    η (w ∘ swapFinAdj' L t ht) = -η w := by
+  set p : Fin L := ⟨t, by have := ht; omega⟩ with hp_def
+  set q : Fin L := ⟨t + 1, by have := ht; omega⟩ with hq_def
+  have hpv : (p : ℕ) = t := rfl
+  have hqv : (q : ℕ) = t + 1 := rfl
+  have hpq : p ≠ q := by
+    intro hh
+    have hval : (p : ℕ) = (q : ℕ) := by rw [hh]
+    omega
+  have hswap_p : swapFinAdj' L t ht p = q := by rw [swapFinAdj', if_pos rfl]
+  have hswap_q : swapFinAdj' L t ht q = p := by rw [swapFinAdj', if_neg (by omega), if_pos rfl]
+  set S : M := w p + w q with hS
+  set u : Fin L → M := Function.update (Function.update w q S) p S with hu
+  have hup : u p = S := Function.update_self ..
+  have huq : u q = S := by
+    rw [hu, Function.update_of_ne (show (q : Fin L) ≠ p by
+      intro hh; exact hpq hh.symm), Function.update_self]
+  have h0 : η u = 0 := η.map_eq_zero_of_eq u (by rw [hup, huq]) hpq
+  -- 在槽 q 拆分
+  have huq' : u = Function.update u q S := by
+    funext k
+    by_cases hk : k = q
+    · subst hk; rw [huq, Function.update_self]
+    · rw [Function.update_of_ne hk]
+  have hid : ∀ Y : M, Function.update (Function.update u q (w p + w q)) q Y
+      = Function.update u q Y := by
+    intro Y
+    funext k
+    rw [hu]
+    simp only [Function.update_apply]
+    by_cases hk : k = q
+    · subst hk; simp
+    · simp [hk]
+  have huq'' : η u = η (Function.update u q (w p)) + η (Function.update u q (w q)) := by
+    rw [huq', hS, η.map_update_add, congrArg η (hid (w p)), congrArg η (hid (w q))]
+  -- 两个半向量在槽 p 拆分（函数等式逐点验证，避免 rw 全局替换污染右侧）
+  have heqP : Function.update u q (w p) = Function.update
+      (Function.update u q (w p)) p (w p + w q) := by
+    funext k
+    by_cases hk : k = p
+    · subst hk
+      rw [Function.update_of_ne hpq, hup, hS, Function.update_self]
+    · by_cases hk2 : k = q
+      · subst hk2
+        rw [Function.update_self, Function.update_of_ne hpq.symm, Function.update_self]
+      · rw [Function.update_of_ne hk2, Function.update_of_ne hk,
+          Function.update_of_ne hk2]
+  have heqQ : Function.update u q (w q) = Function.update
+      (Function.update u q (w q)) p (w p + w q) := by
+    funext k
+    by_cases hk : k = p
+    · subst hk
+      rw [Function.update_of_ne hpq, hup, hS, Function.update_self]
+    · by_cases hk2 : k = q
+      · subst hk2
+        rw [Function.update_self, Function.update_of_ne hpq.symm, Function.update_self]
+      · rw [Function.update_of_ne hk2, Function.update_of_ne hk,
+          Function.update_of_ne hk2]
+  have hPsplit : η (Function.update u q (w p))
+      = η (Function.update (Function.update u q (w p)) p (w p))
+      + η (Function.update (Function.update u q (w p)) p (w q)) := by
+    conv_lhs => rw [heqP]
+    rw [η.map_update_add]
+  have hQsplit : η (Function.update u q (w q))
+      = η (Function.update (Function.update u q (w q)) p (w p))
+      + η (Function.update (Function.update u q (w q)) p (w q)) := by
+    conv_lhs => rw [heqQ]
+    rw [η.map_update_add]
+  -- 对角块为零（p, q 两槽同值）
+  have hdiag1 : η (Function.update (Function.update u q (w p)) p (w p)) = 0 := by
+    refine η.map_eq_zero_of_eq _ ?_ hpq
+    rw [Function.update_self, Function.update_of_ne hpq.symm, Function.update_self]
+  have hdiag2 : η (Function.update (Function.update u q (w q)) p (w q)) = 0 := by
+    refine η.map_eq_zero_of_eq _ ?_ hpq
+    rw [Function.update_self, Function.update_of_ne hpq.symm, Function.update_self]
+  -- 识别两个非对角块：交换后的 w 与 w 本身
+  have hident_swap : Function.update (Function.update u q (w p)) p (w q)
+      = w ∘ swapFinAdj' L t ht := by
+    funext k
+    rw [Function.comp_apply]
+    by_cases hk : k = p
+    · subst hk
+      rw [Function.update_self, hswap_p]
+    · by_cases hk2 : k = q
+      · subst hk2
+        rw [Function.update_of_ne hpq.symm, Function.update_self, hswap_q]
+      · rw [Function.update_of_ne hk, Function.update_of_ne hk2, hu,
+          Function.update_of_ne hk, Function.update_of_ne hk2,
+          swapFinAdj'_of_ne ht (show (k : ℕ) ≠ t by
+            intro hval; exact hk (Fin.ext (by have := hpv; omega))) (show (k : ℕ) ≠ t + 1 by
+            intro hval; exact hk2 (Fin.ext (by have := hqv; omega)))]
+  have hident_w : Function.update (Function.update u q (w q)) p (w p) = w := by
+    funext k
+    by_cases hk : k = p
+    · subst hk; rw [Function.update_self]
+    · by_cases hk2 : k = q
+      · subst hk2
+        rw [Function.update_of_ne hpq.symm, Function.update_self]
+      · rw [Function.update_of_ne hk, Function.update_of_ne hk2, hu,
+          Function.update_of_ne hk, Function.update_of_ne hk2]
+  -- 汇总：0 = ηu = (0 + ηswap) + (ηw + 0)
+  have e1 : η u = η (Function.update u q (w p)) + η (Function.update u q (w q)) := huq''
+  have e2 : η (Function.update u q (w p))
+      = η (w ∘ swapFinAdj' L t ht) := by rw [hPsplit, hdiag1, zero_add, hident_swap]
+  have e3 : η (Function.update u q (w q)) = η w := by
+    rw [hQsplit, hdiag2, add_zero, hident_w]
+  have e5 : (0 : R) = η (w ∘ swapFinAdj' L t ht) + η w := by
+    rw [← h0, e1, e2, e3]
+  exact eq_neg_of_add_eq_zero_left e5.symm
+
+/-! ### `removeNth` 与相邻对换的交换关系 -/
+
+/-- `Fin.succAbove` 的值公式。 -/
+lemma succAbove_val {n : ℕ} (i : Fin (n + 1)) (b : Fin n) :
+    ((i.succAbove b : Fin (n + 1)) : ℕ) =
+      if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1 := by
+  rw [Fin.succAbove]
+  by_cases h : (Fin.castSucc b : Fin (n + 1)) < i
+  · rw [if_pos h, if_pos (by rw [Fin.lt_def, Fin.val_castSucc] at h; exact h),
+      Fin.val_castSucc]
+  · rw [if_neg h, if_neg (by rw [Fin.lt_def, Fin.val_castSucc] at h; omega),
+      Fin.val_succ]
+
+/-- `a.succAbove` 的逆向：`x ≠ a` 时存在原像。 -/
+lemma exists_succAbove_eq {n : ℕ} {a x : Fin (n + 1)} (h : x ≠ a) :
+    ∃ p : Fin n, a.succAbove p = x := by
+  rcases Nat.lt_or_ge ((x : ℕ)) ((a : ℕ)) with hlt | hge
+  · refine ⟨⟨(x : ℕ), by have := x.isLt; omega⟩, ?_⟩
+    rw [Fin.succAbove, if_pos (by rw [Fin.lt_def, Fin.val_castSucc]; exact hlt)]
+    exact Fin.ext rfl
+  · refine ⟨⟨(x : ℕ) - 1, by have := x.isLt; have := a.isLt; omega⟩, ?_⟩
+    rw [Fin.succAbove, if_neg (by
+      rw [Fin.lt_def, Fin.val_castSucc]
+      have hval : ((⟨(x : ℕ) - 1, by have := x.isLt; have := a.isLt; omega⟩ : Fin n) : ℕ)
+          = (x : ℕ) - 1 := rfl
+      rw [hval]
+      omega)]
+    exact Fin.ext (by show (x : ℕ) - 1 + 1 = (x : ℕ); omega)
+
+/-- `i < j`：删除第 `i` 个分量后，`Fin (n+1)` 上的相邻对换 `swapFinAdj j`
+左移为 `Fin n` 上的 `swapFinAdj' n (j-1)`。 -/
+lemma removeNth_swapFinAdj_lt {n : ℕ} {T : Type u} {i : Fin (n + 1)} {j : Fin n}
+    (h : (i : ℕ) < (j : ℕ)) (v : Fin (n + 1) → T) :
+    i.removeNth (fun a : Fin (n + 1) ↦ v (swapFinAdj j a)) =
+      (i.removeNth v) ∘ swapFinAdj' n (j - 1) (by have := j.isLt; omega) := by
+  have hj : (j : ℕ) - 1 + 1 < n := by have := j.isLt; omega
+  funext b
+  simp only [Fin.removeNth_apply, Function.comp_apply]
+  have hfin : swapFinAdj j (i.succAbove b) = i.succAbove (swapFinAdj' n (j - 1) hj b) := by
+    apply Fin.ext
+    have q1 : ((swapFinAdj j (i.succAbove b) : Fin (n + 1)) : ℕ)
+        = if (if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1) = (j : ℕ) then (j : ℕ) + 1
+          else if (if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1) = (j : ℕ) + 1
+          then (j : ℕ)
+          else if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1 := by
+      rw [swapFinAdj_val, succAbove_val]
+    have q3 : ((i.succAbove (swapFinAdj' n (j - 1) hj b) : Fin (n + 1)) : ℕ) =
+        if (if (b : ℕ) = (j : ℕ) - 1 then (j : ℕ) - 1 + 1
+            else if (b : ℕ) = (j : ℕ) - 1 + 1 then (j : ℕ) - 1 else (b : ℕ)) < (i : ℕ) then
+          (if (b : ℕ) = (j : ℕ) - 1 then (j : ℕ) - 1 + 1
+            else if (b : ℕ) = (j : ℕ) - 1 + 1 then (j : ℕ) - 1 else (b : ℕ))
+        else (if (b : ℕ) = (j : ℕ) - 1 then (j : ℕ) - 1 + 1
+            else if (b : ℕ) = (j : ℕ) - 1 + 1 then (j : ℕ) - 1 else (b : ℕ)) + 1 := by
+      rw [succAbove_val, swapFinAdj'_val hj]
+    rw [q1, q3]
+    split_ifs <;> omega
+  rw [hfin]
+
+/-- `i > j + 1`：删除第 `i` 个分量后，相邻对换 `swapFinAdj j` 不移位，
+仍为 `Fin n` 上的 `swapFinAdj' n j`。 -/
+lemma removeNth_swapFinAdj_gt {n : ℕ} {T : Type u} {i : Fin (n + 1)} {j : Fin n}
+    (h : (i : ℕ) > (j : ℕ) + 1) (v : Fin (n + 1) → T) :
+    i.removeNth (fun a : Fin (n + 1) ↦ v (swapFinAdj j a)) =
+      (i.removeNth v) ∘ swapFinAdj' n j (by have := j.isLt; omega) := by
+  have hj : (j : ℕ) + 1 < n := by have := j.isLt; have := i.isLt; omega
+  funext b
+  simp only [Fin.removeNth_apply, Function.comp_apply]
+  have hfin : swapFinAdj j (i.succAbove b) = i.succAbove (swapFinAdj' n j hj b) := by
+    apply Fin.ext
+    have q1 : ((swapFinAdj j (i.succAbove b) : Fin (n + 1)) : ℕ)
+        = if (if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1) = (j : ℕ) then (j : ℕ) + 1
+          else if (if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1) = (j : ℕ) + 1
+          then (j : ℕ)
+          else if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1 := by
+      rw [swapFinAdj_val, succAbove_val]
+    have q3 : ((i.succAbove (swapFinAdj' n j hj b) : Fin (n + 1)) : ℕ) =
+        if (if (b : ℕ) = (j : ℕ) then (j : ℕ) + 1
+            else if (b : ℕ) = (j : ℕ) + 1 then (j : ℕ) else (b : ℕ)) < (i : ℕ) then
+          (if (b : ℕ) = (j : ℕ) then (j : ℕ) + 1
+            else if (b : ℕ) = (j : ℕ) + 1 then (j : ℕ) else (b : ℕ))
+        else (if (b : ℕ) = (j : ℕ) then (j : ℕ) + 1
+            else if (b : ℕ) = (j : ℕ) + 1 then (j : ℕ) else (b : ℕ)) + 1 := by
+      rw [succAbove_val, swapFinAdj'_val hj]
+    rw [q1, q3]
+    split_ifs <;> omega
+  rw [hfin]
+
+/-- `i ∈ {j, j+1}`：删除被对换的分量后，相邻对换被完全吸收：
+`i.removeNth (v ∘ swapFinAdj j) = (swapFinAdj j i).removeNth v`。 -/
+lemma removeNth_swapFinAdj_pivot {n : ℕ} {T : Type u} {i : Fin (n + 1)} {j : Fin n}
+    (h : (i : ℕ) = (j : ℕ) ∨ (i : ℕ) = (j : ℕ) + 1) (v : Fin (n + 1) → T) :
+    i.removeNth (fun a : Fin (n + 1) ↦ v (swapFinAdj j a)) =
+      (swapFinAdj j i).removeNth v := by
+  funext b
+  simp only [Fin.removeNth_apply]
+  rcases h with h | h
+  · have hv : ((swapFinAdj j i : Fin (n + 1)) : ℕ) = (j : ℕ) + 1 := by
+      rw [swapFinAdj_val, if_pos h]
+    have hfin : swapFinAdj j (i.succAbove b) = (swapFinAdj j i).succAbove b := by
+      apply Fin.ext
+      have q1 : ((swapFinAdj j (i.succAbove b) : Fin (n + 1)) : ℕ)
+          = if (if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1) = (j : ℕ)
+            then (j : ℕ) + 1
+            else if (if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1) = (j : ℕ) + 1
+            then (j : ℕ)
+            else if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1 := by
+        rw [swapFinAdj_val, succAbove_val]
+      have q3 : (((swapFinAdj j i).succAbove b : Fin (n + 1)) : ℕ) =
+          if (b : ℕ) < (j : ℕ) + 1 then (b : ℕ) else (b : ℕ) + 1 := by
+        rw [succAbove_val, hv]
+      rw [q1, q3]
+      split_ifs <;> omega
+    rw [hfin]
+  · have hv : ((swapFinAdj j i : Fin (n + 1)) : ℕ) = (j : ℕ) := by
+      rw [swapFinAdj_val, if_neg (by omega : (i : ℕ) ≠ (j : ℕ)), if_pos h]
+    have hfin : swapFinAdj j (i.succAbove b) = (swapFinAdj j i).succAbove b := by
+      apply Fin.ext
+      have q1 : ((swapFinAdj j (i.succAbove b) : Fin (n + 1)) : ℕ)
+          = if (if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1) = (j : ℕ)
+            then (j : ℕ) + 1
+            else if (if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1) = (j : ℕ) + 1
+            then (j : ℕ)
+            else if (b : ℕ) < (i : ℕ) then (b : ℕ) else (b : ℕ) + 1 := by
+        rw [swapFinAdj_val, succAbove_val]
+      have q3 : (((swapFinAdj j i).succAbove b : Fin (n + 1)) : ℕ) =
+          if (b : ℕ) < (j : ℕ) then (b : ℕ) else (b : ℕ) + 1 := by
+        rw [succAbove_val, hv]
+      rw [q1, q3]
+      split_ifs <;> omega
+    rw [hfin]
+
+/-! ### 相邻对换的反交换 -/
+
+/-- **`1 ∧ n` 楔积的相邻对换反交换**：交换第 `j, j+1` 两个槽位，值变号。
+证明为逐项配对：`i ∉ {j, j+1}` 的项由 η 的对换变号承担，
+`i ∈ {j, j+1}` 的项由 `(-1)ⁱ` 的错位承担。 -/
+lemma wedgeOneAnyFun_swapFinAdj {n : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
+    (j : Fin n) (v : Fin (n + 1) → TangentFiber R X x) :
+    wedgeOneAnyFun ω η (fun a ↦ v (swapFinAdj j a)) = -(wedgeOneAnyFun ω η v) := by
+  have he1 : swapFinAdj j j.succ = j.castSucc := Eq.trans (swapFinAdj_eq_one rfl) rfl
+  have he2 : swapFinAdj j j.castSucc = j.succ := Eq.trans (swapFinAdj_eq rfl) rfl
+  have key : ∀ i : Fin (n + 1),
+      wedgeOneAnyTerm ω η (fun a ↦ v (swapFinAdj j a)) i =
+        -wedgeOneAnyTerm ω η v (swapFinAdj j i) := by
+    intro i
+    show (-1 : R) ^ (i : ℕ) * FiberwiseDifferentialForm.oneArg ω (v (swapFinAdj j i)) *
+        η (i.removeNth (fun a : Fin (n + 1) ↦ v (swapFinAdj j a))) =
+      -((-1 : R) ^ ((swapFinAdj j i : Fin (n + 1)) : ℕ) *
+        FiberwiseDifferentialForm.oneArg ω (v (swapFinAdj j i)) *
+        η ((swapFinAdj j i).removeNth v))
+    rcases Nat.lt_trichotomy ((i : ℕ)) ((j : ℕ)) with hlt | he | hgt
+    · rw [swapFinAdj_of_lt hlt]
+      have hη : η ((i : Fin (n + 1)).removeNth (fun a : Fin (n + 1) ↦ v (swapFinAdj j a)))
+          = -η ((i : Fin (n + 1)).removeNth v) := by
+        rw [removeNth_swapFinAdj_lt hlt v]
+        exact alternatingMap_swapFinAdj' η (j - 1) (by have := j.isLt; omega)
+          ((i : Fin (n + 1)).removeNth v)
+      rw [hη]
+      ring
+    · -- i = j（对换的对：(-1)ⁱ 错位承担变号）
+      have hi : i = j.castSucc := Fin.ext he
+      subst hi
+      have hη : η (j.castSucc.removeNth (fun a : Fin (n + 1) ↦ v (swapFinAdj j a)))
+          = η (j.succ.removeNth v) := by
+        rw [removeNth_swapFinAdj_pivot (Or.inl rfl) v, he2]
+      rw [hη, he2]
+      have hvs : ((j.succ : Fin (n + 1)) : ℕ) = (j : ℕ) + 1 := rfl
+      have hvc : ((j.castSucc : Fin (n + 1)) : ℕ) = (j : ℕ) := rfl
+      simp only [hvs, hvc]
+      rw [pow_succ]
+      ring
+    · by_cases h₂ : (i : ℕ) = (j : ℕ) + 1
+      · -- i = j + 1
+        have hi : i = j.succ := Fin.ext h₂
+        subst hi
+        have hη : η (j.succ.removeNth (fun a : Fin (n + 1) ↦ v (swapFinAdj j a)))
+            = η (j.castSucc.removeNth v) := by
+          rw [removeNth_swapFinAdj_pivot (Or.inr rfl) v, he1]
+        rw [hη, he1]
+        have hvs : ((j.succ : Fin (n + 1)) : ℕ) = (j : ℕ) + 1 := rfl
+        have hvc : ((j.castSucc : Fin (n + 1)) : ℕ) = (j : ℕ) := rfl
+        simp only [hvs, hvc]
+        rw [pow_succ]
+        ring
+      · -- i > j + 1
+        rw [swapFinAdj_of_gt (by omega)]
+        have hη : η ((i : Fin (n + 1)).removeNth (fun a : Fin (n + 1) ↦ v (swapFinAdj j a)))
+            = -η ((i : Fin (n + 1)).removeNth v) := by
+          rw [removeNth_swapFinAdj_gt (by omega) v]
+          exact alternatingMap_swapFinAdj' η j (by have := j.isLt; have := i.isLt; omega)
+            ((i : Fin (n + 1)).removeNth v)
+        rw [hη]
+        ring
+  calc wedgeOneAnyFun ω η (fun a ↦ v (swapFinAdj j a))
+      = finSum R (n + 1) (fun i ↦ -wedgeOneAnyTerm ω η v (swapFinAdj j i)) := by
+        rw [wedgeOneAnyFun_eq]
+        exact finSum_congr R key
+    _ = -finSum R (n + 1) (fun i ↦ wedgeOneAnyTerm ω η v (swapFinAdj j i)) := by
+        rw [finSum_neg]
+    _ = -finSum R (n + 1) (wedgeOneAnyTerm ω η v) := by
+        rw [finSum_swapFinAdj n (wedgeOneAnyTerm ω η v) j]
+    _ = -(wedgeOneAnyFun ω η v) := by
+        rw [wedgeOneAnyFun_eq]
+
+/-! ### 任意两槽相等则为零 -/
+
+/-- `a.succAbove` 单射。 -/
+lemma succAbove_right_injective' {n : ℕ} (a : Fin (n + 1)) :
+    Function.Injective a.succAbove := Fin.succAbove_right_injective
+
+/-- 相邻两槽相等则 `1 ∧ n` 楔积的原始函数为零（任意特征：非对换位置的项
+由尾部含相等分量逐项为零，对换位置的两项直接配对相消）。 -/
+lemma wedgeOneAnyFun_eq_zero_of_adjacent {n : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
+    (j : Fin n) (v : Fin (n + 1) → TangentFiber R X x)
+    (h : v j.castSucc = v j.succ) :
+    wedgeOneAnyFun ω η v = 0 := by
+  -- 其余位置的项：η 的尾部同时含相等分量，逐项为零
+  have hrest : ∀ a : Fin (n + 1), a ≠ j.castSucc → a ≠ j.succ →
+      wedgeOneAnyTerm ω η v a = 0 := by
+    intro a ha1 ha2
+    obtain ⟨p₁, hp₁⟩ := exists_succAbove_eq (Ne.symm ha1)
+    obtain ⟨p₂, hp₂⟩ := exists_succAbove_eq (Ne.symm ha2)
+    have hne : (a.removeNth v) p₁ = (a.removeNth v) p₂ := by
+      rw [Fin.removeNth_apply, Fin.removeNth_apply, hp₁, hp₂, h]
+    have hpne : p₁ ≠ p₂ := by
+      intro hh
+      rw [← hh] at hp₂
+      have hcon : (j.castSucc : Fin (n + 1)) = j.succ := hp₁.symm.trans hp₂
+      have hv1 : ((j.castSucc : Fin (n + 1)) : ℕ) = (j : ℕ) := rfl
+      have hv2 : ((j.succ : Fin (n + 1)) : ℕ) = (j : ℕ) + 1 := rfl
+      rw [hcon] at hv1
+      omega
+    have hη0 : η (a.removeNth v) = 0 :=
+      η.map_eq_zero_of_eq _ hne hpne
+    rw [wedgeOneAnyTerm_apply, hη0, mul_zero]
+  -- 拆出 j.castSucc 与 j.succ 两项
+  have hsx : (j.succ : Fin (n + 1)) ≠ j.castSucc := by
+    intro hh
+    have hv1 : ((j.castSucc : Fin (n + 1)) : ℕ) = (j : ℕ) := rfl
+    have hv2 : ((j.succ : Fin (n + 1)) : ℕ) = (j : ℕ) + 1 := rfl
+    rw [hh] at hv2
+    omega
+  have hrem : ∀ k : Fin (n + 1),
+      Function.update (Function.update (wedgeOneAnyTerm ω η v) j.castSucc 0) j.succ 0 k = 0 := by
+    intro k
+    by_cases h1 : k = j.castSucc
+    · rw [h1, Function.update_of_ne hsx.symm, Function.update_self]
+    · by_cases h2 : k = j.succ
+      · rw [h2, Function.update_self]
+      · rw [Function.update_of_ne h2, Function.update_of_ne h1, hrest k h1 h2]
+  rw [wedgeOneAnyFun_eq,
+    finSum_split_at R (wedgeOneAnyTerm ω η v) j.castSucc,
+    finSum_split_at R (Function.update (wedgeOneAnyTerm ω η v) j.castSucc 0) j.succ,
+    Function.update_of_ne hsx,
+    finSum_eq_zero R hrem, wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply, add_zero]
+  -- 尾部一致 + 配对相消（任意特征）
+  have htail : j.castSucc.removeNth v = j.succ.removeNth v := by
+    funext b
+    rw [Fin.removeNth_apply, Fin.removeNth_apply]
+    have hv1 : ((j.castSucc : Fin (n + 1)) : ℕ) = (j : ℕ) := rfl
+    have hv2 : ((j.succ : Fin (n + 1)) : ℕ) = (j : ℕ) + 1 := rfl
+    by_cases hb : (b : ℕ) < (j : ℕ)
+    · have e1 : j.castSucc.succAbove b = ⟨(b : ℕ), by have := b.isLt; omega⟩ :=
+        Fin.ext (by rw [succAbove_val, hv1, if_pos hb])
+      have e2 : j.succ.succAbove b = ⟨(b : ℕ), by have := b.isLt; omega⟩ :=
+        Fin.ext (by rw [succAbove_val, hv2, if_pos (by have := b.isLt; omega)])
+      rw [e1, e2]
+    · by_cases hb2 : (b : ℕ) = (j : ℕ)
+      · have e1 : j.castSucc.succAbove b = j.succ := by
+          apply Fin.ext
+          rw [succAbove_val, hv1, if_neg (by omega), hv2]
+          omega
+        have e2 : j.succ.succAbove b = j.castSucc := by
+          apply Fin.ext
+          rw [succAbove_val, hv2, if_pos (by omega), hv1]
+          omega
+        rw [e1, e2, h.symm]
+      · have e1 : j.castSucc.succAbove b = ⟨(b : ℕ) + 1, by
+          have := b.isLt; have := j.isLt; omega⟩ :=
+          Fin.ext (by rw [succAbove_val, hv1, if_neg (by have := b.isLt; omega)])
+        have e2 : j.succ.succAbove b = ⟨(b : ℕ) + 1, by
+          have := b.isLt; have := j.isLt; omega⟩ :=
+          Fin.ext (by rw [succAbove_val, hv2, if_neg (by have := b.isLt; omega)])
+        rw [e1, e2]
+  rw [htail, h]
+  have hv1 : ((j.castSucc : Fin (n + 1)) : ℕ) = (j : ℕ) := rfl
+  have hv2 : ((j.succ : Fin (n + 1)) : ℕ) = (j : ℕ) + 1 := rfl
+  rw [hv1, hv2, pow_succ]
+  ring
+
+/-- **`1 ∧ n` 楔积交错性**：任取两个不同槽位代入相同的切向量，值为零。
+冒泡归纳化归到相邻情形。 -/
+lemma wedgeOneAnyFun_eq_zero_of_eq {n : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
+    {i j : Fin (n + 1)} (v : Fin (n + 1) → TangentFiber R X x)
+    (h : v i = v j) (hij : i ≠ j) :
+    wedgeOneAnyFun ω η v = 0 := by
+  have aux : ∀ d : ℕ, ∀ w : Fin (n + 1) → TangentFiber R X x, ∀ i j : Fin (n + 1),
+      (j : ℕ) = (i : ℕ) + (d + 1) → w i = w j → wedgeOneAnyFun ω η w = 0 := by
+    intro d
+    induction d with
+    | zero =>
+        intro w i j hd he
+        obtain ⟨k, rfl⟩ : ∃ k : Fin n, i = k.castSucc :=
+          ⟨⟨(i : ℕ), by have := i.isLt; have := j.isLt; omega⟩, rfl⟩
+        have hcv : ((k.castSucc : Fin (n + 1)) : ℕ) = (k : ℕ) := rfl
+        have hjk : j = k.succ := Fin.ext (by
+          have hkv : ((k.succ : Fin (n + 1)) : ℕ) = (k : ℕ) + 1 := rfl
+          have := j.isLt
+          omega)
+        subst hjk
+        exact wedgeOneAnyFun_eq_zero_of_adjacent ω η k w he
+    | succ d ih =>
+        intro w i j hd he
+        have hin : (i : ℕ) < n := by have := i.isLt; have := j.isLt; omega
+        set t : Fin n := ⟨(j : ℕ) - 1, by have := j.isLt; omega⟩ with ht
+        have htv : (t : ℕ) = (j : ℕ) - 1 := rfl
+        have hmove : wedgeOneAnyFun ω η w
+            = -(wedgeOneAnyFun ω η (fun a ↦ w (swapFinAdj t a))) := by
+          rw [wedgeOneAnyFun_swapFinAdj ω η t w, neg_neg]
+        rw [hmove, neg_eq_zero]
+        have hwj : (fun a ↦ w (swapFinAdj t a)) i = w i := by
+          show w (swapFinAdj t i) = w i
+          rw [swapFinAdj_of_lt (show (i : ℕ) < (t : ℕ) by omega)]
+        have hwit : (fun a ↦ w (swapFinAdj t a))
+            (⟨(t : ℕ), by have := t.isLt; omega⟩ : Fin (n + 1)) = w j := by
+          have hp : (Fin.mk ((t : ℕ) + 1) (by have := t.isLt; omega)) = j := by
+            apply Fin.ext
+            show (t : ℕ) + 1 = (j : ℕ)
+            omega
+          show w (swapFinAdj t (⟨(t : ℕ), by have := t.isLt; omega⟩ : Fin (n + 1))) = w j
+          rw [swapFinAdj_eq rfl, hp]
+        exact ih (fun a ↦ w (swapFinAdj t a)) i
+          (⟨(t : ℕ), by have := t.isLt; omega⟩ : Fin (n + 1))
+          (show (t : ℕ) = (i : ℕ) + (d + 1) by omega)
+          (hwj.trans (he.trans hwit.symm))
+  rcases Nat.lt_trichotomy ((j : ℕ)) ((i : ℕ)) with hlt | heq | hgt
+  · exact aux (i - j - 1) v j i (by omega) h.symm
+  · exact absurd (Fin.ext heq) (Ne.symm hij)
+  · exact aux (j - i - 1) v i j (by omega) h
+
+end WedgeOneAnyGen
 
 /-! ## 奇异上链与 de Rham 复形
 
