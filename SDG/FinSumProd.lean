@@ -158,6 +158,46 @@ lemma finSum_eq_single (R : Type u) [AddCommMonoid R] {n : ℕ} (k : Fin n) (a :
           exact congrArg (fun φ : Fin n → R ↦ finSum R n φ) (funext hij)]
         simpa using ih j a
 
+/-- `finSum` 在任意位置拆出单项。 -/
+lemma finSum_split_at (R : Type u) [AddCommMonoid R] {n : ℕ} (f : Fin n → R) (i : Fin n) :
+    finSum R n f = f i + finSum R n (Function.update f i 0) := by
+  induction n with
+  | zero => exact absurd i.isLt (by simp)
+  | succ m ih =>
+      by_cases hi : i = 0
+      · subst hi
+        rw [finSum_succ]
+        congr 1
+        rw [finSum_succ]
+        simp
+      · have hin : (i : ℕ) ≠ 0 := fun hh => hi (Fin.ext hh)
+        obtain ⟨i', rfl⟩ : ∃ k : Fin m, i = k.succ :=
+            ⟨⟨(i : ℕ) - 1, by have h1 := i.isLt; omega⟩,
+              Fin.ext (by show (i : ℕ) = (i : ℕ) - 1 + 1; have h1 := i.isLt; omega)⟩
+        rw [finSum_succ, finSum_succ]
+        have h0 : (Function.update f (i'.succ) 0) (0 : Fin (m + 1)) = f 0 := by
+          rw [Function.update_of_ne (Fin.succ_ne_zero i').symm]
+        rw [h0]
+        have htail : ∀ a : Fin m, Function.update f (i'.succ) 0 a.succ
+            = Function.update (fun a : Fin m ↦ f a.succ) i' 0 a := by
+          intro a
+          simp only [Function.update_apply]
+          by_cases hk : a = i'
+          · subst hk; simp
+          · rw [if_neg (fun hh => hk (Fin.succ_injective m hh)), if_neg hk]
+        rw [ih (fun a : Fin m ↦ f a.succ) i']
+        simp only [htail]
+        abel
+
+/-- 和的负号可以逐项提出。 -/
+lemma finSum_neg (R : Type u) [AddCommGroup R] {n : ℕ} (f : Fin n → R) :
+    finSum R n (fun i ↦ -f i) = -finSum R n f := by
+  induction n with
+  | zero => simp
+  | succ m ih =>
+      rw [finSum_succ, finSum_succ, ih]
+      abel
+
 /-- 逐项相等则和相等。 -/
 lemma finSum_congr (R : Type u) [AddCommMonoid R] {n : ℕ} {f g : Fin n → R}
     (h : ∀ i, f i = g i) : finSum R n f = finSum R n g := by
