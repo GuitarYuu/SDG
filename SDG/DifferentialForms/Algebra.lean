@@ -1901,6 +1901,208 @@ lemma wedgeOneAnyFun_eq_zero_of_eq {n : ℕ} {x : X}
 
 end WedgeOneAnyGen
 
+/-! ## `1 ∧ n` 楔积的严格形式打包
+
+把 `wedgeOneAnyFun` 打包为纤维层 `AlternatingMap`：交错性由
+`wedgeOneAnyFun_eq_zero_of_eq` 保证，逐槽加法/数乘由 η 的
+`map_update_add/smul`（经 `k.succAbove m = i` 的原像）与 ω 的线性承担。 -/
+
+section WedgeOneAnyPack
+
+variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
+variable [DecidableEq (Fin (n + 1))]
+
+/-- `succAbove` 的像不含 `k` 本身（构造性，替代 Mathlib choice 版）。 -/
+lemma succAbove_ne' {n : ℕ} (k : Fin (n + 1)) (r : Fin n) : k.succAbove r ≠ k := by
+  rw [Fin.succAbove]
+  by_cases h : (Fin.castSucc r : Fin (n + 1)) < k
+  · rw [if_pos h]
+    intro hh
+    have hv : ((Fin.castSucc r : Fin (n + 1)) : ℕ) = (k : ℕ) := by rw [hh]
+    rw [Fin.val_castSucc] at hv
+    rw [Fin.lt_def, Fin.val_castSucc] at h
+    omega
+  · rw [if_neg h]
+    intro hh
+    have hv : ((Fin.succ r : Fin (n + 1)) : ℕ) = (k : ℕ) := by rw [hh]
+    rw [Fin.val_succ] at hv
+    rw [Fin.lt_def, Fin.val_castSucc] at h
+    omega
+
+/-- 更新第 `i` 槽后，第 `k ≠ i` 项的 η 尾部：删除第 `k` 槽恰在原像 `m` 处
+看到更新。 -/
+lemma removeNth_update_of_succAbove {n : ℕ} [DecidableEq (Fin (n + 1))] {T : Type u}
+    {k : Fin (n + 1)} {i : Fin (n + 1)} (hk : i ≠ k) (v : Fin (n + 1) → T)
+    (m : Fin n) (hm : k.succAbove m = i) (x : T) :
+    k.removeNth (Function.update v i x) = Function.update (k.removeNth v) m x := by
+  funext r
+  by_cases hr : r = m
+  · subst hr
+    rw [Fin.removeNth_apply]
+    simp [hm]
+  · rw [Fin.removeNth_apply, Function.update_of_ne (by
+      intro hh
+      exact hr (Fin.succAbove_right_injective (hh.trans hm.symm)))]
+    rw [Function.update_apply, Fin.removeNth_apply, if_neg hr]
+
+/-- `1 ∧ n` 楔积对第 `i` 槽加法。 -/
+lemma wedgeOneAnyFun_update_add {n : ℕ} [DecidableEq (Fin (n + 1))] {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
+    (v : Fin (n + 1) → TangentFiber R X x) (i : Fin (n + 1))
+    (p q : TangentFiber R X x) :
+    wedgeOneAnyFun ω η (Function.update v i (p + q)) =
+      wedgeOneAnyFun ω η (Function.update v i p) +
+      wedgeOneAnyFun ω η (Function.update v i q) := by
+  rw [wedgeOneAnyFun_eq, wedgeOneAnyFun_eq, wedgeOneAnyFun_eq, ← finSum_add]
+  refine finSum_congr R (fun k => ?_)
+  have habs : ∀ X : TangentFiber R X x,
+      k.removeNth (Function.update v k X) = k.removeNth v := by
+    intro X
+    funext r
+    rw [Fin.removeNth_apply, Function.update_of_ne (succAbove_ne' k r),
+      Fin.removeNth_apply]
+  by_cases hk : k = i
+  · subst hk
+    rw [wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply,
+      habs (p + q), habs p, habs q]
+    simp only [Function.update_self]
+    rw [map_add]
+    ring
+  · have hik : i ≠ k := fun hh => hk hh.symm
+    obtain ⟨m, hm⟩ := exists_succAbove_eq hik
+    rw [wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply,
+      Function.update_of_ne hk, Function.update_of_ne hk, Function.update_of_ne hk,
+      removeNth_update_of_succAbove hik v m hm (p + q),
+      removeNth_update_of_succAbove hik v m hm p,
+      removeNth_update_of_succAbove hik v m hm q,
+      η.map_update_add]
+    ring
+
+/-- `1 ∧ n` 楔积对第 `i` 槽数乘。 -/
+lemma wedgeOneAnyFun_update_smul {n : ℕ} [DecidableEq (Fin (n + 1))] {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin n]→ₗ[R] R)
+    (v : Fin (n + 1) → TangentFiber R X x) (i : Fin (n + 1))
+    (c : R) (p : TangentFiber R X x) :
+    wedgeOneAnyFun ω η (Function.update v i (c • p)) =
+      c • wedgeOneAnyFun ω η (Function.update v i p) := by
+  rw [wedgeOneAnyFun_eq, wedgeOneAnyFun_eq]
+  show finSum R (n + 1) (wedgeOneAnyTerm ω η (Function.update v i (c • p)))
+    = c * finSum R (n + 1) (wedgeOneAnyTerm ω η (Function.update v i p))
+  rw [← finSum_mul_left]
+  refine finSum_congr R (fun k => ?_)
+  have habs : ∀ X : TangentFiber R X x,
+      k.removeNth (Function.update v k X) = k.removeNth v := by
+    intro X
+    funext r
+    rw [Fin.removeNth_apply, Function.update_of_ne (succAbove_ne' k r),
+      Fin.removeNth_apply]
+  by_cases hk : k = i
+  · subst hk
+    rw [wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply, habs (c • p), habs p]
+    simp only [Function.update_self]
+    rw [map_smul, smul_eq_mul]
+    ring
+  · have hik : i ≠ k := fun hh => hk hh.symm
+    obtain ⟨m, hm⟩ := exists_succAbove_eq hik
+    rw [wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply,
+      Function.update_of_ne hk, Function.update_of_ne hk,
+      removeNth_update_of_succAbove hik v m hm (c • p),
+      removeNth_update_of_succAbove hik v m hm p,
+      η.map_update_smul, smul_eq_mul]
+    ring
+
+/-- **一般 `1 ∧ n` 楔积**：Kock I.14 (14.7) 展开的严格交错多线性形式。 -/
+def wedgeOneAny {n : ℕ} (ω : FiberwiseDifferentialForm R X 1)
+    (η : FiberwiseDifferentialForm R X n) :
+    FiberwiseDifferentialForm R X (n + 1) := by
+  intro x
+  exact
+    { toMultilinearMap :=
+        { toFun := wedgeOneAnyFun (ω x) (η x)
+          map_update_add' := by
+            intro _ v i p q
+            exact wedgeOneAnyFun_update_add (ω x) (η x) v i p q
+          map_update_smul' := by
+            intro _ v i c p
+            exact wedgeOneAnyFun_update_smul (ω x) (η x) v i c p }
+      map_eq_zero_of_eq' := by
+        intro v i j h hij
+        exact wedgeOneAnyFun_eq_zero_of_eq (ω x) (η x) v h hij }
+
+@[simp]
+lemma wedgeOneAny_apply {n : ℕ} (ω : FiberwiseDifferentialForm R X 1)
+    (η : FiberwiseDifferentialForm R X n) (x : X)
+    (v : Fin (n + 1) → TangentFiber R X x) :
+    wedgeOneAny ω η x v = wedgeOneAnyFun (ω x) (η x) v := rfl
+
+/-- 楔积对第一因子的加法。 -/
+lemma wedgeOneAny_add_left {n : ℕ} (ω₁ ω₂ : FiberwiseDifferentialForm R X 1)
+    (η : FiberwiseDifferentialForm R X n) :
+    wedgeOneAny (ω₁ + ω₂) η = wedgeOneAny ω₁ η + wedgeOneAny ω₂ η := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  show wedgeOneAnyFun ((ω₁ + ω₂) x) (η x) v =
+    wedgeOneAnyFun (ω₁ x) (η x) v + wedgeOneAnyFun (ω₂ x) (η x) v
+  rw [Pi.add_apply, wedgeOneAnyFun_eq, wedgeOneAnyFun_eq, wedgeOneAnyFun_eq,
+    ← finSum_add]
+  refine finSum_congr R (fun k => ?_)
+  rw [wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply,
+    FiberwiseDifferentialForm.oneArg_add]
+  ring
+
+/-- 楔积对第二因子的加法。 -/
+lemma wedgeOneAny_add_right {n : ℕ} (ω : FiberwiseDifferentialForm R X 1)
+    (η₁ η₂ : FiberwiseDifferentialForm R X n) :
+    wedgeOneAny ω (η₁ + η₂) = wedgeOneAny ω η₁ + wedgeOneAny ω η₂ := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  show wedgeOneAnyFun (ω x) ((η₁ + η₂) x) v =
+    wedgeOneAnyFun (ω x) (η₁ x) v + wedgeOneAnyFun (ω x) (η₂ x) v
+  rw [Pi.add_apply, wedgeOneAnyFun_eq, wedgeOneAnyFun_eq,
+    wedgeOneAnyFun_eq, ← finSum_add]
+  refine finSum_congr R (fun k => ?_)
+  rw [wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply,
+    AlternatingMap.add_apply]
+  ring
+
+/-- 楔积对第一因子的数乘。 -/
+lemma wedgeOneAny_smul_left {n : ℕ} (c : R) (ω : FiberwiseDifferentialForm R X 1)
+    (η : FiberwiseDifferentialForm R X n) :
+    wedgeOneAny (c • ω) η = c • wedgeOneAny ω η := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  show wedgeOneAnyFun ((c • ω) x) (η x) v = c • wedgeOneAnyFun (ω x) (η x) v
+  rw [Pi.smul_apply]
+  show wedgeOneAnyFun (c • ω x) (η x) v = c * wedgeOneAnyFun (ω x) (η x) v
+  rw [wedgeOneAnyFun_eq, wedgeOneAnyFun_eq, ← finSum_mul_left]
+  refine finSum_congr R (fun k => ?_)
+  rw [wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply,
+    FiberwiseDifferentialForm.oneArg_smul]
+  ring
+
+/-- 楔积对第二因子的数乘。 -/
+lemma wedgeOneAny_smul_right {n : ℕ} (c : R) (ω : FiberwiseDifferentialForm R X 1)
+    (η : FiberwiseDifferentialForm R X n) :
+    wedgeOneAny ω (c • η) = c • wedgeOneAny ω η := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  show wedgeOneAnyFun (ω x) ((c • η) x) v = c • wedgeOneAnyFun (ω x) (η x) v
+  rw [Pi.smul_apply]
+  show wedgeOneAnyFun (ω x) (c • η x) v = c * wedgeOneAnyFun (ω x) (η x) v
+  rw [wedgeOneAnyFun_eq, wedgeOneAnyFun_eq, ← finSum_mul_left]
+  refine finSum_congr R (fun k => ?_)
+  rw [wedgeOneAnyTerm_apply, wedgeOneAnyTerm_apply, AlternatingMap.smul_apply,
+    smul_eq_mul]
+  ring
+
+end WedgeOneAnyPack
+
 /-! ## 奇异上链与 de Rham 复形
 
 在单纯形方法中，n-上链是从 (n+1)-点组到 R 的函数。
