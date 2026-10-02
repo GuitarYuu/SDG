@@ -207,6 +207,82 @@ lemma finSum_congr (R : Type u) [AddCommMonoid R] {n : ℕ} {f g : Fin n → R}
       rw [finSum_succ, finSum_succ]
       rw [h (0 : Fin (m + 1)), ih (fun i ↦ h i.succ)]
 
+/-! ### 区间拆分与三角求和（∂² = 0 的组合基础设施） -/
+
+/-- 求和的指标集平移（subst 基础，无动机问题）。 -/
+lemma finSum_index_congr (R : Type u) [AddCommMonoid R] {m n : ℕ} (he : m = n)
+    (f : Fin m → R) :
+    finSum R m f = finSum R n (fun i => f (Fin.cast he.symm i)) := by
+  subst he
+  rfl
+
+/-- 区间拆分：`Fin (d+k)` 上的求和按位置 `k` 拆成前 `k` 项与后 `d` 项。 -/
+lemma finSum_front (R : Type u) [AddCommMonoid R] : ∀ (k d : ℕ) (h : Fin (d + k) → R),
+    finSum R (d + k) h
+      = finSum R k (fun i => h ⟨(i : ℕ), by have := i.isLt; omega⟩)
+        + finSum R d (fun i => h ⟨k + (i : ℕ), by have := i.isLt; omega⟩) := by
+  intro k
+  induction k with
+  | zero =>
+      intro d h
+      show finSum R d h = finSum R 0 (fun i => h ⟨(i : ℕ), by have := i.isLt; omega⟩)
+        + finSum R d (fun i => h ⟨(0 : ℕ) + (i : ℕ), by have := i.isLt; omega⟩)
+      rw [finSum_zero, zero_add]
+      refine finSum_congr R (f := h)
+        (g := fun i => h ⟨(0 : ℕ) + (i : ℕ), by have := i.isLt; omega⟩)
+        (fun i => congrArg h (Fin.ext (by show (i : ℕ) = (0 : ℕ) + (i : ℕ); omega)))
+  | succ k ih =>
+      intro d h
+      show finSum R (d + k + 1) h = finSum R (k + 1) (fun i => h ⟨(i : ℕ), by have := i.isLt; omega⟩)
+        + finSum R d (fun i => h ⟨k + 1 + (i : ℕ), by have := i.isLt; omega⟩)
+      rw [finSum_succ (R := R) (n := d + k) (f := h)]
+      rw [ih d (fun i => h i.succ)]
+      rw [finSum_succ (R := R) (n := k) (f := fun i => h ⟨(i : ℕ), by have := i.isLt; omega⟩)]
+      have e0 : (h (0 : Fin (d + k + 1)) : R) = h ⟨(0 : ℕ), by omega⟩ := rfl
+      rw [e0, add_assoc]
+      congr 1
+      · congr 1
+        · exact finSum_congr R (fun i => congrArg h (Fin.ext (by
+            have := i.isLt
+            simp only [Fin.val_succ, Fin.val_mk]
+            omega)))
+
+/-- 下三角嵌入：带指标条件的项求和恰为前 `k` 项和。 -/
+lemma finSum_tri_lower (R : Type u) [AddCommMonoid R] {m k : ℕ} (hkm : k ≤ m)
+    (g : Fin m → R) :
+    finSum R m (fun p => if (p : ℕ) < k then g ⟨(p : ℕ), by have := p.isLt; omega⟩ else 0)
+      = finSum R k (fun p => g ⟨(p : ℕ), by have := p.isLt; have := hkm; omega⟩) := by
+    obtain ⟨d, rfl⟩ : ∃ d, m = d + k := ⟨m - k, by omega⟩
+    rw [finSum_front R k d (fun p => if (p : ℕ) < k then g ⟨(p : ℕ), by have := p.isLt; omega⟩ else 0)]
+    simp only [Fin.val_mk]
+    rw [finSum_congr R (fun i => if_pos (by have := i.isLt; omega))]
+    rw [finSum_eq_zero R (fun i => if_neg (by have := i.isLt; omega))]
+    abel
+
+/-- 上三角提取：`Fin (d + (k+1))` 上按 `k < i` 截取的项和恰为位移和。 -/
+lemma finSum_tri_upper (R : Type u) [AddCommMonoid R] {k d : ℕ}
+    (h : Fin (d + (k + 1)) → R) :
+    finSum R (d + (k + 1)) (fun i => if k < (i : ℕ) then h i else 0)
+      = finSum R d (fun s => h ⟨k + 1 + (s : ℕ), by have := s.isLt; omega⟩) := by
+    rw [finSum_front R (k + 1) d (fun i => if k < (i : ℕ) then h i else 0)]
+    simp only [Fin.val_mk]
+    rw [finSum_eq_zero R (fun i => if_neg (by have := i.isLt; omega)), zero_add]
+    rw [finSum_congr R (fun s => if_pos (by have := s.isLt; omega))]
+
+/-- 二重求和换序。 -/
+lemma finSum_sum_comm (R : Type u) [AddCommMonoid R] : ∀ (m n : ℕ) (f : Fin m → Fin n → R),
+    finSum R m (fun i => finSum R n (f i))
+      = finSum R n (fun j => finSum R m (fun i => f i j)) := by
+  intro m
+  induction m with
+  | zero =>
+      intro n f
+      rw [finSum_zero, finSum_eq_zero R (fun j => finSum_zero R (fun i => f i j))]
+  | succ m ih =>
+      intro n f
+      rw [finSum_succ, ih n (fun i => f i.succ), ← finSum_add]
+      rw [finSum_congr R (fun j => finSum_succ R m (fun i => f i j))]
+
 /-- 加法同态穿过求和：$g\,(\mathrm{finSum}\ f) = \mathrm{finSum}\ (g \circ f)$。 -/
 lemma map_finSum (A B : Type u) [AddCommMonoid A] [AddCommMonoid B]
     (g : A →+ B) (n : ℕ) (f : Fin n → A) :
