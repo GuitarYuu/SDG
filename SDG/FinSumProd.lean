@@ -283,6 +283,77 @@ lemma finSum_sum_comm (R : Type u) [AddCommMonoid R] : ∀ (m n : ℕ) (f : Fin 
       rw [finSum_succ, ih n (fun i => f i.succ), ← finSum_add]
       rw [finSum_congr R (fun j => finSum_succ R m (fun i => f i j))]
 
+/-- 末项提取：`Fin (m+1)` 上的和 = 前 `m` 项（经 `castSucc`）+ 末项。 -/
+lemma finSum_last (R : Type u) [AddCommMonoid R] : ∀ (m : ℕ) (h : Fin (m + 1) → R),
+    finSum R (m + 1) h = finSum R m (fun i => h i.castSucc) + h (Fin.last m) := by
+  intro m
+  induction m with
+  | zero =>
+      intro h
+      show h (0 : Fin 1) + finSum R 0 (fun i : Fin 0 => h i.succ)
+        = finSum R 0 (fun i : Fin 0 => h i.castSucc) + h (Fin.last 0)
+      rw [finSum_zero, finSum_zero]
+      show h (0 : Fin 1) + 0 = 0 + h (0 : Fin 1)
+      rw [add_zero, zero_add]
+  | succ m ih =>
+      intro h
+      rw [finSum_succ (R := R) (n := m + 1) (f := h)]
+      rw [ih (fun i : Fin (m + 1) => h i.succ)]
+      rw [finSum_succ (R := R) (n := m) (f := fun i : Fin (m + 1) => h i.castSucc)]
+      rw [finSum_congr R (f := fun i : Fin m => h (Fin.castSucc i).succ)
+        (g := fun i : Fin m => h (Fin.castSucc i.succ)) (fun i => rfl)]
+      rw [add_assoc (a := h (Fin.castSucc (0 : Fin (m + 1))))
+        (b := finSum R m (fun i : Fin m => h (Fin.castSucc i.succ)))
+        (c := h (Fin.last (m + 1)))]
+      congr 1
+      all_goals rfl
+
+/-- **矩形和 = 三角和**（一般 n 的 ∂² = 0 的组合核心）：
+
+`(W+1) × W` 矩形上的双和，等于按下三角 `(i, j)`, `j < i ≤ W` 逐点配对
+`t i j + t j (i-1)` 的和。对任意全函数 `t : ℕ → ℕ → R` 成立：矩形 =
+下三角 ∪ 闭上三角，上三角经 `(a, b) ↦ (b+1, a)` 转置后与下三角同形。 -/
+lemma finSum_rect_eq_tri (R : Type u) [AddCommMonoid R] : ∀ (W : ℕ) (t : ℕ → ℕ → R),
+    finSum R (W + 1) (fun i : Fin (W + 1) => finSum R W (fun j : Fin W => t (i : ℕ) (j : ℕ)))
+      = finSum R (W + 1) (fun i : Fin (W + 1) => finSum R ((i : ℕ)) (fun j : Fin ((i : ℕ)) =>
+          t (i : ℕ) (j : ℕ) + t (j : ℕ) ((i : ℕ) - 1))) := by
+  intro W
+  induction W with
+  | zero =>
+      intro t
+      rw [finSum_succ (R := R) (n := 0)
+        (f := fun i : Fin 1 => finSum R 0 (fun j : Fin 0 => t (i : ℕ) (j : ℕ)))]
+      rw [finSum_succ (R := R) (n := 0) (f := fun i : Fin 1 => finSum R ((i : ℕ))
+        (fun j : Fin ((i : ℕ)) => t (i : ℕ) (j : ℕ) + t (j : ℕ) ((i : ℕ) - 1)))]
+      have h0 : (((0 : Fin 1) : Fin 1) : ℕ) = 0 := rfl
+      rw [h0]
+      simp only [finSum_zero]
+  | succ W ih =>
+      intro t
+      -- 左侧：拆末行，再把每行的内和拆出末列
+      rw [finSum_last (R := R) (m := W + 1)
+        (h := fun i : Fin (W + 2) => finSum R (W + 1) (fun j : Fin (W + 1) => t (i : ℕ) (j : ℕ)))]
+      simp only [Fin.val_castSucc, Fin.val_last]
+      rw [finSum_congr R (f := fun i : Fin (W + 1) => finSum R (W + 1) (fun j : Fin (W + 1) => t (i : ℕ) (j : ℕ)))
+        (g := fun i : Fin (W + 1) => finSum R W (fun j : Fin W => t (i : ℕ) (j : ℕ)) + t (i : ℕ) W)
+        (fun i => by
+          rw [finSum_last (R := R) (m := W) (h := fun j : Fin (W + 1) => t (i : ℕ) (j : ℕ))]
+          simp only [Fin.val_castSucc, Fin.val_last])]
+      rw [finSum_add (R := R) (n := W + 1)
+        (f := fun i : Fin (W + 1) => finSum R W (fun j : Fin W => t (i : ℕ) (j : ℕ)))
+        (g := fun i : Fin (W + 1) => t (i : ℕ) W)]
+      -- 右侧：拆末行，末行两项和拆开
+      rw [finSum_last (R := R) (m := W + 1)
+        (h := fun i : Fin (W + 2) => finSum R ((i : ℕ)) (fun j : Fin ((i : ℕ)) =>
+          t (i : ℕ) (j : ℕ) + t (j : ℕ) ((i : ℕ) - 1)))]
+      simp only [Fin.val_castSucc, Fin.val_last]
+      rw [show ((W : ℕ) + 1) - 1 = W from by omega]
+      rw [finSum_add (R := R) (n := W + 1)
+        (f := fun j : Fin (W + 1) => t (W + 1) (j : ℕ))
+        (g := fun j : Fin (W + 1) => t (j : ℕ) W)]
+      rw [ih t]
+      abel
+
 /-- 加法同态穿过求和：$g\,(\mathrm{finSum}\ f) = \mathrm{finSum}\ (g \circ f)$。 -/
 lemma map_finSum (A B : Type u) [AddCommMonoid A] [AddCommMonoid B]
     (g : A →+ B) (n : ℕ) (f : Fin n → A) :
