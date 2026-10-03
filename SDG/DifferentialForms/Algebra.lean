@@ -1366,6 +1366,222 @@ lemma finSum_swapFinAdj : ∀ (n : ℕ) (f : Fin (n + 1) → R) (j : Fin n),
 
 end SwapFinAdj
 
+/-! ### 任意双射的求和重排（(p,q) 楔积的地基）
+
+README 路线图条目 2 的前置引理「任意对换 = 相邻对换乘积的构造性分解」
+在此落为 `finSum` 层面的重排不变性：有限集的任何单射自映射（构造性双射）
+都不改变 `finSum`。全部构造性，无选择公理。 -/
+
+section FinSumReindex
+
+/-- 非零有限值的「去 0 归一」：减 1 落回 `Fin m`。 -/
+private def predNZ {m : ℕ} (x : Fin (m + 1)) (hx : (x : ℕ) ≠ 0) : Fin m :=
+  ⟨(x : ℕ) - 1, by have := x.isLt; have := hx; omega⟩
+
+lemma val_predNZ_add {m : ℕ} (x : Fin (m + 1)) (hx : (x : ℕ) ≠ 0) :
+    ((predNZ x hx : Fin m) : ℕ) + 1 = (x : ℕ) := by
+  simp only [predNZ]
+  have := x.isLt
+  omega
+
+/-- 相邻位置的对换 `swapFin ⟨k⟩ ⟨k+1⟩` 不改变 `finSum`
+（归一到 `finSum_swapFinAdj`）。 -/
+lemma finSum_reindex_swapFin_adj (R : Type u) [AddCommMonoid R] {m : ℕ}
+    (k : ℕ) (hk : k + 1 < m) (f : Fin m → R) :
+    finSum R m (fun a => f (swapFin (⟨k, by have := hk; omega⟩ : Fin m) (⟨k + 1, by have := hk; omega⟩ : Fin m) a))
+      = finSum R m f := by
+  obtain ⟨d, rfl⟩ : ∃ d, m = d + 1 := ⟨m - 1, by omega⟩
+  have hkd : k < d := by omega
+  have heq : swapFin (⟨k, by omega⟩ : Fin (d + 1)) (⟨k + 1, by have := hk; omega⟩ : Fin (d + 1))
+      = swapFinAdj (⟨k, hkd⟩ : Fin d) := by
+    funext a
+    apply Fin.ext
+    by_cases h1 : (a : ℕ) = k
+    · have ha : a = (⟨k, by omega⟩ : Fin (d + 1)) := Fin.ext h1
+      rw [ha, swapFin_self_left, swapFinAdj_eq rfl]
+    · by_cases h2 : (a : ℕ) = k + 1
+      · have ha : a = (⟨k + 1, by have := hk; omega⟩ : Fin (d + 1)) := Fin.ext h2
+        rw [ha, swapFin_self_right, swapFinAdj_eq_one rfl]
+      · rw [swapFin_of_ne (fun hh => h1 (by rw [hh]))
+          (fun hh => h2 (by rw [hh])),
+        swapFinAdj_of_ne (fun hh => h1 (by rw [hh]))
+          (fun hh => h2 (by rw [hh]))]
+  rw [heq]
+  exact (finSum_swapFinAdj d f ⟨k, hkd⟩).symm
+
+/-- 对换 `(0 k)` 不改变 `finSum`：`k = 0` 为恒等，`k = 1` 为相邻对换，
+`k → k+1` 用共轭恒等式 `(0 (k+1)) = (k (k+1)) ∘ (0 k) ∘ (k (k+1))`（`k ≥ 1`）。 -/
+lemma finSum_reindex_swapFin0 (R : Type u) [AddCommMonoid R] : ∀ (n : ℕ) (k : ℕ) (hk : k < n),
+    ∀ (f : Fin n → R),
+    finSum R n (fun a => f (swapFin (⟨0, by omega⟩ : Fin n)
+      (⟨k, by have := hk; omega⟩ : Fin n) a)) = finSum R n f := by
+  intro n k
+  induction k with
+  | zero =>
+      intro hk f
+      have hid : swapFin (⟨0, hk⟩ : Fin n) (⟨0, hk⟩ : Fin n) = id := by
+        funext a
+        by_cases h : (a : ℕ) = 0
+        · have ha : a = (⟨0, hk⟩ : Fin n) := Fin.ext h
+          rw [ha, swapFin_self_left, id_eq]
+        · rw [swapFin_of_ne (fun hh => h (by rw [hh]))
+            (fun hh => h (by rw [hh])), id_eq]
+      rw [hid]
+      exact finSum_congr R (fun a : Fin n => rfl)
+  | succ k ih =>
+      intro hk f
+      by_cases hk0 : k = 0
+      · subst hk0
+        rw [finSum_reindex_swapFin_adj R 0 hk f]
+      · -- k ≥ 1：共轭恒等式 (0 (k+1)) = s_k ∘ (0 k) ∘ s_k
+        have hne1 : (⟨0, by omega⟩ : Fin n)
+            ≠ (⟨k, by have := hk; omega⟩ : Fin n) := fun hh => by
+          have := congrArg Fin.val hh
+          simp only [Fin.val_mk] at this
+          omega
+        have hne2 : (⟨0, by omega⟩ : Fin n)
+            ≠ (⟨k + 1, by have := hk; omega⟩ : Fin n) := fun hh => by
+          have := congrArg Fin.val hh
+          simp only [Fin.val_mk] at this
+          omega
+        have hτ : ∀ a : Fin n, swapFin (⟨0, by omega⟩ : Fin n)
+              (⟨k + 1, by have := hk; omega⟩ : Fin n) a
+            = swapFin (⟨k, by have := hk; omega⟩ : Fin n) (⟨k + 1, by have := hk; omega⟩ : Fin n)
+                (swapFin (⟨0, by omega⟩ : Fin n) (⟨k, by have := hk; omega⟩ : Fin n)
+                  (swapFin (⟨k, by have := hk; omega⟩ : Fin n) (⟨k + 1, by have := hk; omega⟩ : Fin n) a)) := by
+          intro a
+          apply Fin.ext
+          by_cases ha0 : (a : ℕ) = 0
+          · have ha : a = (⟨0, by omega⟩ : Fin n) := Fin.ext ha0
+            rw [ha, swapFin_self_left, swapFin_of_ne hne1 hne2, swapFin_self_left,
+              swapFin_self_left]
+          · by_cases hak : (a : ℕ) = k
+            · have ha : a = (⟨k, by have := hk; omega⟩ : Fin n) := Fin.ext hak
+              have hne3 : (⟨k, by have := hk; omega⟩ : Fin n) ≠ (⟨0, by omega⟩ : Fin n) :=
+                Ne.symm hne1
+              have hne4 : (⟨k, by have := hk; omega⟩ : Fin n) ≠ (⟨k + 1, by have := hk; omega⟩ : Fin n) := fun hh => by
+                have := congrArg Fin.val hh
+                simp only [Fin.val_mk] at this
+                omega
+              have hne5 : (⟨k + 1, by have := hk; omega⟩ : Fin n)
+                  ≠ (⟨0, by omega⟩ : Fin n) := Ne.symm hne2
+              rw [ha, swapFin_of_ne hne3 hne4, swapFin_self_left,
+                swapFin_of_ne hne5 (Ne.symm hne4), swapFin_self_right]
+            · by_cases hak1 : (a : ℕ) = k + 1
+              · have ha : a = (⟨k + 1, by have := hk; omega⟩ : Fin n) := Fin.ext hak1
+                rw [ha, swapFin_self_right, swapFin_self_right, swapFin_self_right,
+                  swapFin_of_ne hne1 hne2]
+              · have ha0' : (a : Fin n) ≠ (⟨0, by omega⟩ : Fin n) :=
+                  fun hh => by rw [hh] at ha0; exact ha0 rfl
+                have hak' : (a : Fin n) ≠ (⟨k, by have := hk; omega⟩ : Fin n) := fun hh => by
+                  rw [hh] at hak; exact hak rfl
+                have hak1' : (a : Fin n) ≠ (⟨k + 1, by have := hk; omega⟩ : Fin n) := fun hh => by
+                  rw [hh] at hak1; exact hak1 rfl
+                have hs0 : swapFin (⟨0, by omega⟩ : Fin n)
+                    (⟨k + 1, by have := hk; omega⟩ : Fin n) a = a :=
+                  swapFin_of_ne ha0' hak1'
+                have hs1 : swapFin (⟨k, by have := hk; omega⟩ : Fin n)
+                    (⟨k + 1, by have := hk; omega⟩ : Fin n) a = a :=
+                  swapFin_of_ne hak' hak1'
+                have hs2 : swapFin (⟨0, by omega⟩ : Fin n)
+                    (⟨k, by have := hk; omega⟩ : Fin n) a = a :=
+                  swapFin_of_ne ha0' hak'
+                simp only [hs0, hs1, hs2]
+        rw [finSum_congr R (fun a => congrArg f (hτ a))]
+        rw [finSum_reindex_swapFin_adj R k hk
+          (f := fun c => f (swapFin (⟨k, by have := hk; omega⟩ : Fin n) (⟨k + 1, by have := hk; omega⟩ : Fin n)
+            (swapFin (⟨0, by omega⟩ : Fin n) (⟨k, by have := hk; omega⟩ : Fin n) c)))]
+        rw [ih (by have := hk; omega)
+          (f := fun b => f (swapFin (⟨k, by have := hk; omega⟩ : Fin n)
+            (⟨k + 1, by have := hk; omega⟩ : Fin n) b))]
+        rw [finSum_reindex_swapFin_adj R k hk (f := f)]
+
+/-- **重排主引理**：有限集的任何单射自映射（构造性双射）不改变 `finSum`。
+
+证明：取 `0` 的原像 `k`（`FinPerm.surjective_of_injective_self`，构造性），先用
+对换 `(0 k)` 把它换到首位（对换不改变和），再用 `finSum_succ` 分离首项 `f 0`，
+尾部经「去 0 归一」映射 `predNZ`（值非零，减 1 落回 `Fin n`，仍单射）归纳。 -/
+lemma finSum_reindex (R : Type u) [AddCommMonoid R] : ∀ (n : ℕ) (u : Fin n → Fin n),
+    Function.Injective u → ∀ (f : Fin n → R),
+    finSum R n (fun a => f (u a)) = finSum R n f := by
+  intro n
+  induction n with
+  | zero =>
+      intro u _ f
+      rw [finSum_zero, finSum_zero]
+  | succ n ih =>
+      intro u hu f
+      obtain ⟨k, hk⟩ : ∃ k : Fin (n + 1), u k = 0 :=
+        FinPerm.surjective_of_injective_self hu 0
+      -- 第一步：用对换 (0 k) 把 0 的原像换到首位
+      rw [← finSum_reindex_swapFin0 R (n + 1) (k : ℕ) k.isLt
+        (f := fun b => f (u b))]
+      have hv0 : f (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k (0 : Fin (n + 1)))) = f 0 := by
+        show f (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k
+          (⟨0, by omega⟩ : Fin (n + 1)))) = f 0
+        rw [swapFin_self_left, hk]
+      rw [finSum_succ (R := R) (n := n)
+        (f := fun a : Fin (n + 1) => f (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k a))), hv0]
+      rw [finSum_succ (R := R) (n := n) (f := f)]
+      congr 1
+      -- 尾部：值非零 → predNZ 归一 → 归纳
+      have hnz : ∀ i : Fin n, (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ) : ℕ) ≠ 0 := by
+        intro i hcon
+        have hX : u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ) = (0 : Fin (n + 1)) :=
+          Fin.ext hcon
+        rw [← hk] at hX
+        have h2 := hu hX
+        have h4 : swapFin k (⟨0, by omega⟩ : Fin (n + 1))
+            (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ)
+            = swapFin k (⟨0, by omega⟩ : Fin (n + 1)) k :=
+          congrArg (swapFin k (⟨0, by omega⟩ : Fin (n + 1))) h2
+        have h5 : swapFin k (⟨0, by omega⟩ : Fin (n + 1))
+            (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ) = i.succ :=
+          swapFin_leftInverse (⟨0, by omega⟩ : Fin (n + 1)) k _
+        rw [h4, swapFin_self_left] at h5
+        have := congrArg Fin.val h5
+        simp only [Fin.val_mk, Fin.val_zero, Fin.val_succ] at this
+        omega
+      have hu''inj : Function.Injective (fun i : Fin n => predNZ
+          (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ)) (hnz i)) := by
+        intro i i' hii
+        have h0 := hnz i
+        have h0' := hnz i'
+        have e1 : (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ) : ℕ)
+            = (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i'.succ) : ℕ) := by
+          have := congrArg Fin.val hii
+          simp only [predNZ, Fin.val_mk] at this
+          omega
+        have e2 : u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ)
+            = u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i'.succ) := Fin.ext e1
+        have e3 : swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ
+            = swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i'.succ := hu e2
+        have e4 := swapFin_injective (⟨0, by omega⟩ : Fin (n + 1)) k e3
+        exact Fin.ext (by
+          have := congrArg Fin.val e4
+          simp only [Fin.val_succ] at this
+          omega)
+      have hbridge : ∀ i : Fin n, f (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ))
+          = f (⟨((predNZ (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ))
+              (hnz i) : Fin n) : ℕ) + 1, (by have := i.isLt; omega)⟩ : Fin (n + 1)) := by
+        intro i
+        have he : (⟨((predNZ (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ))
+              (hnz i) : Fin n) : ℕ) + 1, (by have := i.isLt; omega)⟩ : Fin (n + 1))
+            = (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ)) := by
+          have hval := val_predNZ_add (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ))
+            (hnz i)
+          exact Fin.ext (by simp only [Fin.val_mk]; omega)
+        rw [congrArg f he]
+      rw [finSum_congr R hbridge]
+      rw [ih (fun i : Fin n => predNZ (u (swapFin (⟨0, by omega⟩ : Fin (n + 1)) k i.succ))
+          (hnz i)) hu''inj
+        (fun x : Fin n => f (Fin.mk ((x : ℕ) + 1) (by have := x.isLt; omega)))]
+      exact finSum_congr R (fun a => rfl)
+
+end FinSumReindex
+
+
+
 /-! ### `1 ∧ n` 楔积的原始函数公式 -/
 
 section WedgeOneAny
