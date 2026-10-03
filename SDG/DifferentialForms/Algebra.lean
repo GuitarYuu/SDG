@@ -1714,6 +1714,127 @@ lemma permSum_reindex_compose : ∀ (n : ℕ) (τ : FinPerm n) (f : FinPerm n �
 
 end PermSumReindex
 
+section PermSumLin
+
+variable {R : Type u} [CommRing R]
+
+/-- permSum 对常量数乘可提出。 -/
+lemma permSum_mul_left {n : ℕ} (a : R) (f : FinPerm n → R) :
+    FinPerm.permSum R (fun π => a * f π) = a * FinPerm.permSum R f := by
+  induction n with
+  | zero => simp only [FinPerm.permSum_zero]
+  | succ n ih =>
+      simp only [FinPerm.permSum_succ, ih, finSum_mul_left]
+
+end PermSumLin
+
+section WedgeAny
+
+variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
+
+/-- 一般 `(p,q)` 楔积的展开函数（交替化定义）：对全部 `(p+q)`-置换的
+符号加权求和，`ω` 取置换像的前 `p` 个槽位、`η` 取后 `q` 个槽位。
+
+与 `1 ∧ n` 情形（`wedgeOneAnyFun` 的位置求和）不同，这里用
+`FinPerm.permSum`（全置换枚举，无选择公理），其重排基础设施
+（`permSum_reindex_compose` 等）是交错性证明的关键。 -/
+def wedgeAnyFun {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) : R :=
+  FinPerm.permSum R (fun π : FinPerm (p + q) =>
+    FinPerm.sign R π * (ω (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+    η (fun j : Fin q => v (π.toFun (Fin.natAdd p j)))))
+
+lemma wedgeAnyFun_apply {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun ω η v = FinPerm.permSum R (fun π : FinPerm (p + q) =>
+    FinPerm.sign R π * (ω (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+    η (fun j : Fin q => v (π.toFun (Fin.natAdd p j))))) := rfl
+
+/-- `(p,q)` 楔积对第一个因子的加法。 -/
+lemma wedgeAnyFun_add_left {p q : ℕ} {x : X}
+    (ω₁ ω₂ : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun (ω₁ + ω₂) η v = wedgeAnyFun ω₁ η v + wedgeAnyFun ω₂ η v := by
+  unfold wedgeAnyFun
+  have hpoint : ∀ π : FinPerm (p + q),
+      FinPerm.sign R π * ((ω₁ + ω₂) (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        η (fun j : Fin q => v (π.toFun (Fin.natAdd p j))))
+      = FinPerm.sign R π * (ω₁ (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        η (fun j : Fin q => v (π.toFun (Fin.natAdd p j)))) +
+        FinPerm.sign R π * (ω₂ (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        η (fun j : Fin q => v (π.toFun (Fin.natAdd p j)))) := by
+    intro π
+    rw [show ((ω₁ + ω₂) (fun i : Fin p => v (π.toFun (Fin.castAdd q i))))
+        = ω₁ (fun i : Fin p => v (π.toFun (Fin.castAdd q i)))
+          + ω₂ (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) from rfl]
+    ring
+  rw [permSum_congr hpoint, FinPerm.permSum_add]
+
+/-- `(p,q)` 楔积对第二个因子的加法。 -/
+lemma wedgeAnyFun_add_right {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η₁ η₂ : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun ω (η₁ + η₂) v = wedgeAnyFun ω η₁ v + wedgeAnyFun ω η₂ v := by
+  unfold wedgeAnyFun
+  have hpoint : ∀ π : FinPerm (p + q),
+      FinPerm.sign R π * (ω (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        (η₁ + η₂) (fun j : Fin q => v (π.toFun (Fin.natAdd p j))))
+      = FinPerm.sign R π * (ω (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        η₁ (fun j : Fin q => v (π.toFun (Fin.natAdd p j)))) +
+        FinPerm.sign R π * (ω (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        η₂ (fun j : Fin q => v (π.toFun (Fin.natAdd p j)))) := by
+    intro π
+    rw [show ((η₁ + η₂) (fun j : Fin q => v (π.toFun (Fin.natAdd p j))))
+        = η₁ (fun j : Fin q => v (π.toFun (Fin.natAdd p j)))
+          + η₂ (fun j : Fin q => v (π.toFun (Fin.natAdd p j))) from rfl]
+    ring
+  rw [permSum_congr hpoint, FinPerm.permSum_add]
+
+/-- `(p,q)` 楔积对第一个因子的数乘。 -/
+lemma wedgeAnyFun_smul_left {p q : ℕ} {x : X}
+    (a : R) (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun (a • ω) η v = a • wedgeAnyFun ω η v := by
+  unfold wedgeAnyFun
+  have hpoint : ∀ π : FinPerm (p + q),
+      FinPerm.sign R π * ((a • ω) (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        η (fun j : Fin q => v (π.toFun (Fin.natAdd p j))))
+      = a * (FinPerm.sign R π * (ω (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        η (fun j : Fin q => v (π.toFun (Fin.natAdd p j))))) := by
+    intro π
+    rw [show ((a • ω) (fun i : Fin p => v (π.toFun (Fin.castAdd q i))))
+        = a * ω (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) from rfl]
+    ring
+  rw [permSum_congr hpoint, permSum_mul_left, smul_eq_mul]
+
+/-- `(p,q)` 楔积对第二个因子的数乘。 -/
+lemma wedgeAnyFun_smul_right {p q : ℕ} {x : X}
+    (a : R) (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun ω (a • η) v = a • wedgeAnyFun ω η v := by
+  unfold wedgeAnyFun
+  have hpoint : ∀ π : FinPerm (p + q),
+      FinPerm.sign R π * (ω (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        (a • η) (fun j : Fin q => v (π.toFun (Fin.natAdd p j))))
+      = a * (FinPerm.sign R π * (ω (fun i : Fin p => v (π.toFun (Fin.castAdd q i))) *
+        η (fun j : Fin q => v (π.toFun (Fin.natAdd p j))))) := by
+    intro π
+    rw [show ((a • η) (fun j : Fin q => v (π.toFun (Fin.natAdd p j))))
+        = a * η (fun j : Fin q => v (π.toFun (Fin.natAdd p j))) from rfl]
+    ring
+  rw [permSum_congr hpoint, permSum_mul_left, smul_eq_mul]
+
+end WedgeAny
+
+
 
 
 
