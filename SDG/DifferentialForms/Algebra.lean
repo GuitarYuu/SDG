@@ -2293,6 +2293,137 @@ theorem coboundary_d0 {R : Type u} [CommRing R] {X : Type u}
   simp only [neg_mul, add_zero]
   ring
 
+/-! ### 一般 n 的 ∂² = 0（无选择公理）
+
+策略：把双和整体提升到 ℕ-指标守卫项函数 `ddTerm`，用
+`finSum_rect_eq_tri`（矩形和 = 三角和，逐点配对）一次性完成指标重排，
+再用 δδ 复合恒等式 + 符号相消收尾。不出现 `Finset`，全程无选择公理。 -/
+
+/-- δδ 复合恒等式：先删第 `a` 个面再删第 `b` 个面（`a ≤ b`），
+等于先删第 `b+1` 个面再删第 `a` 个面。 -/
+lemma coFace_comp_coFace {n : ℕ} (σ : Fin (n + 3) → X) {a : Fin (n + 3)} {b : Fin (n + 2)}
+    (hab : (a : ℕ) ≤ (b : ℕ)) :
+    coFace (coFace σ a) b
+      = coFace (coFace σ ⟨(b : ℕ) + 1, by have := b.isLt; omega⟩)
+          (⟨(a : ℕ), by have := b.isLt; have := hab; omega⟩ : Fin (n + 2)) := by
+  funext k
+  show σ (a.succAbove (b.succAbove k)) = σ ((⟨(b : ℕ) + 1, by have := b.isLt; omega⟩ : Fin (n + 3)).succAbove
+    ((⟨(a : ℕ), by have := b.isLt; have := hab; omega⟩ : Fin (n + 2)).succAbove k))
+  apply congrArg σ
+  apply Fin.ext
+  have q2 : ((b.succAbove k : Fin (n + 2)) : ℕ) =
+      if (k : ℕ) < (b : ℕ) then (k : ℕ) else (k : ℕ) + 1 := succAbove_val b k
+  have q1 : ((a.succAbove (b.succAbove k) : Fin (n + 3)) : ℕ) =
+      (if (if (k : ℕ) < (b : ℕ) then (k : ℕ) else (k : ℕ) + 1) < (a : ℕ)
+        then (if (k : ℕ) < (b : ℕ) then (k : ℕ) else (k : ℕ) + 1)
+        else (if (k : ℕ) < (b : ℕ) then (k : ℕ) else (k : ℕ) + 1) + 1) := by
+    rw [succAbove_val, q2]
+  have q4 : (((⟨(a : ℕ), by have := b.isLt; have := hab; omega⟩ : Fin (n + 2)).succAbove k :
+      Fin (n + 2)) : ℕ) =
+      if (k : ℕ) < (a : ℕ) then (k : ℕ) else (k : ℕ) + 1 := succAbove_val _ k
+  have q3 : (((⟨(b : ℕ) + 1, by have := b.isLt; omega⟩ : Fin (n + 3)).succAbove
+      ((⟨(a : ℕ), by have := b.isLt; have := hab; omega⟩ : Fin (n + 2)).succAbove k)) : ℕ) =
+      (if (if (k : ℕ) < (a : ℕ) then (k : ℕ) else (k : ℕ) + 1) < (b : ℕ) + 1
+        then (if (k : ℕ) < (a : ℕ) then (k : ℕ) else (k : ℕ) + 1)
+        else (if (k : ℕ) < (a : ℕ) then (k : ℕ) else (k : ℕ) + 1) + 1) := by
+    rw [succAbove_val, q4]
+  rw [q1, q3]
+  by_cases h1 : (k : ℕ) < (b : ℕ)
+  · by_cases h2 : (k : ℕ) < (a : ℕ)
+    · rw [if_pos h1, if_pos h2, if_pos (by omega : (k : ℕ) < (b : ℕ) + 1)]
+    · rw [if_pos h1, if_neg h2, if_pos (by omega : (k : ℕ) + 1 < (b : ℕ) + 1)]
+  · by_cases h2 : (k : ℕ) < (a : ℕ)
+    · exfalso; omega
+    · rw [if_neg h1, if_neg h2, if_neg (show ¬((k : ℕ) + 1 < (a : ℕ)) by omega),
+        if_neg (show ¬((k : ℕ) + 1 < (b : ℕ) + 1) by omega)]
+
+/-- δδ 项的 ℕ-指标守卫版本：界内取真实项，界外取 0。
+
+把双和提升到全 ℕ-指标，是规避 `Fin` 依赖类型下指标重排时
+mk-证明项断裂问题的关键步骤。 -/
+def ddTerm (R : Type u) [CommRing R] {X : Type u} {n : ℕ} (c : Cochain R X n)
+    (σ : SimplexPts X (n + 2)) (a b : ℕ) : R :=
+  if h : a < n + 3 ∧ b < n + 2 then
+    (-1 : R) ^ (a + b) * c (coFace (coFace σ ⟨a, h.1⟩) ⟨b, h.2⟩)
+  else 0
+
+/-- **一般 n 的 ∂² = 0**
+
+`∂(∂c) = 0`：双重余边界为零。证明：矩形双和 = 三角配对和
+（`finSum_rect_eq_tri`），每个配对 `ddTerm i j + ddTerm j (i-1)` 中
+两面经 δδ 复合恒等式（`coFace_comp_coFace`）相同，而符号
+`(-1)^{i+j} + (-1)^{j+i-1} = 0`（`j < i` 保证 `i+j ≥ 1`），逐对相消。
+
+纯组合恒等式，构造性证明；`#print axioms` 仅 `[propext, Quot.sound]`。 -/
+theorem coboundary_coboundary {n : ℕ} (c : Cochain R X n) :
+    coboundary (coboundary c) = 0 := by
+  funext σ
+  show finSum R (n + 3) (fun i : Fin (n + 3) => (-1 : R) ^ ((i : ℕ)) *
+    finSum R (n + 2) (fun j : Fin (n + 2) => (-1 : R) ^ ((j : ℕ)) *
+      c (coFace (coFace σ i) j))) = (0 : R)
+  -- 提升到 ℕ-指标守卫项函数
+  have hA : finSum R (n + 3) (fun i : Fin (n + 3) => (-1 : R) ^ ((i : ℕ)) *
+      finSum R (n + 2) (fun j : Fin (n + 2) => (-1 : R) ^ ((j : ℕ)) *
+        c (coFace (coFace σ i) j)))
+      = finSum R (n + 3) (fun i : Fin (n + 3) => finSum R (n + 2) (fun j : Fin (n + 2) =>
+          ddTerm R c σ ((i : ℕ)) ((j : ℕ)))) := by
+    apply finSum_congr R
+    intro i
+    rw [← finSum_mul_left (R := R) (n := n + 2) (a := (-1 : R) ^ ((i : ℕ)))
+      (f := fun j : Fin (n + 2) => (-1 : R) ^ ((j : ℕ)) * c (coFace (coFace σ i) j))]
+    apply finSum_congr R
+    intro j
+    have hp : (i : ℕ) < n + 3 ∧ (j : ℕ) < n + 2 := ⟨i.isLt, j.isLt⟩
+    simp only [ddTerm]
+    rw [dif_pos hp]
+    have q1 : (Fin.mk (i : ℕ) hp.1 : Fin (n + 3)) = i := Fin.ext rfl
+    have q2 : (Fin.mk (j : ℕ) hp.2 : Fin (n + 2)) = j := Fin.ext rfl
+    rw [q1, q2, pow_add]
+    ring
+  -- 矩形 = 三角
+  have hB : finSum R (n + 3) (fun i : Fin (n + 3) => finSum R (n + 2) (fun j : Fin (n + 2) =>
+      ddTerm R c σ ((i : ℕ)) ((j : ℕ))))
+      = finSum R (n + 3) (fun i : Fin (n + 3) => finSum R ((i : ℕ)) (fun j : Fin ((i : ℕ)) =>
+          ddTerm R c σ ((i : ℕ)) ((j : ℕ)) + ddTerm R c σ ((j : ℕ)) (((i : ℕ)) - 1))) :=
+    finSum_rect_eq_tri (R := R) (W := n + 2) (fun a b => ddTerm R c σ a b)
+  rw [hA, hB]
+  apply finSum_eq_zero R
+  intro i
+  apply finSum_eq_zero R
+  intro j
+  -- 逐点相消：ddTerm i j + ddTerm j (i-1) = 0
+  have hij : (j : ℕ) < (i : ℕ) := j.isLt
+  have hib : (i : ℕ) < n + 3 := i.isLt
+  have g1 : (i : ℕ) < n + 3 ∧ (j : ℕ) < n + 2 := ⟨hib, by omega⟩
+  have g2 : (j : ℕ) < n + 3 ∧ ((i : ℕ) - 1) < n + 2 := ⟨by omega, by omega⟩
+  simp only [ddTerm, dif_pos g1, dif_pos g2]
+  -- 第二项的面经 δδ 恒等式改写为与第一项相同的面
+  have hface : coFace (coFace σ (Fin.mk (j : ℕ) g2.1)) (Fin.mk ((i : ℕ) - 1) g2.2)
+      = coFace (coFace σ (Fin.mk (i : ℕ) hib)) (Fin.mk (j : ℕ) g1.2) := by
+    have vJ : ((Fin.mk (j : ℕ) g2.1 : Fin (n + 3)) : ℕ) = (j : ℕ) := rfl
+    have vK : ((Fin.mk ((i : ℕ) - 1) g2.2 : Fin (n + 2)) : ℕ) = (i : ℕ) - 1 := rfl
+    calc coFace (coFace σ (Fin.mk (j : ℕ) g2.1)) (Fin.mk ((i : ℕ) - 1) g2.2)
+        = coFace (coFace σ (Fin.mk ((i : ℕ) - 1 + 1)
+            (by have hb := (Fin.mk ((i : ℕ) - 1) g2.2).isLt; omega)))
+            (Fin.mk (j : ℕ) (by have := (Fin.mk (j : ℕ) g2.1).isLt; omega)) :=
+          coFace_comp_coFace (σ := σ) (a := (Fin.mk (j : ℕ) g2.1 : Fin (n + 3)))
+            (b := (Fin.mk ((i : ℕ) - 1) g2.2 : Fin (n + 2))) (by omega)
+      _ = coFace (coFace σ (Fin.mk (i : ℕ) hib)) (Fin.mk (j : ℕ) g1.2) := by
+          have eA : (Fin.mk ((i : ℕ) - 1 + 1)
+              (by have hb := (Fin.mk ((i : ℕ) - 1) g2.2).isLt; omega) : Fin (n + 3))
+              = (Fin.mk (i : ℕ) hib : Fin (n + 3)) :=
+            Fin.ext (by simp only [Fin.val_mk]; omega)
+          rw [eA]
+  rw [hface]
+  -- 桥接第一项的外层 mk 证明项
+  have q1 : (Fin.mk (i : ℕ) g1.1 : Fin (n + 3)) = (Fin.mk (i : ℕ) hib : Fin (n + 3)) := Fin.ext rfl
+  rw [q1]
+  -- 符号相消：(-1)^{i+j} + (-1)^{j+i-1} = 0（因 j < i 保证 i+j ≥ 1）
+  obtain ⟨m, hm⟩ : ∃ m : ℕ, (i : ℕ) + (j : ℕ) = m + 1 := ⟨(i : ℕ) + (j : ℕ) - 1, by omega⟩
+  have hm2 : (j : ℕ) + ((i : ℕ) - 1) = m := by omega
+  rw [hm, hm2, pow_succ]
+  ring
+
 /-! ## 余边界的加法与数乘线性 -/
 
 /-- 余边界是加法同态。 -/
