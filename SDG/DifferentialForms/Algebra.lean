@@ -1580,6 +1580,141 @@ lemma finSum_reindex (R : Type u) [AddCommMonoid R] : ∀ (n : ℕ) (u : Fin n �
 
 end FinSumReindex
 
+section PermSumReindex
+
+variable {R : Type u} [AddCommMonoid R]
+
+/-! ### permSum 的重排不变性（(p,q) 楔积的地基）
+
+`(p,q)` 楔积将定义为对全部置换的 `permSum` 加权和；其交错性证明需要
+「求和变量经置换复合重排后 permSum 不变」。本节给出两条重排引理：
+
+* `permSum_reindex_encode`（编码级）：单射自映射 `ρ` 复合到 `π.toFun`
+  上不改变 permSum——头部经 `finSum_reindex`（E0）重排，尾部递归；
+* `permSum_reindex_compose`（复合级）：左复合固定置换不改变 permSum。
+
+关键分解（`encode_compose_cons`）：单射函数作用于 cons-置换的编码
+`= cons (限制编码) (ρ i)`，其中限制编码的域函数
+`k ↦ unshift (ρ i) (ρ (insertAt i (σ.toFun k)))` 是与 σ 无关的
+`permRestr ρ hρ i` 与 `σ.toFun` 的复合——这正是归纳假设得以应用的形状。 -/
+
+/-- 逐点相等的两个函数 permSum 相等。 -/
+lemma permSum_congr {n : ℕ} {f g : FinPerm n → R} (h : ∀ π, f π = g π) :
+    FinPerm.permSum R f = FinPerm.permSum R g := by
+  induction n with
+  | zero => simp only [FinPerm.permSum_zero]; exact h _
+  | succ n ih =>
+      simp only [FinPerm.permSum_succ]
+      exact finSum_congr R (fun i => ih (fun σ => h (FinPerm.cons σ i)))
+
+/-- 头部 `i` 处的限制重排：`ρ` 作用后挖去 `ρ i` 再压缩回 `Fin n`。 -/
+def permRestr {n : ℕ} (ρ : Fin (n + 1) → Fin (n + 1)) (hρ : Function.Injective ρ)
+    (i : Fin (n + 1)) (k : Fin n) : Fin n :=
+  FinPerm.unshift (ρ i) (ρ (FinPerm.insertAt i k))
+    (fun hc => FinPerm.insertAt_ne i k (hρ hc))
+
+lemma permRestr_injective {n : ℕ} (ρ : Fin (n + 1) → Fin (n + 1)) (hρ : Function.Injective ρ)
+    (i : Fin (n + 1)) :
+    Function.Injective (permRestr ρ hρ i) := by
+  intro k₁ k₂ hEq
+  have h2 := FinPerm.unshift_injective (ρ i)
+    (fun hc => FinPerm.insertAt_ne i k₁ (hρ hc))
+    (fun hc => FinPerm.insertAt_ne i k₂ (hρ hc)) hEq
+  exact FinPerm.insertAt_injective i (hρ h2)
+
+/-- 共享分解：单射函数作用于 cons-置换的编码。 -/
+lemma encode_compose_cons {n : ℕ} (σ : FinPerm n) (i : Fin (n + 1))
+    (ρ : Fin (n + 1) → Fin (n + 1)) (hρ : Function.Injective ρ) :
+    FinPerm.encode (fun k => ρ ((FinPerm.cons σ i).toFun k))
+        (hρ.comp (FinPerm.cons σ i).toFun_injective)
+      = FinPerm.cons (FinPerm.encode (fun k => permRestr ρ hρ i (σ.toFun k))
+          (show Function.Injective fun k => permRestr ρ hρ i (σ.toFun k) from
+            (permRestr_injective ρ hρ i).comp σ.toFun_injective)) (ρ i) := by
+  apply FinPerm.ext_toFun _ _
+  have hEnc := FinPerm.toFun_encode (fun k => ρ ((FinPerm.cons σ i).toFun k))
+    (hρ.comp (FinPerm.cons σ i).toFun_injective)
+  have hTail := FinPerm.toFun_encode (fun k => permRestr ρ hρ i (σ.toFun k))
+    ((permRestr_injective ρ hρ i).comp σ.toFun_injective)
+  funext j
+  cases j using Fin.cases with
+  | zero => simp only [hEnc, FinPerm.toFun_cons_zero]
+  | succ k =>
+      simp only [hEnc, FinPerm.toFun_cons_succ, hTail]
+      simp only [permRestr, FinPerm.insertAt_unshift]
+
+/-- **编码级重排**：单射自映射复合到 `π.toFun` 上不改变 permSum。 -/
+lemma permSum_reindex_encode : ∀ (n : ℕ) (ρ : Fin n → Fin n) (hρ : Function.Injective ρ)
+    (g : FinPerm n → R),
+    FinPerm.permSum R (fun σ => g (FinPerm.encode (fun k => ρ (σ.toFun k))
+      (hρ.comp σ.toFun_injective))) = FinPerm.permSum R g := by
+  intro n
+  induction n with
+  | zero =>
+      intro ρ hρ g
+      simp only [FinPerm.permSum_zero]
+      have hnil : FinPerm.encode (fun k => ρ ((FinPerm.nil : FinPerm 0).toFun k))
+          (hρ.comp FinPerm.nil.toFun_injective) = FinPerm.nil := by
+        apply FinPerm.ext_toFun _ _
+        funext j
+        exact j.elim0
+      rw [hnil]
+  | succ n ih =>
+      intro ρ hρ g
+      simp only [FinPerm.permSum_succ]
+      have hstep1 : ∀ i : Fin (n + 1),
+          FinPerm.permSum R (fun σ => g (FinPerm.encode (fun k =>
+              ρ ((FinPerm.cons σ i).toFun k)) (hρ.comp (FinPerm.cons σ i).toFun_injective)))
+            = FinPerm.permSum R (fun σ' => g (FinPerm.cons σ' (ρ i))) := by
+        intro i
+        rw [permSum_congr (fun σ => congrArg g (encode_compose_cons σ i ρ hρ)),
+          ih (permRestr ρ hρ i) (permRestr_injective ρ hρ i)
+            (fun σ' => g (FinPerm.cons σ' (ρ i)))]
+      rw [finSum_congr R hstep1]
+      exact finSum_reindex R (n + 1) ρ hρ
+        (fun j => FinPerm.permSum R (fun σ' => g (FinPerm.cons σ' j)))
+
+/-- **复合级重排**：左复合固定置换不改变 permSum。 -/
+lemma permSum_reindex_compose : ∀ (n : ℕ) (τ : FinPerm n) (f : FinPerm n → R),
+    FinPerm.permSum R (fun π => f (FinPerm.compose τ π)) = FinPerm.permSum R f := by
+  intro n
+  induction n with
+  | zero =>
+      intro τ f
+      cases τ
+      simp only [FinPerm.permSum_zero]
+      apply congrArg f
+      apply FinPerm.ext_toFun _ _
+      rw [FinPerm.toFun_compose]
+      funext j
+      exact j.elim0
+  | succ n ih =>
+      intro τ f
+      simp only [FinPerm.permSum_succ]
+      have hcomp : ∀ (i : Fin (n + 1)) (σ : FinPerm n),
+          FinPerm.compose τ (FinPerm.cons σ i)
+            = FinPerm.encode (fun k => τ.toFun ((FinPerm.cons σ i).toFun k))
+                (show Function.Injective fun k => τ.toFun ((FinPerm.cons σ i).toFun k) from
+                  τ.toFun_injective.comp (FinPerm.cons σ i).toFun_injective) := by
+        intro i σ
+        apply FinPerm.ext_toFun _ _
+        rw [FinPerm.toFun_compose, FinPerm.toFun_encode]
+      have hstep1 : ∀ i : Fin (n + 1),
+          FinPerm.permSum R (fun σ => f (FinPerm.compose τ (FinPerm.cons σ i)))
+            = FinPerm.permSum R (fun σ' => f (FinPerm.cons σ' (τ.toFun i))) := by
+        intro i
+        rw [permSum_congr (fun σ => congrArg f (hcomp i σ)),
+          permSum_congr (fun σ => congrArg f
+            (encode_compose_cons σ i τ.toFun τ.toFun_injective)),
+          permSum_reindex_encode n (permRestr τ.toFun τ.toFun_injective i)
+            (permRestr_injective τ.toFun τ.toFun_injective i)
+            (fun σ' => f (FinPerm.cons σ' (τ.toFun i)))]
+      rw [finSum_congr R hstep1]
+      exact finSum_reindex R (n + 1) τ.toFun τ.toFun_injective
+        (fun j => FinPerm.permSum R (fun σ' => f (FinPerm.cons σ' j)))
+
+end PermSumReindex
+
+
 
 
 /-! ### `1 ∧ n` 楔积的原始函数公式 -/
