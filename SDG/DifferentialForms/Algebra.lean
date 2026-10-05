@@ -3187,4 +3187,483 @@ theorem d0_smul {R : Type u} [CommRing R] {X : Type u}
   simp only [Pi.smul_apply, smul_eq_mul]
   ring
 
+/-!
+## 相邻对换的符号翻转（E2b）
+
+`swapPerm a b`（`b = a + 1`）左复合任一置换使 sign 反号；推论：相邻对换自身
+符号为 `-1`。证明依赖：`insertAt_eq_unshift_iff`、`unshift_insertAt`、`encode_toFun_self`、
+`encode_compose_cons_ex`、Helper 1a/1b/2（`permRestr_swapFin_left/right/ne`）与
+`unshift` 值公式。
+-/
+
+variable {R : Type u} [CommRing R]
+
+section SignFlip
+
+/-- `insertAt w k = x`（`x ≠ w`）当且仅当 `k = unshift w x`。 -/
+lemma insertAt_eq_unshift_iff {n : ℕ} (w : Fin (n + 1)) {k : Fin n} {x : Fin (n + 1)}
+    (hx : x ≠ w) : (FinPerm.insertAt w k = x) ↔ (k = FinPerm.unshift w x hx) := by
+  constructor
+  · intro hEq
+    have hxval : (x : ℕ) = if (k : ℕ) < (w : ℕ) then (k : ℕ) else (k : ℕ) + 1 := by
+      rw [← hEq, FinPerm.insertAt_val]
+    by_cases hkw : (k : ℕ) < (w : ℕ)
+    · have hx2 : (x : ℕ) = (k : ℕ) := by rw [hxval, if_pos hkw]
+      have hx3 : ¬((w : ℕ) < (x : ℕ)) := by omega
+      apply Fin.ext
+      unfold FinPerm.unshift
+      rw [dif_neg hx3]
+      simp only [Fin.val_mk]
+      omega
+    · have hx2 : (x : ℕ) = (k : ℕ) + 1 := by rw [hxval, if_neg hkw]
+      have hx3 : (w : ℕ) < (x : ℕ) := by omega
+      apply Fin.ext
+      unfold FinPerm.unshift
+      rw [dif_pos hx3]
+      simp only [Fin.val_mk]
+      omega
+  · intro hEq
+    rw [hEq, FinPerm.insertAt_unshift]
+
+/-- 删除第 `w` 个输入位置后压缩：`unshift w (insertAt w k) = k`。 -/
+lemma unshift_insertAt {n : ℕ} (w : Fin (n + 1)) (k : Fin n) :
+    FinPerm.unshift w (FinPerm.insertAt w k)
+      (fun hc => FinPerm.insertAt_ne w k hc) = k := by
+  unfold FinPerm.unshift
+  have hin := FinPerm.insertAt_val w k
+  by_cases hkw : (k : ℕ) < (w : ℕ)
+  · have hval : (FinPerm.insertAt w k : ℕ) = (k : ℕ) := by rw [hin, if_pos hkw]
+    have hcmp : ¬((w : ℕ) < (FinPerm.insertAt w k : ℕ)) := by rw [hval]; omega
+    rw [dif_neg hcmp]
+    exact Fin.ext hval
+  · have hval : (FinPerm.insertAt w k : ℕ) = (k : ℕ) + 1 := by rw [hin, if_neg hkw]
+    have hcmp : (w : ℕ) < (FinPerm.insertAt w k : ℕ) := by rw [hval]; omega
+    rw [dif_pos hcmp]
+    apply Fin.ext
+    simp only [Fin.val_mk]
+    omega
+
+/-- encode σ.toFun = σ：提取型编码的还原。 -/
+lemma encode_toFun_self {m : ℕ} (σ : FinPerm m) :
+    FinPerm.encode (fun k : Fin m => σ.toFun k) σ.toFun_injective = σ := by
+  apply FinPerm.ext_toFun _ _
+  rw [FinPerm.toFun_encode]
+
+/-- (D) 的显式 hΦ 变体：尾编码的单射性作为假设传入，
+使重写实例完全确定（避免元变量证明参数阻断动机）。 -/
+lemma encode_compose_cons_ex {n : ℕ} (σ : FinPerm n) (i : Fin (n + 1))
+    (ρ : Fin (n + 1) → Fin (n + 1)) (hρ : Function.Injective ρ)
+    (hΦ : Function.Injective fun k : Fin n => permRestr ρ hρ i (σ.toFun k)) :
+    FinPerm.encode (fun k => ρ ((FinPerm.cons σ i).toFun k))
+        (hρ.comp (FinPerm.cons σ i).toFun_injective)
+      = FinPerm.cons (FinPerm.encode (fun k => permRestr ρ hρ i (σ.toFun k)) hΦ) (ρ i) := by
+  apply FinPerm.ext_toFun _ _
+  have hEnc := FinPerm.toFun_encode (fun k => ρ ((FinPerm.cons σ i).toFun k))
+    (hρ.comp (FinPerm.cons σ i).toFun_injective)
+  have hTail := FinPerm.toFun_encode (fun k => permRestr ρ hρ i (σ.toFun k)) hΦ
+  funext j
+  cases j using Fin.cases with
+  | zero => simp only [hEnc, FinPerm.toFun_cons_zero]
+  | succ k =>
+      simp only [hEnc, FinPerm.toFun_cons_succ, hTail]
+      simp only [permRestr, FinPerm.insertAt_unshift]
+
+/-- Helper 1a：`w` 为对换的第一点时限制重排为恒等。 -/
+lemma permRestr_swapFin_left {n : ℕ} (a b : Fin (n + 1)) (h : (a : ℕ) + 1 = (b : ℕ))
+    (hinj : Function.Injective (swapFin a b)) :
+    permRestr (swapFin a b) hinj a = id := by
+  funext x
+  rw [id_eq]
+  unfold permRestr
+  have hxlt := x.isLt
+  have hins0 : (FinPerm.insertAt a x : ℕ) =
+      if (x : ℕ) < (a : ℕ) then (x : ℕ) else (x : ℕ) + 1 := FinPerm.insertAt_val a x
+  have hsw1 : (swapFin a b a : ℕ) = (b : ℕ) := by rw [swapFin_self_left]
+  by_cases hxa : (x : ℕ) < (a : ℕ)
+  · have hneB : FinPerm.insertAt a x ≠ b := by
+      intro hc
+      have hval := congrArg Fin.val hc
+      rw [hins0, if_pos hxa] at hval
+      have := hxlt
+      have := h
+      omega
+    have hswx : (swapFin a b (FinPerm.insertAt a x) : ℕ) = (x : ℕ) := by
+      rw [swapFin, if_neg (FinPerm.insertAt_ne a x), if_neg hneB, hins0, if_pos hxa]
+    have hcmp : ¬((swapFin a b a : ℕ) < (swapFin a b (FinPerm.insertAt a x) : ℕ)) := by
+      rw [hsw1, hswx]
+      omega
+    unfold FinPerm.unshift
+    rw [dif_neg hcmp]
+    apply Fin.ext
+    simp only [Fin.val_mk, hswx]
+  · by_cases hxa2 : (x : ℕ) = (a : ℕ)
+    · have hinsB : FinPerm.insertAt a x = b := by
+        apply Fin.ext
+        rw [hins0, if_neg hxa, hxa2, h]
+      have hswx : (swapFin a b (FinPerm.insertAt a x) : ℕ) = (a : ℕ) := by
+        rw [hinsB, swapFin_self_right]
+      have hcmp : ¬((swapFin a b a : ℕ) < (swapFin a b (FinPerm.insertAt a x) : ℕ)) := by
+        rw [hsw1, hswx, ← h]
+        omega
+      unfold FinPerm.unshift
+      rw [dif_neg hcmp]
+      apply Fin.ext
+      simp only [Fin.val_mk, hswx, hxa2]
+    · have hneA : FinPerm.insertAt a x ≠ a := by
+        intro hc
+        have hval := congrArg Fin.val hc
+        rw [hins0, if_neg hxa] at hval
+        have := hxlt
+        have := h
+        omega
+      have hneB : FinPerm.insertAt a x ≠ b := by
+        intro hc
+        have hval := congrArg Fin.val hc
+        rw [hins0, if_neg hxa] at hval
+        rw [← h] at hval
+        have := hxlt
+        omega
+      have hswx : (swapFin a b (FinPerm.insertAt a x) : ℕ) = (x : ℕ) + 1 := by
+        rw [swapFin, if_neg hneA, if_neg hneB, hins0, if_neg hxa]
+      have hcmp : (swapFin a b a : ℕ) < (swapFin a b (FinPerm.insertAt a x) : ℕ) := by
+        rw [hsw1, hswx, ← h]
+        have := a.isLt
+        omega
+      unfold FinPerm.unshift
+      rw [dif_pos hcmp]
+      apply Fin.ext
+      simp only [Fin.val_mk, hswx]
+      omega
+
+/-- Helper 1b：`w` 为对换的第二点时限制重排为恒等。 -/
+lemma permRestr_swapFin_right {n : ℕ} (a b : Fin (n + 1)) (h : (a : ℕ) + 1 = (b : ℕ))
+    (hinj : Function.Injective (swapFin a b)) :
+    permRestr (swapFin a b) hinj b = id := by
+  funext x
+  rw [id_eq]
+  unfold permRestr
+  have hxlt := x.isLt
+  have hins0 : (FinPerm.insertAt b x : ℕ) =
+      if (x : ℕ) < (b : ℕ) then (x : ℕ) else (x : ℕ) + 1 := FinPerm.insertAt_val b x
+  have hsw1 : (swapFin a b b : ℕ) = (a : ℕ) := by rw [swapFin_self_right]
+  by_cases hxb : (x : ℕ) < (b : ℕ)
+  · by_cases hxa : (x : ℕ) = (a : ℕ)
+    · have hinsA : FinPerm.insertAt b x = a := by
+        apply Fin.ext
+        rw [hins0, if_pos hxb, hxa]
+      have hswx : (swapFin a b (FinPerm.insertAt b x) : ℕ) = (b : ℕ) := by
+        rw [hinsA, swapFin_self_left]
+      have hcmp : (swapFin a b b : ℕ) < (swapFin a b (FinPerm.insertAt b x) : ℕ) := by
+        rw [hsw1, hswx]
+        omega
+      unfold FinPerm.unshift
+      rw [dif_pos hcmp]
+      apply Fin.ext
+      simp only [Fin.val_mk, hswx]
+      omega
+    · have hneA : FinPerm.insertAt b x ≠ a := by
+        intro hc
+        have hval := congrArg Fin.val hc
+        rw [hins0, if_pos hxb] at hval
+        have := hxlt
+        have := h
+        omega
+      have hswx : (swapFin a b (FinPerm.insertAt b x) : ℕ) = (x : ℕ) := by
+        rw [swapFin, if_neg (FinPerm.insertAt_ne b x), if_neg hneA, hins0, if_pos hxb]
+      have hcmp : ¬((swapFin a b b : ℕ) < (swapFin a b (FinPerm.insertAt b x) : ℕ)) := by
+        rw [hsw1, hswx]
+        have := h
+        omega
+      unfold FinPerm.unshift
+      rw [dif_neg hcmp]
+      apply Fin.ext
+      simp only [Fin.val_mk, hswx]
+  · have hneA : FinPerm.insertAt b x ≠ a := by
+      intro hc
+      have hval := congrArg Fin.val hc
+      rw [hins0, if_neg hxb] at hval
+      have := hxlt
+      have := h
+      omega
+    have hneB : FinPerm.insertAt b x ≠ b := by
+      intro hc
+      have hval := congrArg Fin.val hc
+      rw [hins0, if_neg hxb] at hval
+      have := hxlt
+      omega
+    have hswx : (swapFin a b (FinPerm.insertAt b x) : ℕ) = (x : ℕ) + 1 := by
+      rw [swapFin, if_neg hneA, if_neg hneB, hins0, if_neg hxb]
+    have hcmp : (swapFin a b b : ℕ) < (swapFin a b (FinPerm.insertAt b x) : ℕ) := by
+      rw [hsw1, hswx]
+      have := hxlt
+      omega
+    unfold FinPerm.unshift
+    rw [dif_pos hcmp]
+    apply Fin.ext
+    simp only [Fin.val_mk, hswx]
+    omega
+
+/-- unshift 的值计算：无嵌套 Fin 项参与，供 omega 直接使用。 -/
+lemma unshift_val_eq {n : ℕ} (i x : Fin (n + 1)) (hx : x ≠ i) :
+    (FinPerm.unshift i x hx : ℕ)
+      = if (i : ℕ) < (x : ℕ) then (x : ℕ) - 1 else (x : ℕ) := by
+  unfold FinPerm.unshift
+  split <;> simp only [Fin.val_mk] <;> omega
+
+/-- `unshift` 的值公式（小于分支）：`i < w` 时压缩为 `w - 1`。 -/
+lemma FinPerm.unshift_val_lt {n : ℕ} (i w : Fin (n + 1)) (hw : w ≠ i)
+    (hlt : (i : ℕ) < (w : ℕ)) : ((FinPerm.unshift i w hw : Fin n) : ℕ) = (w : ℕ) - 1 := by
+  rw [FinPerm.unshift, dif_pos hlt]
+
+/-- `unshift` 的值公式（不小于分支）：`¬ i < w` 时压缩为 `w`。 -/
+lemma FinPerm.unshift_val_ge {n : ℕ} (i w : Fin (n + 1)) (hw : w ≠ i)
+    (hge : ¬((i : ℕ) < (w : ℕ))) : ((FinPerm.unshift i w hw : Fin n) : ℕ) = (w : ℕ) := by
+  rw [FinPerm.unshift, dif_neg hge]
+
+/-- Helper 2：`w` 不为对换两点时限制重排为压缩后的相邻对换。 -/
+lemma permRestr_swapFin_ne {n : ℕ} (a b w : Fin (n + 1)) (h : (a : ℕ) + 1 = (b : ℕ))
+    (hinj : Function.Injective (swapFin a b)) (hwa : w ≠ a) (hwb : w ≠ b) :
+    permRestr (swapFin a b) hinj w
+      = swapFin (FinPerm.unshift w a (Ne.symm hwa)) (FinPerm.unshift w b (Ne.symm hwb)) := by
+  funext k
+  unfold permRestr
+  apply Fin.ext
+  have ha' := (FinPerm.unshift w a (Ne.symm hwa)).isLt
+  have hkw := k.isLt
+  have hw := w.isLt
+  have hpair : (FinPerm.unshift w a (Ne.symm hwa) : ℕ) + 1 = (FinPerm.unshift w b (Ne.symm hwb) : ℕ) := by
+    unfold FinPerm.unshift
+    split <;> split <;> simp only [Fin.val_mk] <;> omega
+  have hinsa : FinPerm.insertAt w (FinPerm.unshift w a (Ne.symm hwa)) = a :=
+    FinPerm.insertAt_unshift w a (Ne.symm hwa)
+  have hinsb : FinPerm.insertAt w (FinPerm.unshift w b (Ne.symm hwb)) = b :=
+    FinPerm.insertAt_unshift w b (Ne.symm hwb)
+  have hvw2 : swapFin a b w = w := swapFin_of_ne hwa hwb
+  have hvw2v : (swapFin a b w : ℕ) = (w : ℕ) := congrArg Fin.val hvw2
+  have hval : (swapFin a b (FinPerm.insertAt w k) : ℕ)
+      = (FinPerm.insertAt w (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+          (FinPerm.unshift w b (Ne.symm hwb)) k) : ℕ) := by
+    rw [swapFin]
+    by_cases hEq1 : FinPerm.insertAt w k = a
+    · have hk : k = FinPerm.unshift w a (Ne.symm hwa) :=
+        (insertAt_eq_unshift_iff w (Ne.symm hwa)).mp hEq1
+      rw [if_pos hEq1, hk, swapFin_self_left, hinsb]
+    · by_cases hEq2 : FinPerm.insertAt w k = b
+      · have hk : k = FinPerm.unshift w b (Ne.symm hwb) :=
+          (insertAt_eq_unshift_iff w (Ne.symm hwb)).mp hEq2
+        rw [if_neg hEq1, if_pos hEq2, hk, swapFin_self_right, hinsa]
+      · have hk1 : k ≠ FinPerm.unshift w a (Ne.symm hwa) := by
+          intro hc
+          rw [hc, hinsa] at hEq1
+          exact hEq1 rfl
+        have hk2 : k ≠ FinPerm.unshift w b (Ne.symm hwb) := by
+          intro hc
+          rw [hc, hinsb] at hEq2
+          exact hEq2 rfl
+        rw [if_neg hEq1, if_neg hEq2, swapFin_of_ne hk1 hk2]
+  have hYins : (FinPerm.insertAt w (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+      (FinPerm.unshift w b (Ne.symm hwb)) k) : ℕ)
+      = if (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+          (FinPerm.unshift w b (Ne.symm hwb)) k : ℕ) < (w : ℕ)
+        then (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+          (FinPerm.unshift w b (Ne.symm hwb)) k : ℕ)
+        else (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+          (FinPerm.unshift w b (Ne.symm hwb)) k : ℕ) + 1 :=
+    FinPerm.insertAt_val w (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+      (FinPerm.unshift w b (Ne.symm hwb)) k)
+  -- 主目标保持 unshift 不透明；左右两侧的值分别用值公式与 hval/hYins 化为同一组原子。
+  by_cases hWX : (w : ℕ) < (swapFin a b (FinPerm.insertAt w k) : ℕ)
+  · have hWX' : (swapFin a b w : ℕ) < (swapFin a b (FinPerm.insertAt w k) : ℕ) := by
+      rw [hvw2v]
+      exact hWX
+    rw [FinPerm.unshift_val_lt _ _ _ hWX']
+    by_cases hCX : (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+        (FinPerm.unshift w b (Ne.symm hwb)) k : ℕ) < (w : ℕ)
+    · have hXe : (swapFin a b (FinPerm.insertAt w k) : ℕ)
+          = (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+            (FinPerm.unshift w b (Ne.symm hwb)) k : ℕ) := by
+        rw [hval, hYins, if_pos hCX]
+      omega
+    · have hXe : (swapFin a b (FinPerm.insertAt w k) : ℕ)
+          = (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+            (FinPerm.unshift w b (Ne.symm hwb)) k : ℕ) + 1 := by
+        rw [hval, hYins, if_neg hCX]
+      omega
+  · have hWX' : ¬((swapFin a b w : ℕ) < (swapFin a b (FinPerm.insertAt w k) : ℕ)) := by
+      intro hc
+      rw [hvw2v] at hc
+      exact hWX hc
+    rw [FinPerm.unshift_val_ge _ _ _ hWX']
+    by_cases hCX : (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+        (FinPerm.unshift w b (Ne.symm hwb)) k : ℕ) < (w : ℕ)
+    · have hXe : (swapFin a b (FinPerm.insertAt w k) : ℕ)
+          = (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+            (FinPerm.unshift w b (Ne.symm hwb)) k : ℕ) := by
+        rw [hval, hYins, if_pos hCX]
+      exact hXe
+    · have hXe : (swapFin a b (FinPerm.insertAt w k) : ℕ)
+          = (swapFin (FinPerm.unshift w a (Ne.symm hwa))
+            (FinPerm.unshift w b (Ne.symm hwb)) k : ℕ) + 1 := by
+        rw [hval, hYins, if_neg hCX]
+      omega
+
+/-- **相邻对换的符号翻转**：左复合相邻对换 `swapPerm a b`（`b = a+1`）
+使 sign 反号（对 π 的树结构归纳）。
+
+情形分析：`w = a` 或 `w = b` 时，限制重排退化为恒等而头值恰好互换；
+否则限制重排是压缩后的相邻对换 `swapFin a' b'（`a' = unshift w a`，
+`b' = unshift w b`，仍有 `b' = a'+1`），交给归纳假设。 -/
+lemma sign_compose_swapPerm_adj : ∀ {m : ℕ} (π : FinPerm m),
+    ∀ (a b : Fin m), (a : ℕ) + 1 = (b : ℕ) →
+    FinPerm.sign R (FinPerm.compose (FinPerm.swapPerm a b) π) = -FinPerm.sign R π := by
+  intro m π
+  induction π with
+  | nil =>
+      intro a b h
+      exfalso
+      have := a.isLt
+      have := b.isLt
+      omega
+  | cons σ w ih =>
+      intro a b h
+      have hsFun : (FinPerm.swapPerm a b).toFun = swapFin a b := FinPerm.toFun_swapPerm _ _
+      have hinj : Function.Injective (swapFin a b) := swapFin_injective _ _
+      have hcomp : FinPerm.compose (FinPerm.swapPerm a b) (FinPerm.cons σ w)
+          = FinPerm.encode (fun k => swapFin a b ((FinPerm.cons σ w).toFun k))
+              (hinj.comp (FinPerm.cons σ w).toFun_injective) := by
+        apply FinPerm.ext_toFun _ _
+        rw [FinPerm.toFun_compose, FinPerm.toFun_encode, hsFun]
+      have hΦinst : Function.Injective fun k =>
+          permRestr (swapFin a b) hinj w (σ.toFun k) :=
+        Function.Injective.comp (permRestr_injective (swapFin a b) hinj w)
+          σ.toFun_injective
+      rw [hcomp]
+      by_cases hj0 : (w : ℕ) = (a : ℕ)
+      · -- w = a：限制重排为恒等，头值 b
+        have hw : w = a := Fin.ext hj0
+        have hcons : FinPerm.encode (fun k => swapFin a b ((FinPerm.cons σ w).toFun k))
+            (hinj.comp (FinPerm.cons σ w).toFun_injective)
+            = FinPerm.cons (FinPerm.encode (fun k => σ.toFun k)
+              σ.toFun_injective) (swapFin a b w) := by
+          rw [encode_compose_cons_ex σ w (swapFin a b) hinj hΦinst]
+          apply congrArg (fun X => FinPerm.cons X (swapFin a b w))
+          apply FinPerm.ext_toFun _ _
+          rw [FinPerm.toFun_encode, FinPerm.toFun_encode]
+          funext k
+          rw [hw, permRestr_swapFin_left a b h hinj, id_eq]
+        have hvw : (swapFin a b w : ℕ) = (b : ℕ) := by
+          rw [hw, swapFin_self_left]
+        rw [hcons, encode_toFun_self, FinPerm.sign_cons, hvw, FinPerm.sign_cons, hw,
+          ← h, pow_succ]
+        ring
+      · by_cases hj1 : (w : ℕ) = (b : ℕ)
+        · -- w = b：限制重排为恒等，头值 a
+          have hw : w = b := Fin.ext hj1
+          have hcons : FinPerm.encode (fun k => swapFin a b ((FinPerm.cons σ w).toFun k))
+              (hinj.comp (FinPerm.cons σ w).toFun_injective)
+              = FinPerm.cons (FinPerm.encode (fun k => σ.toFun k)
+                σ.toFun_injective) (swapFin a b w) := by
+            rw [encode_compose_cons_ex σ w (swapFin a b) hinj hΦinst]
+            apply congrArg (fun X => FinPerm.cons X (swapFin a b w))
+            apply FinPerm.ext_toFun _ _
+            rw [FinPerm.toFun_encode, FinPerm.toFun_encode]
+            funext k
+            rw [hw, permRestr_swapFin_right a b h hinj, id_eq]
+          have hvw : (swapFin a b w : ℕ) = (a : ℕ) := by
+            rw [hw, swapFin_self_right]
+          rw [hcons, encode_toFun_self, FinPerm.sign_cons, hvw, FinPerm.sign_cons, hw,
+            ← h, pow_succ]
+          ring
+        · -- 一般情形：限制重排 = 压缩后的相邻对换，交给归纳假设
+          have hjw : a ≠ w := fun hc => hj0 (congrArg Fin.val hc).symm
+          have hjw' : b ≠ w := fun hc => hj1 (congrArg Fin.val hc).symm
+          have ha'val : ((FinPerm.unshift w a hjw) : ℕ) + 1
+              = ((FinPerm.unshift w b hjw') : ℕ) := by
+            unfold FinPerm.unshift
+            by_cases h1 : (w : ℕ) < (a : ℕ)
+            · rw [dif_pos h1, dif_pos (by have := h; omega)]
+              simp only [Fin.val_mk]
+              have := a.isLt
+              omega
+            · by_cases h2 : (w : ℕ) < (b : ℕ)
+              · rw [dif_neg h1, dif_pos h2]
+                simp only [Fin.val_mk]
+                have := a.isLt
+                have := h
+                omega
+              · rw [dif_neg h1, dif_neg h2]
+                simp only [Fin.val_mk]
+                exact h
+          have hcons : FinPerm.encode (fun k => swapFin a b ((FinPerm.cons σ w).toFun k))
+              (hinj.comp (FinPerm.cons σ w).toFun_injective)
+              = FinPerm.cons (FinPerm.encode (fun k =>
+                  swapFin (FinPerm.unshift w a hjw)
+                  (FinPerm.unshift w b hjw') (σ.toFun k))
+                (Function.Injective.comp (swapFin_injective (FinPerm.unshift w a hjw)
+                  (FinPerm.unshift w b hjw')) σ.toFun_injective)) (swapFin a b w) := by
+            rw [encode_compose_cons_ex σ w (swapFin a b) hinj hΦinst]
+            apply congrArg (fun X => FinPerm.cons X (swapFin a b w))
+            apply FinPerm.ext_toFun _ _
+            rw [FinPerm.toFun_encode, FinPerm.toFun_encode]
+            funext k
+            exact congrFun (permRestr_swapFin_ne a b w h hinj (Ne.symm hjw)
+              (Ne.symm hjw')) (σ.toFun k)
+          have hEnc : FinPerm.encode (fun k => swapFin (FinPerm.unshift w a hjw)
+                (FinPerm.unshift w b hjw') (σ.toFun k))
+              (Function.Injective.comp (swapFin_injective (FinPerm.unshift w a hjw)
+                (FinPerm.unshift w b hjw')) σ.toFun_injective)
+              = FinPerm.compose (FinPerm.swapPerm (FinPerm.unshift w a hjw)
+                (FinPerm.unshift w b hjw')) σ := by
+            apply FinPerm.ext_toFun _ _
+            rw [FinPerm.toFun_compose, FinPerm.toFun_swapPerm, FinPerm.toFun_encode]
+          have hvw : (swapFin a b w : ℕ) = (w : ℕ) := by
+            rw [swapFin_of_ne (Ne.symm hjw) (Ne.symm hjw')]
+          rw [hcons, FinPerm.sign_cons, hvw, hEnc,
+            ih (FinPerm.unshift w a hjw) (FinPerm.unshift w b hjw') ha'val,
+            FinPerm.sign_cons]
+          ring
+
+/-- 恒等置换的符号为 `1`（对 n 归纳：identity 在后继层显式拆出
+`cons (encode (fun k ↦ unshift 0 (succ k)) _) 0`，尾部编码的 toFun 逐点等于 id）。 -/
+lemma FinPerm.sign_identity (R : Type u) [CommRing R] :
+    ∀ (n : ℕ), FinPerm.sign R (FinPerm.identity : FinPerm n) = 1 := by
+  intro n
+  induction n with
+  | zero => exact FinPerm.sign_nil R
+  | succ n ih =>
+      have hinj : Function.Injective fun k : Fin n ↦ FinPerm.unshift 0 (Fin.succ k)
+          (Fin.succ_ne_zero k) := by
+        intro k₁ k₂ hEq2
+        exact Fin.succ_injective n
+          (FinPerm.unshift_injective 0 (Fin.succ_ne_zero k₁) (Fin.succ_ne_zero k₂) hEq2)
+      show FinPerm.sign R (FinPerm.cons (FinPerm.encode
+            (fun k : Fin n ↦ FinPerm.unshift 0 (Fin.succ k) (Fin.succ_ne_zero k)) hinj)
+          (0 : Fin (n + 1))) = 1
+      rw [FinPerm.sign_cons_zero]
+      have hEq : (FinPerm.encode (fun k : Fin n ↦ FinPerm.unshift 0 (Fin.succ k)
+              (Fin.succ_ne_zero k)) hinj)
+          = (FinPerm.identity : FinPerm n) := by
+        apply FinPerm.ext_toFun _ _
+        rw [FinPerm.toFun_encode, FinPerm.toFun_identity]
+        funext k
+        have hlt : ((0 : Fin (n + 1)) : ℕ) < (Fin.succ k : ℕ) := by
+          show (0 : ℕ) < (k : ℕ) + 1
+          omega
+        rw [FinPerm.unshift, dif_pos hlt, id_eq]
+        exact Fin.ext (by
+          have hv : ((Fin.succ k : Fin (n + 1)) : ℕ) = (k : ℕ) + 1 := rfl
+          simp only [hv, Fin.val_mk]
+          omega)
+      rw [hEq]
+      exact ih
+
+/-- 相邻对换自身的符号为 `-1`（与恒等置换复合后用翻转引理）。 -/
+lemma sign_swapPerm_adj {m : ℕ} {a b : Fin m} (h : (a : ℕ) + 1 = (b : ℕ)) :
+    FinPerm.sign R (FinPerm.swapPerm a b) = -1 := by
+  have h1 := sign_compose_swapPerm_adj (R := R) (FinPerm.identity : FinPerm m) a b h
+  rw [FinPerm.compose_identity_right, FinPerm.sign_identity R] at h1
+  exact h1
+
+end SignFlip
+
 end SDG.DifferentialForms
