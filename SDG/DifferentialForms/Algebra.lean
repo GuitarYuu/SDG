@@ -4167,4 +4167,77 @@ lemma wedgeAny_smul_right {p q : ℕ} (h2 : ∃ y : R, y * 2 = 1)
 
 end WedgeAnyPack
 
+/-! ### 分次交换律的符号机器
+
+块交换 `bsFunV n q p`（前 `q` 槽与后 `p` 槽互换）的限定乘性
+`sign (encode (bsFunV ∘ π.toFun)) = (-1)^(q*p) · sign π` 经三件套：
+任意对换的 FLIP（共轭分解，对距离归纳）、循环移位 `cycFun` 的相邻链
+（`n-1` 次 FLIP）、以及块交换递推
+`bsFunV n (q+1) p = cycFun n ∘ bsFunV n q (p+1)`（对 `2q+p` 强归纳，
+指数差 `2q` 为偶）。全部无选择公理。 -/
+
+section GradComm
+
+variable {R : Type u} [CommRing R]
+
+/-- 共轭分解的置换形式：`(x y) = (x z) ∘ ((z y) ∘ (x z))`（`z = x+1 < y`），
+toFun 级恒等式即 `swapFin_triple`。 -/
+lemma swapPerm_triple {n : ℕ} {x y : Fin n} {z : Fin n}
+    (hxz : (x : ℕ) + 1 = (z : ℕ)) (hlt : (z : ℕ) < (y : ℕ)) :
+    FinPerm.swapPerm x y
+      = FinPerm.compose (FinPerm.swapPerm x z)
+          (FinPerm.compose (FinPerm.swapPerm z y) (FinPerm.swapPerm x z)) := by
+      apply FinPerm.ext_toFun _ _
+      rw [FinPerm.toFun_compose, FinPerm.toFun_compose]
+      simp only [FinPerm.toFun_swapPerm]
+      exact swapFin_triple hxz hlt
+
+/-- **任意对换的 FLIP**：左复合任意对换（不要求相邻）使 sign 反号。
+对距离 `d := y - x - 1` 归纳；递推用 `swapPerm_triple` 剥一层 +
+归纳假设 + 相邻 FLIP。 -/
+lemma sign_compose_swapPerm : ∀ (d : ℕ) {n : ℕ} (x y : Fin n),
+    (y : ℕ) = (x : ℕ) + d + 1 → ∀ (π : FinPerm n),
+    FinPerm.sign R (FinPerm.compose (FinPerm.swapPerm x y) π) = -FinPerm.sign R π := by
+  intro d
+  induction d with
+  | zero =>
+      intro n x y h π
+      have hxy : (x : ℕ) + 1 = (y : ℕ) := by omega
+      exact sign_compose_swapPerm_adj π x y hxy
+  | succ d ih =>
+      intro n x y h π
+      have hy := y.isLt
+      obtain ⟨z, hzv⟩ : ∃ z : Fin n, (z : ℕ) = (x : ℕ) + 1 :=
+        ⟨⟨_, by omega⟩, rfl⟩
+      have hxz : (x : ℕ) + 1 = (z : ℕ) := hzv.symm
+      have hlt : (z : ℕ) < (y : ℕ) := by omega
+      have hzy : (y : ℕ) = (z : ℕ) + d + 1 := by omega
+      rw [swapPerm_triple hxz hlt, FinPerm.compose_assoc,
+        sign_compose_swapPerm_adj _ _ _ hxz, FinPerm.compose_assoc,
+        ih z y hzy, sign_compose_swapPerm_adj _ _ _ hxz]
+      ring
+
+/-- **任意对换的符号为 `-1`**（FLIP 与恒等置换复合）。 -/
+lemma sign_swapPerm : ∀ (d : ℕ) {n : ℕ} (x y : Fin n),
+    (y : ℕ) = (x : ℕ) + d + 1 → FinPerm.sign R (FinPerm.swapPerm x y) = -1 := by
+  intro d
+  induction d with
+  | zero =>
+      intro n x y h
+      have hxy : (x : ℕ) + 1 = (y : ℕ) := by omega
+      exact sign_swapPerm_adj hxy
+  | succ d ih =>
+      intro n x y h
+      have hy := y.isLt
+      obtain ⟨z, hzv⟩ : ∃ z : Fin n, (z : ℕ) = (x : ℕ) + 1 :=
+        ⟨⟨_, by omega⟩, rfl⟩
+      have hxz : (x : ℕ) + 1 = (z : ℕ) := hzv.symm
+      have hlt : (z : ℕ) < (y : ℕ) := by omega
+      have hzy : (y : ℕ) = (z : ℕ) + d + 1 := by omega
+      rw [swapPerm_triple hxz hlt, sign_compose_swapPerm_adj _ _ _ hxz,
+        sign_compose_swapPerm d z y hzy, sign_swapPerm_adj hxz]
+      ring
+
+end GradComm
+
 end SDG.DifferentialForms
