@@ -4240,4 +4240,144 @@ lemma sign_swapPerm : ∀ (d : ℕ) {n : ℕ} (x y : Fin n),
 
 end GradComm
 
+/-! ### 循环左移与块交换（E3 续）
+
+`cycLfun s p`：区间 `[s, s+p]` 的循环左移（`s ↦ s+p`，其余 `-1`）；
+`bsFunV n q p`：`(p,q)`-shuffle（前 `q` 槽右移 `p`、后 `p` 槽左移 `q`）。
+关键恒等式（均点态表验证）：
+`cycLfun s (p+1) = swapFin⟨s+p⟩⟨s+p+1⟩ ∘ cycLfun s p` 与
+`bsFunV n (q+1) p = bsFunV n q p ∘ cycLfun q p`，
+由此 (P') `sign (encode (bsFunV ∘ π.toFun)) = (-1)^{q*p} sign π` 对 q 归纳。 -/
+
+
+section CycleShift
+
+/-- 区间 `[s, s+p]` 的循环左移：`s ↦ s+p`，`s < t ≤ s+p ↦ t-1`，其余不动。
+守卫 `hsp : s + p < n` 保证右端落点合法。 -/
+def cycLfun {n : ℕ} (s p : ℕ) (hsp : s + p < n) : Fin n → Fin n :=
+  fun t =>
+    dite ((t : ℕ) = s)
+      (fun _hEq => (Fin.mk (s + p) hsp : Fin n))
+      (fun _hne =>
+        dite (s < (t : ℕ) ∧ (t : ℕ) ≤ s + p)
+          (fun _hMid => (Fin.mk ((t : ℕ) - 1) (by have ht := t.isLt; omega) : Fin n))
+          (fun _hOut => t))
+
+/-- 循环左移在左端点的值：`↑t = s ↦ s+p`。 -/
+lemma cycLfun_left {n : ℕ} {s p : ℕ} (hsp : s + p < n) {t : Fin n}
+    (hEq : (t : ℕ) = s) :
+    cycLfun s p hsp t = (Fin.mk (s + p) hsp : Fin n) := by
+  unfold cycLfun
+  rw [dif_pos hEq]
+
+/-- 循环左移在中段的值：`s < t ≤ s+p ↦ t-1`。 -/
+lemma cycLfun_mid {n : ℕ} {s p : ℕ} (hsp : s + p < n) {t : Fin n}
+    (h1 : s < (t : ℕ)) (h2 : (t : ℕ) ≤ s + p) :
+    cycLfun s p hsp t
+      = (Fin.mk ((t : ℕ) - 1) (by have ht := t.isLt; omega) : Fin n) := by
+  unfold cycLfun
+  rw [dif_neg (by omega), dif_pos ⟨h1, h2⟩]
+
+/-- 循环左移在区间外的值：不动。 -/
+lemma cycLfun_out {n : ℕ} {s p : ℕ} (hsp : s + p < n) {t : Fin n}
+    (hne : (t : ℕ) ≠ s) (hno : ¬(s < (t : ℕ) ∧ (t : ℕ) ≤ s + p)) :
+    cycLfun s p hsp t = t := by
+  unfold cycLfun
+  rw [dif_neg hne, dif_neg hno]
+
+
+/-- **循环左移的递推**：`cycLfun s (p+1)` = 右端对换复合 `cycLfun s p`。
+五情形点态验证（`t = s` 直达右端、`t = s+p+1` 对换回落、`s < t ≤ s+p` 中段
+`-1` 不变、其余区间外不动）。 -/
+lemma cycLfun_succ {n : ℕ} {s p : ℕ} (hsp : s + (p + 1) < n) :
+    cycLfun s (p + 1) hsp
+      = (swapFin (Fin.mk (s + p) (by omega : (s + p : ℕ) < n))
+          (Fin.mk (s + p + 1) hsp)) ∘
+        (cycLfun s p (by omega : (s + p : ℕ) < n)) := by
+  have hsp2 : (s + p : ℕ) < n := by omega
+  funext t
+  by_cases h1 : (t : ℕ) = s
+  · -- t = s：subst 后两侧 dite 都走左端分支
+    have hEq : t = (Fin.mk s (show (s : ℕ) < n from Nat.lt_of_le_of_lt (Nat.le_add_right s (p + 1)) hsp) : Fin n) := Fin.ext h1
+    subst hEq
+    show cycLfun s (p + 1) hsp (Fin.mk s (show (s : ℕ) < n from Nat.lt_of_le_of_lt (Nat.le_add_right s (p + 1)) hsp))
+      = swapFin (Fin.mk (s + p) hsp2) (Fin.mk (s + p + 1) hsp)
+        (cycLfun s p hsp2 (Fin.mk s (show (s : ℕ) < n from Nat.lt_of_le_of_lt (Nat.le_add_right s (p + 1)) hsp)))
+    unfold cycLfun
+    rw [dif_pos rfl, dif_pos rfl, swapFin_self_left]
+    exact Fin.ext (by simp only [Fin.val_mk]; omega)
+  · by_cases h2 : (t : ℕ) = s + (p + 1)
+    · have hEq : t = (Fin.mk (s + p + 1) hsp : Fin n) := Fin.ext h2
+      subst hEq
+      have hM1 : s < ((Fin.mk (s + p + 1) hsp : Fin n) : ℕ) := show s < s + p + 1 by omega
+      have hM2 : ((Fin.mk (s + p + 1) hsp : Fin n) : ℕ) ≤ s + p + 1 := show s + p + 1 ≤ s + p + 1 by omega
+      have hO1 : ((Fin.mk (s + p + 1) hsp : Fin n) : ℕ) ≠ s := show s + p + 1 ≠ s by omega
+      have hO2 : ¬(s < ((Fin.mk (s + p + 1) hsp : Fin n) : ℕ) ∧
+          ((Fin.mk (s + p + 1) hsp : Fin n) : ℕ) ≤ s + p) :=
+        show ¬(s < s + p + 1 ∧ s + p + 1 ≤ s + p) by omega
+      show cycLfun s (p + 1) hsp (Fin.mk (s + p + 1) hsp)
+        = swapFin (Fin.mk (s + p) hsp2) (Fin.mk (s + p + 1) hsp)
+          (cycLfun s p hsp2 (Fin.mk (s + p + 1) hsp))
+      rw [cycLfun_mid hsp hM1 hM2, cycLfun_out hsp2 hO1 hO2, swapFin_self_right]
+      exact Fin.ext (by simp only [Fin.val_mk]; omega)
+    · by_cases h3 : (t : ℕ) ≤ s + p
+      · by_cases h4 : (t : ℕ) < s
+        · -- t < s：两侧区间外
+          have hO3 : (t : ℕ) ≠ s := fun hc => by rw [hc] at h4; omega
+          have hO4 : ¬(s < (t : ℕ) ∧ (t : ℕ) ≤ s + (p + 1)) := fun hcon => by omega
+          have hO5 : ¬(s < (t : ℕ) ∧ (t : ℕ) ≤ s + p) := fun hcon => by omega
+          have hneA : t ≠ (Fin.mk (s + p) hsp2 : Fin n) := fun hc => by
+            rw [hc, Fin.val_mk] at h4
+            omega
+          have hneB : t ≠ (Fin.mk (s + p + 1) hsp : Fin n) := fun hc => by
+            rw [hc, Fin.val_mk] at h4
+            omega
+          show cycLfun s (p + 1) hsp t
+            = swapFin (Fin.mk (s + p) hsp2) (Fin.mk (s + p + 1) hsp)
+              (cycLfun s p hsp2 t)
+          rw [cycLfun_out hsp hO3 hO4, cycLfun_out hsp2 hO3 hO5, swapFin_of_ne hneA hneB]
+        · -- s < t ≤ s+p：两侧同为中段 `-1`
+          have ht1 : s < (t : ℕ) := by omega
+          have hUp1 : (t : ℕ) ≤ s + p + 1 := by omega
+          have hneL : (Fin.mk ((t : ℕ) - 1) (by have ht := t.isLt; omega) : Fin n)
+              ≠ (Fin.mk (s + p) hsp2 : Fin n) := by
+            intro hc
+            have hv : ((Fin.mk ((t : ℕ) - 1) (by have ht := t.isLt; omega) : Fin n) : ℕ)
+                = ((Fin.mk (s + p) hsp2 : Fin n) : ℕ) := congrArg Fin.val hc
+            have hv1 : ((Fin.mk ((t : ℕ) - 1) (by have ht := t.isLt; omega) : Fin n) : ℕ)
+                = (t : ℕ) - 1 := rfl
+            have hv2 : ((Fin.mk (s + p) hsp2 : Fin n) : ℕ) = s + p := rfl
+            omega
+          have hneR : (Fin.mk ((t : ℕ) - 1) (by have ht := t.isLt; omega) : Fin n)
+              ≠ (Fin.mk (s + p + 1) hsp : Fin n) := by
+            intro hc
+            have hv : ((Fin.mk ((t : ℕ) - 1) (by have ht := t.isLt; omega) : Fin n) : ℕ)
+                = ((Fin.mk (s + p + 1) hsp : Fin n) : ℕ) := congrArg Fin.val hc
+            have hv1 : ((Fin.mk ((t : ℕ) - 1) (by have ht := t.isLt; omega) : Fin n) : ℕ)
+                = (t : ℕ) - 1 := rfl
+            have hv2 : ((Fin.mk (s + p + 1) hsp : Fin n) : ℕ) = s + p + 1 := rfl
+            omega
+          show cycLfun s (p + 1) hsp t
+            = swapFin (Fin.mk (s + p) hsp2) (Fin.mk (s + p + 1) hsp)
+              (cycLfun s p hsp2 t)
+          rw [cycLfun_mid hsp ht1 hUp1, cycLfun_mid hsp2 ht1 h3, swapFin_of_ne hneL hneR]
+      · -- t > s+p：两侧区间外
+        have hO3 : (t : ℕ) ≠ s :=
+          fun hc => h3 (Nat.le_trans (le_of_eq hc) (Nat.le_add_right s p))
+        have hge : (s + p + 1 : ℕ) ≤ (t : ℕ) := Nat.succ_le_of_lt (Nat.lt_of_not_ge h3)
+        have hO4 : ¬(s < (t : ℕ) ∧ (t : ℕ) ≤ s + (p + 1)) := fun hcon => by
+          have hEq : (t : ℕ) = s + p + 1 := by omega
+          exact h2 hEq
+        have hO5 : ¬(s < (t : ℕ) ∧ (t : ℕ) ≤ s + p) := fun hcon => h3 hcon.2
+        have hneA : t ≠ (Fin.mk (s + p) hsp2 : Fin n) := fun hc =>
+          h3 (by rw [hc, Fin.val_mk])
+        have hneB : t ≠ (Fin.mk (s + p + 1) hsp : Fin n) := fun hc =>
+          h2 (by rw [hc]; simp only [Fin.val_mk]; omega)
+        show cycLfun s (p + 1) hsp t
+          = swapFin (Fin.mk (s + p) hsp2) (Fin.mk (s + p + 1) hsp)
+            (cycLfun s p hsp2 t)
+        rw [cycLfun_out hsp hO3 hO4, cycLfun_out hsp2 hO3 hO5, swapFin_of_ne hneA hneB]
+
+end CycleShift
+
 end SDG.DifferentialForms
