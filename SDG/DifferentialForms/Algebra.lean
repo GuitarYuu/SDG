@@ -3707,4 +3707,128 @@ lemma wedgeAnyFun_swap_adj {p q : ℕ} {x : X}
 
 end WedgeAdjacent
 
+/-! ### 任意对换的反号与等值消零（冒泡分解）
+
+任意两槽对换经「三重相邻对换恒等式 `(a b) = (a c)∘(c b)∘(a c)`」冒泡分解；
+两个输入槽位相等时展开函数等于自身取负，2 可逆下即为零——这是打包为
+`AlternatingMap` 所需的 `map_eq_zero_of_eq'` 字段。 -/
+
+section WedgeAlternating
+
+variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
+
+/-- 三重相邻对换恒等式（向量槽位冒泡分解）：`(a b) = (a c)∘(c b)∘(a c)`，
+其中 `c = a + 1 < b`。 -/
+lemma swapFin_triple {n : ℕ} {a b : Fin n} {c : Fin n}
+    (hac : (a : ℕ) + 1 = (c : ℕ)) (hlt : (c : ℕ) < (b : ℕ)) :
+    swapFin a b = (swapFin a c) ∘ ((swapFin c b) ∘ (swapFin a c)) := by
+  funext t
+  simp only [Function.comp_apply]
+  have hca : (a : ℕ) ≠ (c : ℕ) := by omega
+  have hcb : (c : ℕ) ≠ (b : ℕ) := by omega
+  have hab : (a : ℕ) ≠ (b : ℕ) := by omega
+  by_cases h1 : t = a
+  · rw [h1, swapFin_self_left, swapFin_self_left, swapFin_self_left,
+      swapFin_of_ne (fun hc => hab (congrArg Fin.val hc).symm)
+        (fun hc => hcb (congrArg Fin.val hc).symm)]
+  · by_cases h2 : t = b
+    · rw [h2, swapFin_self_right,
+        swapFin_of_ne (fun hc => hab (congrArg Fin.val hc).symm)
+          (fun hc => hcb (congrArg Fin.val hc).symm),
+        swapFin_self_right, swapFin_self_right]
+    · by_cases h3 : t = c
+      · rw [h3, swapFin_of_ne (fun hc => hca (congrArg Fin.val hc).symm)
+          (fun hc => hcb (congrArg Fin.val hc)),
+          swapFin_self_right,
+          swapFin_of_ne (fun hc => hca (congrArg Fin.val hc))
+            (fun hc => hab (congrArg Fin.val hc)),
+          swapFin_self_left]
+      · rw [swapFin_of_ne h1 h2, swapFin_of_ne h1 h3, swapFin_of_ne h3 h2,
+          swapFin_of_ne h1 h3]
+
+/-- 冒泡引理：相距 `d + 1` 的两槽对换使 `(p,q)` 楔积展开函数反号
+（对距离 `d` 归纳）。 -/
+lemma wedgeAnyFun_swap_flip_aux {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R) :
+    ∀ (d : ℕ) (a b : Fin (p + q)) (u : Fin (p + q) → TangentFiber R X x),
+      (b : ℕ) = (a : ℕ) + d + 1 →
+      wedgeAnyFun ω η (fun t => u ((FinPerm.swapPerm a b).toFun t))
+        = -wedgeAnyFun ω η u := by
+  intro d
+  induction d with
+  | zero =>
+      intro a b u hb
+      exact wedgeAnyFun_swap_adj ω η a b (by omega) u
+  | succ d ih =>
+      intro a b u hb
+      have hb2 : (b : ℕ) = (a : ℕ) + d + 2 := hb
+      obtain ⟨c, hcval⟩ : ∃ c : Fin (p + q), (c : ℕ) = (a : ℕ) + 1 :=
+        ⟨⟨_, by have := b.isLt; omega⟩, rfl⟩
+      have hac : (a : ℕ) + 1 = (c : ℕ) := hcval.symm
+      have hlt : (c : ℕ) < (b : ℕ) := by omega
+      have hid : (fun t => u ((FinPerm.swapPerm a b).toFun t))
+          = (fun t => (fun t' => u ((FinPerm.swapPerm a c).toFun
+              ((FinPerm.swapPerm c b).toFun t')))
+            ((FinPerm.swapPerm a c).toFun t)) := by
+        funext t
+        rw [FinPerm.toFun_swapPerm, FinPerm.toFun_swapPerm, FinPerm.toFun_swapPerm,
+          swapFin_triple hac hlt]
+        simp only [Function.comp_apply]
+      rw [hid, wedgeAnyFun_swap_adj ω η a c hac
+        (fun t' => u ((FinPerm.swapPerm a c).toFun ((FinPerm.swapPerm c b).toFun t'))),
+        ih c b (fun t' => u ((FinPerm.swapPerm a c).toFun t')) (by omega),
+        neg_neg, wedgeAnyFun_swap_adj ω η a c hac u]
+
+/-- **任意对换反号**：交换任意两个输入槽位使 `(p,q)` 楔积展开函数反号。 -/
+lemma wedgeAnyFun_swap_ne {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    {a b : Fin (p + q)} (hne : a ≠ b)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun ω η (fun t => v ((FinPerm.swapPerm a b).toFun t))
+      = -wedgeAnyFun ω η v := by
+  have habn : (a : ℕ) ≠ (b : ℕ) := fun hc => hne (Fin.ext hc)
+  by_cases hlt : (a : ℕ) < (b : ℕ)
+  · exact wedgeAnyFun_swap_flip_aux ω η (b - a - 1) a b v (by omega)
+  · have h1 := wedgeAnyFun_swap_flip_aux ω η (a - b - 1) b a v (by omega)
+    rw [show (fun t => v ((FinPerm.swapPerm a b).toFun t))
+        = (fun t => v ((FinPerm.swapPerm b a).toFun t)) from by
+        funext t
+        rw [FinPerm.toFun_swapPerm, FinPerm.toFun_swapPerm, FinPerm.swapFin_comm]]
+    rw [h1]
+
+/-- **等值消零**：两个输入槽位相等的向量在 `(p,q)` 楔积展开函数下为零
+（需 2 可逆，此假设将随打包以 `Invertible`-式参数进入 `AlternatingMap`）。
+
+证明：等值向量经对换不变（`habs`），故 `S = -S`（任意对换反号），
+`2` 可逆消去即得。 -/
+lemma wedgeAnyFun_eq_zero_of_eq {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (h2 : ∃ y : R, y * 2 = 1)
+    {a b : Fin (p + q)} (hne : a ≠ b)
+    (v : Fin (p + q) → TangentFiber R X x) (h : v a = v b) :
+    wedgeAnyFun ω η v = 0 := by
+  have habs : (fun t => v ((FinPerm.swapPerm a b).toFun t)) = v := by
+    funext t
+    by_cases h1 : t = a
+    · rw [h1, FinPerm.toFun_swapPerm, swapFin_self_left, h]
+    · by_cases h2c : t = b
+      · rw [h2c, FinPerm.toFun_swapPerm, swapFin_self_right, h]
+      · rw [FinPerm.toFun_swapPerm, swapFin_of_ne h1 h2c]
+  obtain ⟨y, hy2⟩ := h2
+  have hneg : wedgeAnyFun ω η v = -wedgeAnyFun ω η v := by
+    calc wedgeAnyFun ω η v
+        = wedgeAnyFun ω η (fun t => v ((FinPerm.swapPerm a b).toFun t)) := by rw [habs]
+      _ = -wedgeAnyFun ω η v := wedgeAnyFun_swap_ne ω η hne v
+  have hsum : wedgeAnyFun ω η v + wedgeAnyFun ω η v = 0 := by
+    nth_rewrite 1 [hneg]
+    rw [neg_add_cancel]
+  have h4 : (1 : R) * wedgeAnyFun ω η v = 0 := by
+    rw [← hy2, mul_assoc, two_mul, hsum, mul_zero]
+  exact Eq.trans (one_mul _).symm h4
+
+end WedgeAlternating
+
 end SDG.DifferentialForms
