@@ -3666,4 +3666,45 @@ lemma sign_swapPerm_adj {m : ℕ} {a b : Fin m} (h : (a : ℕ) + 1 = (b : ℕ)) 
 
 end SignFlip
 
+section WedgeAdjacent
+
+variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
+
+/-- **相邻反交换**：把第 `a`、`a+1 = b` 两个输入槽位对调（经相邻对换
+`swapPerm a b` 作用于参数向量），`(p,q)` 楔积展开函数反号。
+
+证明：点态恒等式 `sign π * W'(π) = -u(compose s π)`（FLIP 翻转符号、
+`toFun_compose` 吸收对换），再经 `permSum_mul_left` 提出 `-1`、
+`permSum_reindex_compose`（(P) 重排）吸收 `s∘s = id`。 -/
+lemma wedgeAnyFun_swap_adj {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (a b : Fin (p + q)) (h : (a : ℕ) + 1 = (b : ℕ))
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun ω η (fun t => v ((FinPerm.swapPerm a b).toFun t))
+      = -wedgeAnyFun ω η v := by
+  unfold wedgeAnyFun
+  have hpoint : ∀ π : FinPerm (p + q),
+      FinPerm.sign R π * (ω (fun i : Fin p =>
+          v ((FinPerm.swapPerm a b).toFun (π.toFun (Fin.castAdd q i)))) *
+        η (fun j : Fin q =>
+          v ((FinPerm.swapPerm a b).toFun (π.toFun (Fin.natAdd p j)))))
+      = (-1 : R) * (FinPerm.sign R (FinPerm.compose (FinPerm.swapPerm a b) π) *
+        (ω (fun i : Fin p =>
+          v ((FinPerm.compose (FinPerm.swapPerm a b) π).toFun (Fin.castAdd q i))) *
+        η (fun j : Fin q =>
+          v ((FinPerm.compose (FinPerm.swapPerm a b) π).toFun (Fin.natAdd p j))))) := by
+    intro π
+    rw [FinPerm.toFun_compose, sign_compose_swapPerm_adj π a b h]
+    simp only [Function.comp_apply]
+    ring
+  rw [permSum_congr hpoint, permSum_mul_left,
+    permSum_reindex_compose (p + q) (FinPerm.swapPerm a b)
+      (fun π' : FinPerm (p + q) => FinPerm.sign R π' *
+        (ω (fun i : Fin p => v (π'.toFun (Fin.castAdd q i))) *
+        η (fun j : Fin q => v (π'.toFun (Fin.natAdd p j)))))]
+  ring
+
+end WedgeAdjacent
+
 end SDG.DifferentialForms
