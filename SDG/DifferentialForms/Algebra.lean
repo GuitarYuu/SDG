@@ -3831,4 +3831,340 @@ lemma wedgeAnyFun_eq_zero_of_eq {p q : ℕ} {x : X}
 
 end WedgeAlternating
 
+/-! ### `(p,q)` 楔积的打包（AlternatingMap）
+
+槽位 update 引理的关键：更新槽 `i` 在置换 `π` 下的预像（`FinPerm.preimage`，
+构造性、无选择公理）以 `↑(preimage π i) < p` 与否决定落入 ω 块或 η 块
+（两块像集不交且覆盖全 `Fin (p+q)`），块向量经
+`update_comp_of_preimage` / `update_comp_of_not_mem` 分解后由 ω/η 的
+槽线性（Mathlib `MultilinearMap.map_update_add/smul`，无选择）承担。 -/
+
+section WedgeAnyPack
+
+variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
+
+/-- 置换作用的构造性原像：对 `cons σ i`，`i` 的原像是 `0`，其余 `t` 的
+原像是 `σ` 对 `unshift i t` 的原像的后继。 -/
+def FinPerm.preimage : {n : ℕ} → FinPerm n → Fin n → Fin n
+  | 0, .nil, j => j
+  | n + 1, .cons σ i, t =>
+      if h : t = i then 0 else (preimage σ (FinPerm.unshift i t h)).succ
+
+lemma FinPerm.preimage_apply : ∀ {n : ℕ} (π : FinPerm n) (i : Fin n),
+    π.toFun (preimage π i) = i := by
+  intro n
+  induction n with
+  | zero =>
+      intro π i
+      cases π with
+      | nil => exact FinPerm.toFun_nil i
+  | succ n ih =>
+      intro π i
+      cases π with
+      | cons σ j =>
+          show (FinPerm.cons σ j).toFun
+            (if h : i = j then 0
+              else (preimage σ (FinPerm.unshift j i h)).succ) = i
+          by_cases h : i = j
+          · rw [dif_pos h, FinPerm.toFun_cons_zero]
+            exact h.symm
+          · rw [dif_neg h, FinPerm.toFun_cons_succ,
+              ih σ (FinPerm.unshift j i h), FinPerm.insertAt_unshift]
+
+/-- 复合向量的槽更新分解（预像在块内）：更新经单射 `f` 的预像 `m`
+恰好落入块向量 `v ∘ f` 的第 `m` 槽。 -/
+lemma update_comp_of_preimage {n p : ℕ} {T : Type u} (f : Fin p → Fin n)
+    (hinj : Function.Injective f) (v : Fin n → T) (i : Fin n) (m : Fin p)
+    (hm : f m = i) (x : T) :
+    (fun k => Function.update v i x (f k)) = Function.update (fun k => v (f k)) m x := by
+  funext k
+  by_cases hk : k = m
+  · rw [hk, hm, Function.update_self, Function.update_self]
+  · rw [Function.update_of_ne (fun hc => hk (hinj (hc.trans hm.symm))),
+      Function.update_of_ne hk]
+
+/-- 复合向量的槽更新分解（预像不在块内）：块向量不变。 -/
+lemma update_comp_of_not_mem {n p : ℕ} {T : Type u} (f : Fin p → Fin n)
+    (v : Fin n → T) (i : Fin n) (hni : ∀ k, f k ≠ i) (x : T) :
+    (fun k => Function.update v i x (f k)) = fun k => v (f k) := by
+  funext k
+  rw [Function.update_of_ne (hni k)]
+
+/-- `(p,q)` 楔积对第 `i` 槽的加法。预像落在 ω 块（`↑(preimage π i) < p`）时
+η 块不受影响，反之亦然；两块像集不交且覆盖保证恰居其一。 -/
+lemma wedgeAnyFun_update_add {p q : ℕ} {x : X} [DecidableEq (Fin (p + q))]
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) (i : Fin (p + q))
+    (x₁ x₂ : TangentFiber R X x) :
+    wedgeAnyFun ω η (Function.update v i (x₁ + x₂))
+      = wedgeAnyFun ω η (Function.update v i x₁)
+        + wedgeAnyFun ω η (Function.update v i x₂) := by
+  unfold wedgeAnyFun
+  rw [← FinPerm.permSum_add]
+  refine permSum_congr (fun π => ?_)
+  have hpre := FinPerm.preimage_apply π i
+  by_cases hwp : (FinPerm.preimage π i : ℕ) < p
+  · -- 预像在 ω 块：η 块不受影响
+    have hmEq : (Fin.castAdd q (Fin.mk ((FinPerm.preimage π i : ℕ)) hwp : Fin p))
+        = FinPerm.preimage π i := Fin.ext (by simp only [Fin.val_castAdd])
+    have hmi : π.toFun (Fin.castAdd q (Fin.mk ((FinPerm.preimage π i : ℕ)) hwp : Fin p))
+        = i := by rw [hmEq]; exact hpre
+    have hηne : ∀ k : Fin q, π.toFun (Fin.natAdd p k) ≠ i := by
+      intro k hc
+      have h1 : Fin.natAdd p k = FinPerm.preimage π i :=
+        π.toFun_injective (hc.trans hpre.symm)
+      have hv : p + (k : ℕ) = (FinPerm.preimage π i : ℕ) := by
+        simpa only [Fin.val_natAdd] using congrArg Fin.val h1
+      have hkp := k.isLt
+      omega
+    have hωdec : ∀ x : TangentFiber R X x,
+        (fun k => Function.update v i x (π.toFun (Fin.castAdd q k)))
+          = Function.update (fun k => v (π.toFun (Fin.castAdd q k)))
+            (Fin.mk ((FinPerm.preimage π i : ℕ)) hwp) x := by
+      intro x
+      funext k
+      by_cases hk : k = Fin.mk ((FinPerm.preimage π i : ℕ)) hwp
+      · rw [hk, hmEq, hpre, Function.update_self, Function.update_self]
+      · have hne : π.toFun (Fin.castAdd q k) ≠ i := by
+          intro hc
+          have h1 : Fin.castAdd q k = FinPerm.preimage π i :=
+            π.toFun_injective (hc.trans hpre.symm)
+          have hv : (k : ℕ) = (FinPerm.preimage π i : ℕ) := by
+            simpa only [Fin.val_castAdd] using congrArg Fin.val h1
+          have hkv : (k : ℕ) ≠ (Fin.mk ((FinPerm.preimage π i : ℕ)) hwp : ℕ) :=
+            fun hc2 => hk (Fin.ext hc2)
+          have hmv : ((Fin.mk ((FinPerm.preimage π i : ℕ)) hwp : Fin p) : ℕ)
+              = (FinPerm.preimage π i : ℕ) := rfl
+          omega
+        rw [Function.update_of_ne hne, Function.update_of_ne hk]
+    have hηdec : ∀ x : TangentFiber R X x,
+        (fun k => Function.update v i x (π.toFun (Fin.natAdd p k)))
+          = fun k => v (π.toFun (Fin.natAdd p k)) := by
+      intro x
+      funext k
+      rw [Function.update_of_ne (hηne k)]
+    rw [hωdec (x₁ + x₂), hηdec (x₁ + x₂), hωdec x₁, hηdec x₁, hωdec x₂, hηdec x₂,
+      ω.map_update_add]
+    ring
+  · -- 预像在 η 块：ω 块不受影响
+    have hmq : (FinPerm.preimage π i : ℕ) - p < q := by
+      have h1 := (FinPerm.preimage π i).isLt
+      omega
+    have hm'Eq : (Fin.natAdd p (Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq : Fin q))
+        = FinPerm.preimage π i := Fin.ext (by simp only [Fin.val_natAdd]; omega)
+    have hmi' : π.toFun (Fin.natAdd p (Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq : Fin q))
+        = i := by rw [hm'Eq]; exact hpre
+    have hωne : ∀ k : Fin p, π.toFun (Fin.castAdd q k) ≠ i := by
+      intro k hc
+      have h1 : Fin.castAdd q k = FinPerm.preimage π i :=
+        π.toFun_injective (hc.trans hpre.symm)
+      have hv : (k : ℕ) = (FinPerm.preimage π i : ℕ) := by
+        simpa only [Fin.val_castAdd] using congrArg Fin.val h1
+      have hkp := k.isLt
+      omega
+    have hωdec : ∀ x : TangentFiber R X x,
+        (fun k => Function.update v i x (π.toFun (Fin.castAdd q k)))
+          = fun k => v (π.toFun (Fin.castAdd q k)) := by
+      intro x
+      funext k
+      rw [Function.update_of_ne (hωne k)]
+    have hηdec : ∀ x : TangentFiber R X x,
+        (fun k => Function.update v i x (π.toFun (Fin.natAdd p k)))
+          = Function.update (fun k => v (π.toFun (Fin.natAdd p k)))
+            (Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq) x := by
+      intro x
+      funext k
+      by_cases hk : k = Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq
+      · rw [hk, hm'Eq, hpre, Function.update_self, Function.update_self]
+      · have hne : π.toFun (Fin.natAdd p k) ≠ i := by
+          intro hc
+          have h1 : Fin.natAdd p k = FinPerm.preimage π i :=
+            π.toFun_injective (hc.trans hpre.symm)
+          have hv : p + (k : ℕ) = (FinPerm.preimage π i : ℕ) := by
+            simpa only [Fin.val_natAdd] using congrArg Fin.val h1
+          have hkv : (k : ℕ) ≠ (Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq : ℕ) :=
+            fun hc2 => hk (Fin.ext hc2)
+          have hmv : ((Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq : Fin q) : ℕ)
+              = (FinPerm.preimage π i : ℕ) - p := rfl
+          omega
+        rw [Function.update_of_ne hne, Function.update_of_ne hk]
+    rw [hωdec (x₁ + x₂), hηdec (x₁ + x₂), hωdec x₁, hηdec x₁, hωdec x₂, hηdec x₂,
+      η.map_update_add]
+    ring
+
+/-- `(p,q)` 楔积对第 `i` 槽的数乘。 -/
+lemma wedgeAnyFun_update_smul {p q : ℕ} {x : X} [DecidableEq (Fin (p + q))]
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) (i : Fin (p + q))
+    (c : R) (x₁ : TangentFiber R X x) :
+    wedgeAnyFun ω η (Function.update v i (c • x₁))
+      = c • wedgeAnyFun ω η (Function.update v i x₁) := by
+  unfold wedgeAnyFun
+  simp only [smul_eq_mul]
+  rw [← permSum_mul_left]
+  refine permSum_congr (fun π => ?_)
+  have hpre := FinPerm.preimage_apply π i
+  by_cases hwp : (FinPerm.preimage π i : ℕ) < p
+  · have hmEq : (Fin.castAdd q (Fin.mk ((FinPerm.preimage π i : ℕ)) hwp : Fin p))
+        = FinPerm.preimage π i := Fin.ext (by simp only [Fin.val_castAdd])
+    have hmi : π.toFun (Fin.castAdd q (Fin.mk ((FinPerm.preimage π i : ℕ)) hwp : Fin p))
+        = i := by rw [hmEq]; exact hpre
+    have hηne : ∀ k : Fin q, π.toFun (Fin.natAdd p k) ≠ i := by
+      intro k hc
+      have h1 : Fin.natAdd p k = FinPerm.preimage π i :=
+        π.toFun_injective (hc.trans hpre.symm)
+      have hv : p + (k : ℕ) = (FinPerm.preimage π i : ℕ) := by
+        simpa only [Fin.val_natAdd] using congrArg Fin.val h1
+      have hkp := k.isLt
+      omega
+    have hωdec : ∀ x : TangentFiber R X x,
+        (fun k => Function.update v i x (π.toFun (Fin.castAdd q k)))
+          = Function.update (fun k => v (π.toFun (Fin.castAdd q k)))
+            (Fin.mk ((FinPerm.preimage π i : ℕ)) hwp) x := by
+      intro x
+      funext k
+      by_cases hk : k = Fin.mk ((FinPerm.preimage π i : ℕ)) hwp
+      · rw [hk, hmEq, hpre, Function.update_self, Function.update_self]
+      · have hne : π.toFun (Fin.castAdd q k) ≠ i := by
+          intro hc
+          have h1 : Fin.castAdd q k = FinPerm.preimage π i :=
+            π.toFun_injective (hc.trans hpre.symm)
+          have hv : (k : ℕ) = (FinPerm.preimage π i : ℕ) := by
+            simpa only [Fin.val_castAdd] using congrArg Fin.val h1
+          have hkv : (k : ℕ) ≠ (Fin.mk ((FinPerm.preimage π i : ℕ)) hwp : ℕ) :=
+            fun hc2 => hk (Fin.ext hc2)
+          have hmv : ((Fin.mk ((FinPerm.preimage π i : ℕ)) hwp : Fin p) : ℕ)
+              = (FinPerm.preimage π i : ℕ) := rfl
+          omega
+        rw [Function.update_of_ne hne, Function.update_of_ne hk]
+    have hηdec : ∀ x : TangentFiber R X x,
+        (fun k => Function.update v i x (π.toFun (Fin.natAdd p k)))
+          = fun k => v (π.toFun (Fin.natAdd p k)) := by
+      intro x
+      funext k
+      rw [Function.update_of_ne (hηne k)]
+    rw [hωdec (c • x₁), hηdec (c • x₁), hωdec x₁, hηdec x₁, ω.map_update_smul]
+    simp only [smul_eq_mul]
+    ring
+  · have hmq : (FinPerm.preimage π i : ℕ) - p < q := by
+      have h1 := (FinPerm.preimage π i).isLt
+      omega
+    have hm'Eq : (Fin.natAdd p (Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq : Fin q))
+        = FinPerm.preimage π i := Fin.ext (by simp only [Fin.val_natAdd]; omega)
+    have hmi' : π.toFun (Fin.natAdd p (Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq : Fin q))
+        = i := by rw [hm'Eq]; exact hpre
+    have hωne : ∀ k : Fin p, π.toFun (Fin.castAdd q k) ≠ i := by
+      intro k hc
+      have h1 : Fin.castAdd q k = FinPerm.preimage π i :=
+        π.toFun_injective (hc.trans hpre.symm)
+      have hv : (k : ℕ) = (FinPerm.preimage π i : ℕ) := by
+        simpa only [Fin.val_castAdd] using congrArg Fin.val h1
+      have hkp := k.isLt
+      omega
+    have hωdec : ∀ x : TangentFiber R X x,
+        (fun k => Function.update v i x (π.toFun (Fin.castAdd q k)))
+          = fun k => v (π.toFun (Fin.castAdd q k)) := by
+      intro x
+      funext k
+      rw [Function.update_of_ne (hωne k)]
+    have hηdec : ∀ x : TangentFiber R X x,
+        (fun k => Function.update v i x (π.toFun (Fin.natAdd p k)))
+          = Function.update (fun k => v (π.toFun (Fin.natAdd p k)))
+            (Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq) x := by
+      intro x
+      funext k
+      by_cases hk : k = Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq
+      · rw [hk, hm'Eq, hpre, Function.update_self, Function.update_self]
+      · have hne : π.toFun (Fin.natAdd p k) ≠ i := by
+          intro hc
+          have h1 : Fin.natAdd p k = FinPerm.preimage π i :=
+            π.toFun_injective (hc.trans hpre.symm)
+          have hv : p + (k : ℕ) = (FinPerm.preimage π i : ℕ) := by
+            simpa only [Fin.val_natAdd] using congrArg Fin.val h1
+          have hkv : (k : ℕ) ≠ (Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq : ℕ) :=
+            fun hc2 => hk (Fin.ext hc2)
+          have hmv : ((Fin.mk ((FinPerm.preimage π i : ℕ) - p) hmq : Fin q) : ℕ)
+              = (FinPerm.preimage π i : ℕ) - p := rfl
+          omega
+        rw [Function.update_of_ne hne, Function.update_of_ne hk]
+    rw [hωdec (c • x₁), hηdec (c • x₁), hωdec x₁, hηdec x₁, η.map_update_smul]
+    simp only [smul_eq_mul]
+    ring
+
+/-- **一般 `(p,q)` 楔积**：`wedgeAnyFun` 的纤维层 `AlternatingMap` 打包。
+交错性（等值槽消零）需 2 可逆，以参数 `h2 : ∃ y : R, y * 2 = 1` 进入。 -/
+def wedgeAny {p q : ℕ} (h2 : ∃ y : R, y * 2 = 1)
+    (ω : FiberwiseDifferentialForm R X p)
+    (η : FiberwiseDifferentialForm R X q) :
+    FiberwiseDifferentialForm R X (p + q) := by
+  intro x
+  exact
+    { toMultilinearMap :=
+        { toFun := wedgeAnyFun (ω x) (η x)
+          map_update_add' := by
+            intro _ v i x₁ x₂
+            exact wedgeAnyFun_update_add (ω x) (η x) v i x₁ x₂
+          map_update_smul' := by
+            intro _ v i c x₁
+            exact wedgeAnyFun_update_smul (ω x) (η x) v i c x₁ }
+      map_eq_zero_of_eq' := by
+        intro v i j h hij
+        exact wedgeAnyFun_eq_zero_of_eq (ω x) (η x) h2 hij v h }
+
+@[simp]
+lemma wedgeAny_apply {p q : ℕ} (h2 : ∃ y : R, y * 2 = 1)
+    (ω : FiberwiseDifferentialForm R X p) (η : FiberwiseDifferentialForm R X q)
+    (x : X) (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAny h2 ω η x v = wedgeAnyFun (ω x) (η x) v := rfl
+
+/-- 楔积对第一因子的加法。 -/
+lemma wedgeAny_add_left {p q : ℕ} (h2 : ∃ y : R, y * 2 = 1)
+    (ω₁ ω₂ : FiberwiseDifferentialForm R X p)
+    (η : FiberwiseDifferentialForm R X q) :
+    wedgeAny h2 (ω₁ + ω₂) η = wedgeAny h2 ω₁ η + wedgeAny h2 ω₂ η := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  show wedgeAnyFun ((ω₁ + ω₂) x) (η x) v
+    = wedgeAnyFun (ω₁ x) (η x) v + wedgeAnyFun (ω₂ x) (η x) v
+  rw [Pi.add_apply, wedgeAnyFun_add_left]
+
+/-- 楔积对第二因子的加法。 -/
+lemma wedgeAny_add_right {p q : ℕ} (h2 : ∃ y : R, y * 2 = 1)
+    (ω : FiberwiseDifferentialForm R X p)
+    (η₁ η₂ : FiberwiseDifferentialForm R X q) :
+    wedgeAny h2 ω (η₁ + η₂) = wedgeAny h2 ω η₁ + wedgeAny h2 ω η₂ := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  show wedgeAnyFun (ω x) ((η₁ + η₂) x) v
+    = wedgeAnyFun (ω x) (η₁ x) v + wedgeAnyFun (ω x) (η₂ x) v
+  rw [Pi.add_apply, wedgeAnyFun_add_right]
+
+/-- 楔积对第一因子的数乘。 -/
+lemma wedgeAny_smul_left {p q : ℕ} (h2 : ∃ y : R, y * 2 = 1)
+    (c : R) (ω : FiberwiseDifferentialForm R X p)
+    (η : FiberwiseDifferentialForm R X q) :
+    wedgeAny h2 (c • ω) η = c • wedgeAny h2 ω η := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  show wedgeAnyFun ((c • ω) x) (η x) v = c • wedgeAnyFun (ω x) (η x) v
+  rw [Pi.smul_apply, wedgeAnyFun_smul_left]
+
+/-- 楔积对第二因子的数乘。 -/
+lemma wedgeAny_smul_right {p q : ℕ} (h2 : ∃ y : R, y * 2 = 1)
+    (ω : FiberwiseDifferentialForm R X p) (c : R)
+    (η : FiberwiseDifferentialForm R X q) :
+    wedgeAny h2 ω (c • η) = c • wedgeAny h2 ω η := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  show wedgeAnyFun (ω x) ((c • η) x) v = c • wedgeAnyFun (ω x) (η x) v
+  rw [Pi.smul_apply, wedgeAnyFun_smul_right]
+
+end WedgeAnyPack
+
 end SDG.DifferentialForms
