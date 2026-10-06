@@ -78,6 +78,74 @@ lemma bsFunV_succ_left {n q p : ℕ} (hsp : q + 1 + p ≤ n) :
           bsFunV_out hsp' hge0
         simp only [Function.comp_apply, hv1, hv2, hv3]
 
+/-- **(P') 块交换的符号公式**：sign (encode (bsFunV q p 与 pi.toFun 的复合))
+= (-1)^(q*p) * sign pi。对 q 归纳：(S) 递推的 encode 级复合 + IH +
+循环移位符号引理；无需 sign 乘性——hStep 保持 encode 形式，
+IH 直接应用于 sigma := encode (cycLfun 与 pi.toFun 的复合)。 -/
+lemma sign_encode_bsFunV : forall (q : Nat) {n : Nat} (p : Nat) (hsp : q + p <= n)
+    (pi : FinPerm n) (hinj : Function.Injective (bsFunV q p hsp)),
+    FinPerm.sign R (FinPerm.encode (bsFunV q p hsp ∘ pi.toFun)
+        (hinj.comp pi.toFun_injective))
+      = (-1 : R)^(q * p) * FinPerm.sign R pi := by
+  intro q
+  induction q with
+  | zero =>
+      intro n p hsp pi hinj
+      have hid : bsFunV 0 p hsp = id := by
+        funext t
+        by_cases h1 : (t : ℕ) < p
+        · have hv : bsFunV 0 p hsp t
+              = (Fin.mk ((t : ℕ) - 0) (by have ht := t.isLt; omega) : Fin n) :=
+            bsFunV_back hsp (by omega) (by omega)
+          rw [hv]
+          simp only [Fin.val_mk, Nat.sub_zero]
+          exact Fin.ext (by simp only [Fin.val_mk, id_eq])
+        · exact bsFunV_out hsp (by omega)
+      show FinPerm.sign R (FinPerm.encode (bsFunV 0 p hsp ∘ pi.toFun)
+          (hinj.comp pi.toFun_injective)) = (-1 : R)^(0 * p) * FinPerm.sign R pi
+      have hE : FinPerm.encode (bsFunV 0 p hsp ∘ pi.toFun)
+          (hinj.comp pi.toFun_injective) = pi := by
+        apply FinPerm.ext_toFun _ _
+        rw [FinPerm.toFun_encode]
+        funext k
+        show bsFunV 0 p hsp (pi.toFun k) = pi.toFun k
+        rw [hid, id_eq]
+      rw [hE, zero_mul, pow_zero, one_mul]
+  | succ q ih =>
+      intro n p hsp pi hinj
+      have hsp' : q + p <= n := by omega
+      have hltC : (q + p : Nat) < n := by omega
+      have hinjC : Function.Injective (cycLfun q p hltC) := cycLfun_injective p q hltC
+      have hinj' : Function.Injective (bsFunV q p hsp') :=
+        bsFunV_injective (show q + p <= n from by omega)
+      have hX : Function.Injective (cycLfun q p hltC ∘ pi.toFun) :=
+        hinjC.comp pi.toFun_injective
+      have hrec := bsFunV_succ_left hsp
+      show FinPerm.sign R (FinPerm.encode (bsFunV (q+1) p hsp ∘ pi.toFun)
+          (hinj.comp pi.toFun_injective)) = (-1 : R)^((q+1) * p) * FinPerm.sign R pi
+      have hStep : FinPerm.encode (bsFunV (q+1) p hsp ∘ pi.toFun)
+          (hinj.comp pi.toFun_injective)
+        = FinPerm.encode
+            (bsFunV q p hsp' ∘
+              (FinPerm.encode (cycLfun q p hltC ∘ pi.toFun) hX).toFun)
+            (hinj'.comp
+              (FinPerm.toFun_injective
+                (FinPerm.encode (cycLfun q p hltC ∘ pi.toFun) hX))) := by
+        apply FinPerm.ext_toFun _ _
+        rw [FinPerm.toFun_encode, FinPerm.toFun_encode, FinPerm.toFun_encode]
+        funext k
+        exact congrFun hrec (pi.toFun k)
+      rw [hStep]
+      rw [ih p hsp' (FinPerm.encode (cycLfun q p hltC ∘ pi.toFun) hX) hinj']
+      have hCyc : FinPerm.sign R (FinPerm.encode (cycLfun q p hltC ∘ pi.toFun)
+          (hinjC.comp pi.toFun_injective)) = (-1 : R)^p * FinPerm.sign R pi :=
+        sign_encode_cycLfun p q hltC pi hinjC
+      have hrw : (q + 1) * p = q * p + p := Nat.succ_mul q p
+      rw [hCyc]
+      rw [hrw]
+      rw [pow_add]
+      ring
+
 end GradComm
 
 end SDG.DifferentialForms
