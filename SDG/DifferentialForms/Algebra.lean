@@ -4380,4 +4380,82 @@ lemma cycLfun_succ {n : ℕ} {s p : ℕ} (hsp : s + (p + 1) < n) :
 
 end CycleShift
 
+section BlockSwap
+
+/-- `(p,q)`-shuffle 的位置函数：前 `q` 槽右移 `p`（`t ↦ t+p`）、
+中段 `q ≤ t < q+p` 左移 `q`（`t ↦ t-q`）、其余不动。
+守卫 `hsp : q + p ≤ n` 保证落点合法；`q = p` 时为对合，
+一般与 `bsFunV p q` 互逆。 -/
+def bsFunV {n : ℕ} (q p : ℕ) (hsp : q + p ≤ n) : Fin n → Fin n :=
+  fun t =>
+    dite ((t : ℕ) < q)
+      (fun _hlt => (Fin.mk ((t : ℕ) + p) (by have ht := t.isLt; have h := hsp; omega) : Fin n))
+      (fun _hge =>
+        dite ((t : ℕ) < q + p)
+          (fun _hlt2 => (Fin.mk ((t : ℕ) - q) (by have ht := t.isLt; have h := hsp; omega) : Fin n))
+          (fun _hge2 => t))
+
+/-- shuffle 在前段的值：`t < q ↦ t+p`。 -/
+lemma bsFunV_front {n q p : ℕ} (hsp : q + p ≤ n) {t : Fin n} (hlt : (t : ℕ) < q) :
+    bsFunV q p hsp t
+      = (Fin.mk ((t : ℕ) + p) (by have ht := t.isLt; have h := hsp; omega) : Fin n) := by
+  unfold bsFunV
+  rw [dif_pos hlt]
+
+/-- shuffle 在中段的值：`q ≤ t < q+p ↦ t-q`。 -/
+lemma bsFunV_back {n q p : ℕ} (hsp : q + p ≤ n) {t : Fin n}
+    (h1 : q ≤ (t : ℕ)) (h2 : (t : ℕ) < q + p) :
+    bsFunV q p hsp t
+      = (Fin.mk ((t : ℕ) - q) (by have ht := t.isLt; have h := hsp; omega) : Fin n) := by
+  unfold bsFunV
+  rw [dif_neg (by omega), dif_pos (by omega)]
+
+/-- shuffle 在尾部区间的值：不动。 -/
+lemma bsFunV_out {n q p : ℕ} (hsp : q + p ≤ n) {t : Fin n} (hge : q + p ≤ (t : ℕ)) :
+    bsFunV q p hsp t = t := by
+  unfold bsFunV
+  rw [dif_neg (by omega), dif_neg (by omega)]
+
+/-- **shuffle 与反参数 shuffle 互逆**：`bsFunV p q ∘ bsFunV q p = id`
+（三分支点态表；由 `Function.LeftInverse.injective` 得单射性）。 -/
+lemma bsFunV_comp_id {n q p : ℕ} (hsp : q + p ≤ n) :
+    (fun t => bsFunV p q (show p + q ≤ n from by omega)
+        (bsFunV q p hsp t)) = id := by
+  funext t
+  by_cases h1 : (t : ℕ) < q
+  · have hv : bsFunV q p hsp t
+        = (Fin.mk ((t : ℕ) + p) (by have ht := t.isLt; have h := hsp; omega) : Fin n) :=
+      bsFunV_front hsp h1
+    have h2 : ((Fin.mk ((t : ℕ) + p) (by have ht := t.isLt; have h := hsp; omega) : Fin n) : ℕ)
+        ≥ p := by simp only [Fin.val_mk]; omega
+    have h3 : ((Fin.mk ((t : ℕ) + p) (by have ht := t.isLt; have h := hsp; omega) : Fin n) : ℕ)
+        < p + q := by simp only [Fin.val_mk]; omega
+    rw [hv, bsFunV_back (show p + q ≤ n from by omega) h2 h3]
+    simp only [Fin.val_mk]
+    congr 1
+    omega
+  · by_cases h2 : (t : ℕ) < q + p
+    · have hv : bsFunV q p hsp t
+          = (Fin.mk ((t : ℕ) - q) (by have ht := t.isLt; have h := hsp; omega) : Fin n) :=
+        bsFunV_back hsp (by omega) h2
+      have h3 : ((Fin.mk ((t : ℕ) - q) (by have ht := t.isLt; have h := hsp; omega) : Fin n) : ℕ)
+          < p := by simp only [Fin.val_mk]; omega
+      rw [hv, bsFunV_front (show p + q ≤ n from by omega) h3]
+      simp only [Fin.val_mk]
+      congr 1
+      omega
+    · have hv : bsFunV q p hsp t = t := bsFunV_out hsp (by omega)
+      rw [hv, bsFunV_out (show p + q ≤ n from by omega) (by omega)]
+      rfl
+
+/-- shuffle 单射（经逆复合）。 -/
+lemma bsFunV_injective {n q p : ℕ} (hsp : q + p ≤ n) :
+    Function.Injective (bsFunV q p hsp) :=
+  Function.LeftInverse.injective
+    (fun t => by
+      have h := bsFunV_comp_id (show q + p ≤ n from hsp)
+      exact congrFun h t)
+
+end BlockSwap
+
 end SDG.DifferentialForms
