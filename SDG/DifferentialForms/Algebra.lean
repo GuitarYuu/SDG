@@ -4458,4 +4458,106 @@ lemma bsFunV_injective {n q p : ℕ} (hsp : q + p ≤ n) :
 
 end BlockSwap
 
+section GradComm
+
+variable {R : Type u} [CommRing R]
+
+/-- encode 的复合换向：`encode (g ∘ π.toFun) = compose (encode g) π`
+（左复合 g 于置换的编码级表达）。 -/
+lemma encode_comp_toFun {n : ℕ} (g : Fin n → Fin n) (hg : Function.Injective g)
+    (π : FinPerm n) :
+    FinPerm.encode (g ∘ π.toFun) (hg.comp π.toFun_injective)
+      = FinPerm.compose (FinPerm.encode g hg) π := by
+  apply FinPerm.ext_toFun _ _
+  rw [FinPerm.toFun_compose, FinPerm.toFun_encode, FinPerm.toFun_encode]
+  rfl
+
+/-- **循环左移单射**（对 p 归纳：succ 递推 = 对换复合）。 -/
+lemma cycLfun_injective : ∀ (p : ℕ) {n : ℕ} (s : ℕ) (hsp : s + p < n),
+    Function.Injective (cycLfun s p hsp) := by
+  intro p
+  induction p with
+  | zero =>
+      intro n s hsp
+      have hid : cycLfun s 0 hsp = id := by
+        funext t
+        by_cases h1 : (t : ℕ) = s
+        · have hEq : t = (Fin.mk s hsp : Fin n) := Fin.ext h1
+          subst hEq
+          show cycLfun s 0 hsp (Fin.mk s hsp) = id (Fin.mk s hsp)
+          unfold cycLfun
+          rw [dif_pos rfl, id_eq]
+          exact Fin.ext (by simp only [Fin.val_mk, Nat.add_zero])
+        · exact cycLfun_out hsp h1 (fun hcon => by omega)
+      rw [hid]
+      exact Function.injective_id
+  | succ p ih =>
+      intro n s hsp
+      have hsp' : s + p < n := by omega
+      have hdec := cycLfun_succ hsp
+      intro a b hab
+      rw [hdec] at hab
+      have hswap : swapFin (Fin.mk (s + p) (by omega : (s + p : ℕ) < n))
+          (Fin.mk (s + p + 1) hsp) (cycLfun s p hsp' a)
+          = swapFin (Fin.mk (s + p) (by omega : (s + p : ℕ) < n))
+              (Fin.mk (s + p + 1) hsp) (cycLfun s p hsp' b) := hab
+      have hc : cycLfun s p hsp' a = cycLfun s p hsp' b :=
+        swapFin_injective _ _ hswap
+      exact ih s hsp' hc
+
+/-- **循环左移的符号**：`sign (encode (cycLfun s p ∘ π.toFun)) = (-1)^p · sign π`
+（对 p 归纳：succ 递推 + encode 换向 + 相邻 FLIP）。 -/
+lemma sign_encode_cycLfun : ∀ (p : ℕ) {n : ℕ} (s : ℕ) (hsp : s + p < n)
+    (π : FinPerm n) (hinj : Function.Injective (cycLfun s p hsp)),
+    FinPerm.sign R (FinPerm.encode (cycLfun s p hsp ∘ π.toFun)
+        (hinj.comp π.toFun_injective))
+      = (-1 : R)^p * FinPerm.sign R π := by
+  intro p
+  induction p with
+  | zero =>
+      intro n s hsp π hinj
+      have hE : FinPerm.encode (cycLfun s 0 hsp ∘ π.toFun)
+          (hinj.comp π.toFun_injective) = π := by
+        apply FinPerm.ext_toFun _ _
+        rw [FinPerm.toFun_encode]
+        funext k
+        show cycLfun s 0 hsp (π.toFun k) = π.toFun k
+        by_cases hx : ((π.toFun k : Fin n) : ℕ) = s
+        · have hEq : π.toFun k = (Fin.mk s hsp : Fin n) := Fin.ext hx
+          rw [hEq]
+          show cycLfun s 0 hsp (Fin.mk s hsp) = Fin.mk s hsp
+          unfold cycLfun
+          rw [dif_pos rfl]
+          exact Fin.ext (by simp only [Fin.val_mk, Nat.add_zero])
+        · exact cycLfun_out hsp hx (fun hcon => by omega)
+      rw [hE, pow_zero, one_mul]
+  | succ p ih =>
+      intro n s hsp π hinj
+      have hsp' : s + p < n := by omega
+      have hinj' : Function.Injective (cycLfun s p hsp') := cycLfun_injective p s hsp'
+      have hab : (Fin.mk (s + p) (by omega : (s + p : ℕ) < n) : ℕ) + 1
+          = (Fin.mk (s + p + 1) hsp : ℕ) := by simp only [Fin.val_mk]
+      have hX : Function.Injective (cycLfun s p hsp' ∘ π.toFun) :=
+        hinj'.comp π.toFun_injective
+      show FinPerm.sign R (FinPerm.encode (cycLfun s (p + 1) hsp ∘ π.toFun)
+          (hinj.comp π.toFun_injective)) = (-1 : R)^(p + 1) * FinPerm.sign R π
+      have hStep : FinPerm.encode (cycLfun s (p + 1) hsp ∘ π.toFun)
+          (hinj.comp π.toFun_injective)
+        = FinPerm.compose (FinPerm.swapPerm (Fin.mk (s + p) (by omega : (s + p : ℕ) < n))
+            (Fin.mk (s + p + 1) hsp))
+          (FinPerm.encode (cycLfun s p hsp' ∘ π.toFun) hX) := by
+        apply FinPerm.ext_toFun _ _
+        rw [FinPerm.toFun_encode, FinPerm.toFun_compose, FinPerm.toFun_swapPerm,
+          FinPerm.toFun_encode]
+        funext k
+        show cycLfun s (p + 1) hsp (π.toFun k)
+          = swapFin (Fin.mk (s + p) (by omega : (s + p : ℕ) < n))
+              (Fin.mk (s + p + 1) hsp) (cycLfun s p hsp' (π.toFun k))
+        exact congrFun (cycLfun_succ hsp) (π.toFun k)
+      rw [hStep, sign_compose_swapPerm_adj _ _ _ hab, ih s hsp' π hinj']
+      rw [pow_succ]
+      ring
+
+end GradComm
+
 end SDG.DifferentialForms
