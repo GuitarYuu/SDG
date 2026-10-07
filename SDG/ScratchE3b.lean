@@ -146,6 +146,57 @@ lemma sign_encode_bsFunV : forall (q : Nat) {n : Nat} (p : Nat) (hsp : q + p <= 
       rw [pow_add]
       ring
 
+variable {X : Type u} [Microlinear R X]
+
+/-- **槽块恒等式（grad comm 引擎）**：输入向量预复合块交换 `bsFunV p q`
+（前 p 槽与后 q 槽互换）使 `(p,q)` 楔积展开函数乘 `(-1)^{p*q}`。
+
+关键：(P') 以 `le_refl` 守卫直接应用于 `bsFunV p q : Fin (p+q) → Fin (p+q)`
+（守卫 `p + q ≤ p + q` 成立——(P') 的 ≤ 守卫在边界无需缓冲维度），
+点态恒等式两侧括号逐项相同，重排经 `permSum_reindex_compose`。 -/
+lemma wedgeAnyFun_grad_comm_block {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun ω η (fun t => v (bsFunV p q (le_refl (p + q)) t))
+      = (-1 : R)^(p * q) • wedgeAnyFun ω η v := by
+  unfold wedgeAnyFun
+  have hpow : (-1 : R)^(p * q) * (-1 : R)^(p * q) = 1 := by
+    rw [← mul_pow (a := (-1 : R)) (b := (-1 : R)) (n := p * q),
+      show ((-1 : R) * (-1 : R)) = 1 from by ring, one_pow]
+  have hinjB : Function.Injective (bsFunV p q (le_refl (p + q))) :=
+    bsFunV_injective (le_refl (p + q))
+  have hpoint : ∀ π : FinPerm (p + q),
+      FinPerm.sign R π * (ω (fun i : Fin p =>
+          v (bsFunV p q (le_refl (p + q)) (π.toFun (Fin.castAdd q i)))) *
+        η (fun j : Fin q =>
+          v (bsFunV p q (le_refl (p + q)) (π.toFun (Fin.natAdd p j)))))
+    = (-1 : R)^(p * q) * (FinPerm.sign R (FinPerm.compose
+          (FinPerm.encode (bsFunV p q (le_refl (p + q))) hinjB) π) *
+        (ω (fun i : Fin p => v ((FinPerm.compose
+            (FinPerm.encode (bsFunV p q (le_refl (p + q))) hinjB) π).toFun
+              (Fin.castAdd q i))) *
+        η (fun j : Fin q => v ((FinPerm.compose
+            (FinPerm.encode (bsFunV p q (le_refl (p + q))) hinjB) π).toFun
+              (Fin.natAdd p j))))) := by
+    intro π
+    have hsig' : FinPerm.sign R π
+        = (-1 : R)^(p * q) * FinPerm.sign R (FinPerm.encode
+            (bsFunV p q (le_refl (p + q)) ∘ π.toFun)
+            (hinjB.comp π.toFun_injective)) := by
+      have h1 := sign_encode_bsFunV (R := R) p q (le_refl (p + q)) π hinjB
+      rw [h1, ← mul_assoc, hpow, one_mul]
+    rw [hsig', encode_comp_toFun (bsFunV p q (le_refl (p + q))) hinjB π,
+      FinPerm.toFun_compose, FinPerm.toFun_encode]
+    simp only [Function.comp_apply]
+    ring
+  rw [permSum_congr hpoint, permSum_mul_left,
+    permSum_reindex_compose (p + q) (FinPerm.encode (bsFunV p q (le_refl (p + q))) hinjB)
+      (fun τ' : FinPerm (p + q) => FinPerm.sign R τ' *
+        (ω (fun i : Fin p => v (τ'.toFun (Fin.castAdd q i))) *
+        η (fun j : Fin q => v (τ'.toFun (Fin.natAdd p j))))),
+    smul_eq_mul]
+
 end GradComm
 
 end SDG.DifferentialForms
