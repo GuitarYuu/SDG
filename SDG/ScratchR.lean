@@ -479,6 +479,104 @@ lemma permSum_compose_swap01 {n : ℕ} (R : Type u) [CommRing R]
     finSum_congr R (fun c => finSum_congr R (fun k =>
       s01Term_slice_pointwise_B R f c k))]
 
+/-- FinPerm 复合的结合律。 -/
+lemma compose_assoc {n : ℕ} (π₁ π₂ π₃ : FinPerm n) :
+    FinPerm.compose π₁ (FinPerm.compose π₂ π₃)
+      = FinPerm.compose (FinPerm.compose π₁ π₂) π₃ := by
+  apply FinPerm.ext_toFun _ _
+  rw [FinPerm.toFun_compose, FinPerm.toFun_compose, FinPerm.toFun_compose,
+    FinPerm.toFun_compose]
+
+/-- succ-mk 还原：非零的 `x` 是 `x-1` 的后继。 -/
+lemma fin_succ_mk_eq {n : ℕ} {x : Fin (n + 2)} (hx : (x : ℕ) ≥ 1) :
+    Fin.succ (Fin.mk ((x : ℕ) - 1) (by have h1 := x.isLt; omega)) = x := by
+  apply Fin.ext
+  show ((Fin.succ (Fin.mk ((x : ℕ) - 1) (by have h1 := x.isLt; omega)) :
+      Fin (n + 1 + 1)) : ℕ) = (x : ℕ)
+  simp only [Fin.val_succ, Fin.val_mk]
+  have h1 := x.isLt
+  omega
+
+/-- 任意相邻对换的右复合重排（对 N 归纳，层级 N+2）：与任意相邻对换的
+右复合不改变 permSum。 -/
+lemma permSum_compose_swapPerm (R : Type u) [CommRing R] :
+    ∀ (N : ℕ) (f : FinPerm (N + 2) → R) (a b : Fin (N + 2)), (a : ℕ) + 1 = (b : ℕ) →
+      FinPerm.permSum R (fun π : FinPerm (N + 2) =>
+          f (FinPerm.compose π (FinPerm.swapPerm a b)))
+        = FinPerm.permSum R f := by
+  intro N
+  induction N with
+  | zero =>
+      intro f a b h
+      have ha : a = (0 : Fin 2) := Fin.ext (by
+        show (a : ℕ) = 0
+        have h1 := a.isLt
+        have h2 := b.isLt
+        omega)
+      have hb : b = (1 : Fin 2) := Fin.ext (by
+        show (b : ℕ) = 1
+        have h1 := a.isLt
+        have h2 := b.isLt
+        omega)
+      rw [ha, hb]
+      exact permSum_compose_swap01 R f
+  | succ N ih =>
+      intro f a b h
+      by_cases ha : (a : ℕ) = 0
+      · -- s01 情形（层级 (N+1)+2，泛 n 版直接用）
+        have h0 : a = (0 : Fin (N + 3)) := Fin.ext ha
+        have hb : b = (1 : Fin (N + 3)) := Fin.ext (by
+          have h1 := b.isLt
+          have hv0 : ((0 : Fin (N + 3)) : ℕ) = 0 := rfl
+          rw [h0] at h
+          rw [hv0] at h
+          show (b : ℕ) = 1
+          omega)
+        rw [h0, hb]
+        exact permSum_compose_swap01 R f
+      · -- 清洁情形：obtain 型构造（避免 have-fvar 不透明）
+        have hbv : (b : ℕ) = (a : ℕ) + 1 := by omega
+        obtain ⟨m0, ha0⟩ : ∃ m0 : Fin (N + 1 + 1), Fin.succ m0 = a :=
+          ⟨Fin.mk ((a : ℕ) - 1) (by have h1 := a.isLt; have h3 := b.isLt; have h4 := hbv; omega),
+            fin_succ_mk_eq (by have h1 := a.isLt; have h3 := b.isLt; have h4 := hbv; omega)⟩
+        have hv : (m0 : ℕ) + 1 = (a : ℕ) := by
+          have hv2 := congrArg Fin.val ha0
+          simp only [Fin.val_succ] at hv2
+          exact hv2
+        obtain ⟨m1, hm1⟩ : ∃ m1 : Fin (N + 1 + 1), (m0 : ℕ) + 1 = (m1 : ℕ) :=
+          ⟨Fin.mk ((m0 : ℕ) + 1) (by
+              have h1 := b.isLt
+              have h2 := hbv
+              omega),
+            by simp only [Fin.val_mk]⟩
+        have hb0 : Fin.succ m1 = b := by
+          apply Fin.ext
+          show ((Fin.succ m1 : Fin (N + 1 + 2)) : ℕ) = (b : ℕ)
+          have h1 := b.isLt
+          have hmk : (m1 : ℕ) = (m0 : ℕ) + 1 := hm1.symm
+          simp only [Fin.val_succ]
+          omega
+        rw [← ha0, ← hb0]
+        refine permSum_compose_swap_succ_step R f m0 m1 hm1 ?_
+        intro j a' b' h'
+        exact ih (fun ρ : FinPerm (N + 1 + 1) => f (FinPerm.cons ρ j)) a' b' h'
+
+/-- 单步右复合换序：先过相邻对换再复合 σ = 先复合 σ 再过相邻对换。 -/
+lemma permSum_compose_swap_step {n : ℕ} (R : Type u) [CommRing R]
+    (Φ : FinPerm (n + 2) → R) (σ : FinPerm (n + 2)) (a b : Fin (n + 2))
+    (h : (a : ℕ) + 1 = (b : ℕ)) :
+    FinPerm.permSum R (fun π => Φ (FinPerm.compose π
+        (FinPerm.compose (FinPerm.swapPerm a b) σ)))
+      = FinPerm.permSum R (fun π => Φ (FinPerm.compose π σ)) := by
+  have hpoint : ∀ π : FinPerm (n + 2),
+      Φ (FinPerm.compose π (FinPerm.compose (FinPerm.swapPerm a b) σ))
+        = Φ (FinPerm.compose (FinPerm.compose π (FinPerm.swapPerm a b)) σ) := by
+    intro π
+    rw [compose_assoc]
+  rw [permSum_congr hpoint]
+  exact permSum_compose_swapPerm (R := R) (N := n)
+    (fun τ => Φ (FinPerm.compose τ σ)) a b h
+
 end PermSumRightReindex
 
 end SDG.DifferentialForms
