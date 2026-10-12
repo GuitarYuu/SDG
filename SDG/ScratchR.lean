@@ -258,6 +258,227 @@ lemma consCons_compose_swap01 {n : ℕ} (ρ' : FinPerm n) (k : Fin (n + 1))
           FinPerm.toFun_cons_succ, FinPerm.toFun_cons_succ]
         exact insertAt_insertAt_comm j k (ρ'.toFun v)
 
+/-- **SLICE-A**：上三角指示子区域的坐标化重排（`a = k.succ`，`j = c`）。 -/
+lemma finSum_slice_A {n : ℕ} (R : Type u) [AddCommMonoid R]
+    (T : Fin (n + 1) → Fin (n + 2) → R) :
+    finSum R (n + 2) (fun a => finSum R (n + 1) (fun c =>
+        if (c : ℕ) < (a : ℕ) then T c a else 0))
+      = finSum R (n + 1) (fun j => finSum R (n + 1) (fun k =>
+        if (j : ℕ) ≤ (k : ℕ) then T j (Fin.succ k) else 0)) := by
+  rw [finSum_succ R (n + 1) (fun a => finSum R (n + 1) (fun c =>
+      if (c : ℕ) < (a : ℕ) then T c a else 0))]
+  rw [Fin.val_zero]
+  rw [finSum_eq_zero R (fun c => if_neg (Nat.not_lt_zero (c : ℕ)))]
+  rw [zero_add]
+  rw [finSum_sum_comm R (n + 1) (n + 1) (fun k => fun c =>
+      if (c : ℕ) < ((Fin.succ k : Fin (n + 2)) : ℕ) then T c (Fin.succ k) else 0)]
+  refine finSum_congr R (fun j => finSum_congr R (fun k => ?_))
+  by_cases h : (j : ℕ) ≤ (k : ℕ)
+  · rw [if_pos h, if_pos (show ((j : ℕ) < ((Fin.succ k : Fin (n + 2)) : ℕ)) from by
+      simp only [Fin.val_succ]; omega)]
+  · rw [if_neg h, if_neg (show ¬(((j : ℕ) < ((Fin.succ k : Fin (n + 2)) : ℕ))) from by
+      simp only [Fin.val_succ]; omega)]
+
+/-- **SLICE-B**：下三角含对角指示子区域的坐标化重排（`a = castSucc k`）。 -/
+lemma finSum_slice_B {n : ℕ} (R : Type u) [AddCommMonoid R]
+    (T : Fin (n + 1) → Fin (n + 2) → R) :
+    finSum R (n + 2) (fun a => finSum R (n + 1) (fun c =>
+        if (a : ℕ) ≤ (c : ℕ) then T c a else 0))
+      = finSum R (n + 1) (fun c => finSum R (n + 1) (fun k =>
+        if (k : ℕ) ≤ (c : ℕ) then T c (Fin.castSucc k) else 0)) := by
+  rw [finSum_last R (n + 1) (fun a => finSum R (n + 1) (fun c =>
+      if (a : ℕ) ≤ (c : ℕ) then T c a else 0))]
+  have hlast : (finSum R (n + 1) (fun c =>
+      if ((((Fin.last (n + 1) : Fin (n + 2))) : ℕ)) ≤ ((c : Fin (n + 1)) : ℕ)
+        then T c (Fin.last (n + 1)) else 0) : R) = 0 := by
+    rw [finSum_eq_zero R (fun c => if_neg (by
+      have h1 := c.isLt
+      simp only [Fin.val_last] at *
+      omega))]
+  rw [hlast, add_zero]
+  rw [finSum_sum_comm R (n + 1) (n + 1) (fun k => fun c =>
+      if ((((Fin.castSucc k : Fin (n + 2)) : ℕ)) ≤ ((c : Fin (n + 1)) : ℕ))
+        then T c (Fin.castSucc k) else 0)]
+  refine finSum_congr R (fun c => finSum_congr R (fun k => ?_))
+  by_cases h : (k : ℕ) ≤ (c : ℕ)
+  · rw [if_pos h, if_pos (show ((((Fin.castSucc k : Fin (n + 2)) : ℕ))
+        ≤ ((c : Fin (n + 1)) : ℕ)) from by
+      simp only [Fin.val_castSucc]; omega)]
+  · rw [if_neg h, if_neg (show ¬((((Fin.castSucc k : Fin (n + 2)) : ℕ))
+        ≤ ((c : Fin (n + 1)) : ℕ)) from by
+      simp only [Fin.val_castSucc]; omega)]
+
+/-- s01 求和项（组装用缩写）。 -/
+def s01Term {n : ℕ} (R : Type u) [CommRing R] (f : FinPerm (n + 2) → R)
+    (j : Fin (n + 2)) (k : Fin (n + 1)) : R :=
+  FinPerm.permSum R (fun ρ' : FinPerm n =>
+    f (FinPerm.cons (FinPerm.cons ρ'
+        (FinPerm.unshift (FinPerm.insertAt j k) j
+          (fun hc => FinPerm.insertAt_ne j k (hc.symm))))
+      (FinPerm.insertAt j k)))
+
+/-- A 桥：`c ≤ k` 时（`j = castSucc c`）`(m, X₀) = (k.succ, c)`。 -/
+lemma s01Term_cast {n : ℕ} (R : Type u) [CommRing R] (f : FinPerm (n + 2) → R)
+    (c k : Fin (n + 1)) (h : (c : ℕ) ≤ (k : ℕ)) :
+    s01Term R f (Fin.castSucc c) k
+      = FinPerm.permSum R (fun d : FinPerm n =>
+          f (FinPerm.cons (FinPerm.cons d c) (Fin.succ k))) := by
+  have hm : FinPerm.insertAt (Fin.castSucc c) k = Fin.succ k := by
+    apply Fin.ext
+    rw [FinPerm.insertAt_val, Fin.val_castSucc, Fin.val_succ,
+      if_neg (show ¬((k : ℕ) < (c : ℕ)) from by omega)]
+  have hx : FinPerm.unshift (FinPerm.insertAt (Fin.castSucc c) k) (Fin.castSucc c)
+        (fun hc => FinPerm.insertAt_ne (Fin.castSucc c) k (hc.symm)) = c := by
+    apply Fin.ext
+    rw [unshift_val_eq _ _ (fun hc => FinPerm.insertAt_ne (Fin.castSucc c) k (hc.symm)),
+      FinPerm.insertAt_val, Fin.val_castSucc]
+    split_ifs <;> omega
+  show FinPerm.permSum R (fun ρ' : FinPerm n =>
+      f (FinPerm.cons (FinPerm.cons ρ'
+          (FinPerm.unshift (FinPerm.insertAt (Fin.castSucc c) k) (Fin.castSucc c)
+            (fun hc => FinPerm.insertAt_ne (Fin.castSucc c) k (hc.symm))))
+        (FinPerm.insertAt (Fin.castSucc c) k)))
+    = FinPerm.permSum R (fun d : FinPerm n =>
+        f (FinPerm.cons (FinPerm.cons d c) (Fin.succ k)))
+  rw [hx, hm]
+
+/-- B 桥：`k ≤ c` 时（`j = succ c`）`(m, X₀) = (castSucc k, c)`。 -/
+lemma s01Term_succL {n : ℕ} (R : Type u) [CommRing R] (f : FinPerm (n + 2) → R)
+    (c k : Fin (n + 1)) (h : (k : ℕ) ≤ (c : ℕ)) :
+    s01Term R f (Fin.succ c) k
+      = FinPerm.permSum R (fun d : FinPerm n =>
+          f (FinPerm.cons (FinPerm.cons d c) (Fin.castSucc k))) := by
+  have hm : FinPerm.insertAt (Fin.succ c) k = Fin.castSucc k := by
+    apply Fin.ext
+    rw [FinPerm.insertAt_val, Fin.val_succ, Fin.val_castSucc, if_pos (by omega)]
+  have hx : FinPerm.unshift (FinPerm.insertAt (Fin.succ c) k) (Fin.succ c)
+        (fun hc => FinPerm.insertAt_ne (Fin.succ c) k (hc.symm)) = c := by
+    apply Fin.ext
+    rw [unshift_val_eq _ _ (fun hc => FinPerm.insertAt_ne (Fin.succ c) k (hc.symm)),
+      FinPerm.insertAt_val, Fin.val_succ]
+    split_ifs <;> omega
+  show FinPerm.permSum R (fun ρ' : FinPerm n =>
+      f (FinPerm.cons (FinPerm.cons ρ'
+          (FinPerm.unshift (FinPerm.insertAt (Fin.succ c) k) (Fin.succ c)
+            (fun hc => FinPerm.insertAt_ne (Fin.succ c) k (hc.symm))))
+        (FinPerm.insertAt (Fin.succ c) k)))
+    = FinPerm.permSum R (fun d : FinPerm n =>
+        f (FinPerm.cons (FinPerm.cons d c) (Fin.castSucc k)))
+  rw [hx, hm]
+
+/-- A 逐点桥（两侧具体，供 finSum_congr 使用）。 -/
+lemma s01Term_slice_pointwise_A {n : ℕ} (R : Type u) [CommRing R]
+    (f : FinPerm (n + 2) → R) (c k : Fin (n + 1)) :
+    (if ((Fin.castSucc c : Fin (n + 2)) : ℕ) ≤ (k : ℕ) then
+          s01Term R f (Fin.castSucc c) k else 0)
+      = (if (c : ℕ) ≤ (k : ℕ) then FinPerm.permSum R (fun d : FinPerm n =>
+            f (FinPerm.cons (FinPerm.cons d c) (Fin.succ k))) else 0) := by
+  by_cases h : (c : ℕ) ≤ (k : ℕ)
+  · rw [if_pos (show ((Fin.castSucc c : Fin (n + 2)) : ℕ) ≤ (k : ℕ) from by
+        simp only [Fin.val_castSucc]; omega), if_pos h, s01Term_cast R f c k h]
+  · rw [if_neg (show ¬(((Fin.castSucc c : Fin (n + 2)) : ℕ) ≤ (k : ℕ)) from by
+        simp only [Fin.val_castSucc]; omega), if_neg h]
+
+/-- B 逐点桥（两侧具体，供 finSum_congr 使用）。 -/
+lemma s01Term_slice_pointwise_B {n : ℕ} (R : Type u) [CommRing R]
+    (f : FinPerm (n + 2) → R) (c k : Fin (n + 1)) :
+    (if (k : ℕ) < ((Fin.succ c : Fin (n + 2)) : ℕ) then
+          s01Term R f (Fin.succ c) k else 0)
+      = (if (k : ℕ) ≤ (c : ℕ) then FinPerm.permSum R (fun d : FinPerm n =>
+            f (FinPerm.cons (FinPerm.cons d c) (Fin.castSucc k))) else 0) := by
+  by_cases h : (k : ℕ) ≤ (c : ℕ)
+  · rw [if_pos (show (k : ℕ) < (Fin.succ c : Fin (n + 2)) from by
+        simp only [Fin.val_succ]; omega), if_pos h, s01Term_succL R f c k h]
+  · rw [if_neg (show ¬((k : ℕ) < (Fin.succ c : Fin (n + 2))) from by
+        simp only [Fin.val_succ]; omega), if_neg h]
+
+/-- **s01 硬情形重排主引理**：与 `s01` 的右复合不改变 permSum。 -/
+lemma permSum_compose_swap01 {n : ℕ} (R : Type u) [CommRing R]
+    (f : FinPerm (n + 2) → R) :
+    FinPerm.permSum R (fun π : FinPerm (n + 2) =>
+        f (FinPerm.compose π (FinPerm.swapPerm (0 : Fin (n + 2)) (1 : Fin (n + 2)))))
+      = FinPerm.permSum R f := by
+  -- 目标侧：双 succ + 指示子拆分 + SLICE
+  have hsuccT : ∀ a : Fin (n + 2),
+      FinPerm.permSum R (fun b : FinPerm (n + 1) => f (FinPerm.cons b a))
+        = finSum R (n + 1) (fun c => FinPerm.permSum R (fun d : FinPerm n =>
+            f (FinPerm.cons (FinPerm.cons d c) a))) :=
+    fun a => FinPerm.permSum_succ R n (fun b : FinPerm (n + 1) => f (FinPerm.cons b a))
+  have hsplT : ∀ (a : Fin (n + 2)) (c : Fin (n + 1)),
+      FinPerm.permSum R (fun d : FinPerm n => f (FinPerm.cons (FinPerm.cons d c) a))
+        = (if (c : ℕ) < (a : ℕ) then
+              FinPerm.permSum R (fun d : FinPerm n =>
+                f (FinPerm.cons (FinPerm.cons d c) a)) else 0)
+          + (if (a : ℕ) ≤ (c : ℕ) then
+              FinPerm.permSum R (fun d : FinPerm n =>
+                f (FinPerm.cons (FinPerm.cons d c) a)) else 0) := by
+    intro a c
+    by_cases h : (c : ℕ) < (a : ℕ)
+    · rw [if_pos h, if_neg (by omega), add_zero]
+    · rw [if_neg h]
+      by_cases h2 : (a : ℕ) ≤ (c : ℕ)
+      · rw [if_pos h2, zero_add]
+      · exact absurd (show (c : ℕ) < (a : ℕ) from by omega) h
+  rw [FinPerm.permSum_succ R (n + 1) f, finSum_congr R hsuccT,
+    finSum_congr R (fun a => finSum_congr R (hsplT a))]
+  simp only [finSum_add]
+  rw [finSum_slice_A R (fun c a => FinPerm.permSum R (fun d : FinPerm n =>
+      f (FinPerm.cons (FinPerm.cons d c) a))),
+    finSum_slice_B R (fun c a => FinPerm.permSum R (fun d : FinPerm n =>
+      f (FinPerm.cons (FinPerm.cons d c) a)))]
+  -- LHS 侧：双 succ + consCons 分解 + s01Term 折叠
+  have hsuccL : ∀ j : Fin (n + 2),
+      FinPerm.permSum R (fun ρ : FinPerm (n + 1) =>
+          f (FinPerm.compose (FinPerm.cons ρ j)
+              (FinPerm.swapPerm (0 : Fin (n + 2)) (1 : Fin (n + 2)))))
+        = finSum R (n + 1) (fun k => FinPerm.permSum R (fun ρ' : FinPerm n =>
+            f (FinPerm.compose (FinPerm.cons (FinPerm.cons ρ' k) j)
+                (FinPerm.swapPerm (0 : Fin (n + 2)) (1 : Fin (n + 2)))))) :=
+    fun j => FinPerm.permSum_succ R n (fun ρ : FinPerm (n + 1) =>
+      f (FinPerm.compose (FinPerm.cons ρ j)
+          (FinPerm.swapPerm (0 : Fin (n + 2)) (1 : Fin (n + 2)))))
+  rw [FinPerm.permSum_succ R (n + 1) (fun π => f (FinPerm.compose π
+      (FinPerm.swapPerm (0 : Fin (n + 2)) (1 : Fin (n + 2))))),
+    finSum_congr R hsuccL,
+    finSum_congr R (fun j => finSum_congr R (fun k => permSum_congr
+      (fun ρ' => congrArg f (consCons_compose_swap01 ρ' k j)))),
+    finSum_congr R (fun j => show finSum R (n + 1) (fun k =>
+        FinPerm.permSum R (fun ρ' : FinPerm n =>
+          f (FinPerm.cons (FinPerm.cons ρ'
+              (FinPerm.unshift (FinPerm.insertAt j k) j
+                (fun hc => FinPerm.insertAt_ne j k (hc.symm))))
+            (FinPerm.insertAt j k))))
+      = finSum R (n + 1) (fun k => s01Term R f j k) from rfl)]
+  -- LHS 指示子拆分
+  have hsplL : ∀ (j : Fin (n + 2)) (k : Fin (n + 1)),
+      s01Term R f j k
+        = (if (j : ℕ) ≤ (k : ℕ) then s01Term R f j k else 0)
+          + (if (k : ℕ) < (j : ℕ) then s01Term R f j k else 0) := by
+    intro j k
+    by_cases h : (j : ℕ) ≤ (k : ℕ)
+    · rw [if_pos h, if_neg (by omega), add_zero]
+    · rw [if_neg h, if_pos (by omega), zero_add]
+  rw [finSum_congr R (fun j => finSum_congr R (hsplL j))]
+  simp only [finSum_add]
+  -- A 半边：last-剥皮（last ≤ k 恒假）
+  rw [finSum_last R (n + 1) (fun j => finSum R (n + 1) (fun k =>
+      if (j : ℕ) ≤ (k : ℕ) then s01Term R f j k else 0))]
+  rw [finSum_eq_zero R (fun k => if_neg (show ¬(((Fin.last (n + 1) : Fin (n + 2)) : ℕ)
+      ≤ (k : ℕ)) from by
+    have h1 := k.isLt
+    simp only [Fin.val_last]
+    omega)), add_zero]
+  -- B 半边：succ-剥皮（k < 0 恒假）
+  rw [finSum_succ R (n + 1) (fun j => finSum R (n + 1) (fun k =>
+      if (k : ℕ) < (j : ℕ) then s01Term R f j k else 0))]
+  rw [Fin.val_zero,
+    finSum_eq_zero R (fun k => if_neg (Nat.not_lt_zero (k : ℕ))), zero_add]
+  -- A/B 桥
+  rw [finSum_congr R (fun c => finSum_congr R (fun k =>
+      s01Term_slice_pointwise_A R f c k)),
+    finSum_congr R (fun c => finSum_congr R (fun k =>
+      s01Term_slice_pointwise_B R f c k))]
+
 end PermSumRightReindex
 
 end SDG.DifferentialForms
