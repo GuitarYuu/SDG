@@ -461,6 +461,114 @@ theorem chainCurrent_boundary_boundary {m : ℕ}
 
 end Currents
 
+/-! ## 同调层：循环/边缘与配对的适定性 -/
+
+section Homology
+
+variable {R : Type u} [CommRing R] {X : Type u} {n : ℕ}
+
+/-- **链循环**：对偶边界为零的电流（电流链复形的闭链）。 -/
+def IsChainCycle (T : Current R X (n + 1)) : Prop := currentBoundary T = 0
+
+/-- **链边缘**：是某个电流的对偶边界（电流同调中的零类）。 -/
+def IsChainBoundary (T : Current R X (n + 1)) : Prop :=
+  ∃ S : Current R X (n + 2), currentBoundary S = T
+
+/-- **上循环**：上边界为零的上链（de Rham 复形的闭形式链）。 -/
+def IsCocycle (c : Cochain R X n) : Prop := coboundary c = 0
+
+/-- **上边缘**：是某个上链的上边界（恰当形式链）。 -/
+def IsCoboundary (c : Cochain R X (n + 1)) : Prop :=
+  ∃ b : Cochain R X n, coboundary b = c
+
+/-- 链边缘必是链循环：∂² = 0（电流侧）。 -/
+theorem IsChainBoundary.isChainCycle {T : Current R X (n + 1)}
+    (h : IsChainBoundary T) : IsChainCycle T := by
+  obtain ⟨S, hS⟩ := h
+  show currentBoundary T = 0
+  rw [← hS]
+  exact currentBoundary_currentBoundary S
+
+/-- 上边缘必是上循环：∂² = 0（上链侧）。 -/
+theorem IsCoboundary.isCocycle {c : Cochain R X (n + 1)}
+    (h : IsCoboundary c) : IsCocycle c := by
+  obtain ⟨b, hb⟩ := h
+  show coboundary c = 0
+  rw [← hb]
+  exact coboundary_coboundary b
+
+/-- **循环电流子模**：链循环对加法、零、数乘封闭。 -/
+def chainCycles : Submodule R (Current R X (n + 1)) where
+  carrier := {T | currentBoundary T = 0}
+  add_mem' ha hb := by
+    show currentBoundary (_ + _) = 0
+    rw [currentBoundary_add, ha, hb, add_zero]
+  zero_mem' := currentBoundary_zero
+  smul_mem' := by
+    intro r T h
+    show currentBoundary (r • T) = 0
+    rw [currentBoundary_smul, h, smul_zero]
+
+/-- **上循环子模**：闭形式链对加法、零、数乘封闭。 -/
+def cocycles : Submodule R (Cochain R X n) where
+  carrier := {c | coboundary c = 0}
+  add_mem' ha hb := by
+    show coboundary (_ + _) = 0
+    rw [← coboundaryLinear_apply, LinearMap.map_add, coboundaryLinear_apply,
+      coboundaryLinear_apply, ha, hb, add_zero]
+  zero_mem' := by
+    show coboundary (0 : Cochain R X n) = 0
+    rw [← coboundaryLinear_apply, LinearMap.map_zero]
+  smul_mem' := by
+    intro r c hc
+    show coboundary (r • c) = 0
+    rw [← coboundaryLinear_apply, LinearMap.map_smul, coboundaryLinear_apply, hc,
+      smul_zero]
+
+/-- **边缘电流与上循环的配对为零**：⟨∂S, c⟩ = S(∂c) = S(0) = 0——
+边缘修改不改变配对（第一半）。 -/
+theorem currentBoundary_pair_isCocycle (S : Current R X (n + 2))
+    (c : Cochain R X (n + 1)) (hc : IsCocycle c) : currentBoundary S c = 0 := by
+  rw [currentBoundary_apply, hc, map_zero]
+
+/-- **循环电流与上边缘的配对为零**：⟨T, ∂b⟩ = ⟨∂T, b⟩ = 0——
+上边缘修改不改变配对（第二半）。 -/
+theorem isChainCycle_pair_coboundary (T : Current R X (n + 1)) (b : Cochain R X n)
+    (hT : IsChainCycle T) : T (coboundary b) = 0 := by
+  rw [← currentBoundary_apply, hT, LinearMap.zero_apply]
+
+/-- **配对适定性（电流同调 × 上同调）**：循环电流对上循环的配对在
+「电流加边缘」与「上链加上边缘」两类修改下不变：
+⟨T + ∂S, c + ∂b⟩ = ⟨T, c⟩（T 循环、c 闭）。
+这是电流理论的中央恒等式——配对良定义于 Hₙ(currents) × Hⁿ(cochains)。 -/
+theorem pairing_cycle_cocycle_congr (T T' : Current R X (n + 1))
+    (c c' : Cochain R X (n + 1))
+    (hT : IsChainCycle T) (hc : IsCocycle c)
+    (hTT' : ∃ S : Current R X (n + 2), T' = T + currentBoundary S)
+    (hcc' : ∃ b : Cochain R X n, c' = c + coboundary b) :
+    T' c' = T c := by
+  obtain ⟨S, rfl⟩ := hTT'
+  obtain ⟨b, rfl⟩ := hcc'
+  have e1 : ∀ (U : Current R X (n + 1)) (d e : Cochain R X (n + 1)),
+      U (d + e) = U d + U e := fun U d e => LinearMap.map_add U d e
+  have e2 : ∀ (U V : Current R X (n + 1)) (d : Cochain R X (n + 1)),
+      (U + V) d = U d + V d := fun U V d => LinearMap.add_apply U V d
+  have hcob : ∀ (d e : Cochain R X (n + 1)),
+      coboundary (d + e) = coboundary d + coboundary e := by
+    intro d e
+    show coboundaryLinear (d + e) = coboundaryLinear d + coboundaryLinear e
+    rw [LinearMap.map_add, coboundaryLinear_apply, coboundaryLinear_apply]
+  calc (T + currentBoundary S) (c + coboundary b)
+      = T c + T (coboundary b)
+          + (S (coboundary c) + S (coboundary (coboundary b))) := by
+        rw [e2, e1, currentBoundary_apply, hcob, LinearMap.map_add S]
+    _ = T c := by
+        rw [isChainCycle_pair_coboundary T b hT, hc, map_zero S,
+          coboundary_coboundary b, map_zero S]
+        ring
+
+end Homology
+
 /-! ## 积分电流 -/
 
 section IntegralCurrents
@@ -602,6 +710,17 @@ end IntegralCurrents
 #print axioms SDG.DifferentialForms.chainCurrent_boundary_apply
 #print axioms SDG.DifferentialForms.evalCochain_boundary_eq_family
 #print axioms SDG.DifferentialForms.chainCurrent_boundary_boundary
+#print axioms SDG.DifferentialForms.IsChainCycle
+#print axioms SDG.DifferentialForms.IsChainBoundary
+#print axioms SDG.DifferentialForms.IsCocycle
+#print axioms SDG.DifferentialForms.IsCoboundary
+#print axioms SDG.DifferentialForms.IsChainBoundary.isChainCycle
+#print axioms SDG.DifferentialForms.IsCoboundary.isCocycle
+#print axioms SDG.DifferentialForms.chainCycles
+#print axioms SDG.DifferentialForms.cocycles
+#print axioms SDG.DifferentialForms.currentBoundary_pair_isCocycle
+#print axioms SDG.DifferentialForms.isChainCycle_pair_coboundary
+#print axioms SDG.DifferentialForms.pairing_cycle_cocycle_congr
 #print axioms SDG.DifferentialForms.affine_path_mem_Icc
 #print axioms SDG.DifferentialForms.IntegralCurrent.apply
 #print axioms SDG.DifferentialForms.IntegralCurrent.apply_add
