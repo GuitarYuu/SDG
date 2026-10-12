@@ -191,6 +191,73 @@ lemma permSum_compose_swap_succ_step {n : ℕ} (R : Type u) [CommRing R]
   rw [permSum_congr (fun ρ => congrArg f (cons_compose_swapPerm_succ ρ j m0 m1 hm)),
     IH j m0 m1 hm]
 
+/-- 字面量 `1` 即 `0` 的后继（`if_pos rfl` 的桥）。 -/
+lemma fin_one_eq_succ_zero {n : ℕ} :
+    (1 : Fin (n + 2)) = Fin.succ (0 : Fin (n + 1)) := rfl
+
+/-- **P1 双重插入换序**：先在 `k` 后在 `j` 插入 = 先在 `X₀` 后在 `m` 插入
+（`m = insertAt j k`，`X₀ = unshift m j`）。 -/
+lemma insertAt_insertAt_comm {n : ℕ} (j : Fin (n + 2)) (k : Fin (n + 1)) (x : Fin n) :
+    FinPerm.insertAt j (FinPerm.insertAt k x)
+      = FinPerm.insertAt (FinPerm.insertAt j k)
+          (FinPerm.insertAt
+            (FinPerm.unshift (FinPerm.insertAt j k) j
+              (fun hc => FinPerm.insertAt_ne j k (hc.symm))) x) := by
+  have hj := j.isLt
+  have hk := k.isLt
+  have hx := x.isLt
+  apply Fin.ext
+  simp only [FinPerm.insertAt_val,
+    unshift_val_eq (FinPerm.insertAt j k) j
+      (fun hc => FinPerm.insertAt_ne j k (hc.symm))]
+  split_ifs <;> omega
+
+/-- **s01 点态分解（硬情形核心）**：双层 cons 置换与 `s01` 的右复合
+= 双层 cons 保 `ρ'` 换头（`(P1)` + `insertAt_unshift`）。 -/
+lemma consCons_compose_swap01 {n : ℕ} (ρ' : FinPerm n) (k : Fin (n + 1))
+    (j : Fin (n + 2)) :
+    FinPerm.compose (FinPerm.cons (FinPerm.cons ρ' k) j)
+        (FinPerm.swapPerm (0 : Fin (n + 2)) (1 : Fin (n + 2)))
+      = FinPerm.cons (FinPerm.cons ρ'
+          (FinPerm.unshift (FinPerm.insertAt j k) j
+            (fun hc => FinPerm.insertAt_ne j k (hc.symm))))
+          (FinPerm.insertAt j k) := by
+  apply FinPerm.ext_toFun _ _
+  rw [FinPerm.toFun_compose, FinPerm.toFun_swapPerm]
+  funext t
+  cases t using Fin.cases with
+  | zero =>
+      have hsw : swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2)) (0 : Fin (n + 2))
+          = Fin.succ (0 : Fin (n + 1)) := by
+        unfold swapFin
+        rw [fin_one_eq_succ_zero, if_pos rfl]
+      rw [hsw, FinPerm.toFun_cons_succ, FinPerm.toFun_cons_zero,
+        FinPerm.toFun_cons_zero]
+  | succ u =>
+      by_cases hu : u = 0
+      · rw [hu]
+        have hsw : swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2))
+            ((0 : Fin (n + 1)).succ) = (0 : Fin (n + 2)) := by
+          unfold swapFin
+          rw [if_neg (Fin.succ_ne_zero (0 : Fin (n + 1))),
+            if_pos (by rw [fin_one_eq_succ_zero])]
+        rw [hsw, FinPerm.toFun_cons_zero, FinPerm.toFun_cons_succ,
+          FinPerm.toFun_cons_zero, FinPerm.insertAt_unshift]
+      · obtain ⟨v, hv⟩ := fin_succ_of_ne_zero hu
+        have hsw : swapFin (0 : Fin (n + 2)) (1 : Fin (n + 2)) u.succ = u.succ := by
+          unfold swapFin
+          rw [if_neg (Fin.succ_ne_zero u),
+            if_neg (show ¬(u.succ = (1 : Fin (n + 2))) from by
+              intro hc
+              rw [fin_one_eq_succ_zero] at hc
+              have hv2 := congrArg Fin.val hc
+              simp only [Fin.val_succ] at hv2
+              have h9 := u.isLt
+              omega)]
+        rw [hsw, FinPerm.toFun_cons_succ, ← hv, FinPerm.toFun_cons_succ,
+          FinPerm.toFun_cons_succ, FinPerm.toFun_cons_succ]
+        exact insertAt_insertAt_comm j k (ρ'.toFun v)
+
 end PermSumRightReindex
 
 end SDG.DifferentialForms
