@@ -30,6 +30,7 @@ Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham 复�
 | `SDG/DifferentialForms/Core.lean` | 严格逐点形式层 `FiberwiseDifferentialForm`（每基点一个 Mathlib `AlternatingMap`）、严格拉回、0-形式外微分 `d₀` 及 Leibniz |
 | `SDG/DifferentialForms/Algebra.lean` | 形式代数主体（见下） |
 | `SDG/DifferentialForms/Simplicial.lean` | 单纯形面映射 `faceMap i = i.succAbove` |
+| `SDG/DifferentialForms/Currents.lean` | 电流层：拓扑/紧支撑结构、电流空间 `Current`、对偶边界 ∂（∂²=0）、单纯形链电流与积分电流 |
 | `SDG/FinSumProd.lean` | 无选择 `finSum`/`finProd` 及其拆分/重排/配对引理 |
 
 ## 已完成的形式化内容
@@ -95,17 +96,38 @@ Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham 复�
 
 按优先级：
 
-1. **一般 n 的 `∂² = 0`**：单纯形恒等式
-   `i.succAbove ∘ j.succAbove = j'.succAbove ∘ i'.succAbove`（case 分裂
-   重参数化）+ 双和配对消去（基础设施已就绪：`finSum_swapFinAdj`、
-   `finSum_split_at`）；
-2. **`(p,q)` 一般楔积**：permSum + shuffle 符号加权（需任意对换 =
-   相邻对换乘积的构造性分解）；
-3. **任意阶外微分 `d : Ωⁿ → Ωⁿ⁺¹`**（Koszul 公式）与 `d² = 0`、
-   分次 Leibniz、拉回自然性；
-4. **参数化单形积分与 Stokes**（先 n=1, 2 再归纳）；
-5. **构造性链与 currents**：`∂² = 0` 对偶、current-Stokes；
-6. Čech 上同调、de Rham 同构的 SDG 版本。
+1. **参数化单形积分与 Stokes**（先 n=1, 2 再归纳；积分电流
+   `IntegralCurrent` 与紧支撑层已就绪，见 `Currents.lean`）；
+2. **current-Stokes 定理**：电流与形式的配对在边界上的恒等式
+   （`currentBoundary` 的配对公式与 `chainCurrent_boundary_apply`
+   Fubini 展开已备好）；
+3. Čech 上同调、de Rham 同构的 SDG 版本。
+
+## 电流层（Currents，2026-10-12 完成）
+
+`SDG/DifferentialForms/Currents.lean` 三部分，全部无选择公理：
+
+* **拓扑/紧支撑结构**：`SupportsIn`（支撑含于承载集，逐点零的构造性
+  表述）、抽象紧集族 `CompactFamily`（空集紧 + 有限并紧——currents
+  理论所需的全部拓扑公理）、`HasCompactSupport` 紧支撑函数/形式对
+  加法、取负、数乘封闭并打包为 R-子模 `compactSupportedFuns` /
+  `compactSupportedForms`；`IsCompactOrder`（预序有向性）具体化 R
+  上紧性：有界集构成紧集族、`compactFamily_Icc` 闭区间紧、
+  `hasCompactSupport_iff_interval` 紧支撑的区间刻画。
+* **电流主层**：`Current R X n := Cochain R X n →ₗ[R] R`；
+  `coboundaryLinear`（∂ 的线性打包）；对偶边界
+  `currentBoundary T c = T (∂c)`（Stokes 配对公式），线性性三条 +
+  **`currentBoundary_currentBoundary`：电流的 ∂² = 0**（D2 的直接
+  对偶推论）；单纯形链电流 `evalCochain σ`、加权族电流
+  `chainCurrent σs w`、**Stokes 配对恒等式**
+  `chainCurrent_boundary_apply`（双和经 `finSum_sum_comm` 换序）、
+  `∂[σ] = Σ (-1)^i [∂_i σ]`（`evalCochain_boundary_eq_family`）。
+* **积分电流**：仿射路径含于区间 `affine_path_mem_Icc`（预序有向
+  乘法推出）；`IntegralCurrent`（密度 + 承载区间捆绑成数据——SDG
+  预序下「紧支撑积分与承载区间选取无关」需单点质量为零的进一步
+  论证，本层诚实不作声称）；配对 `apply` 线性（加法/数乘）、
+  `apply_congr_on`（只依赖承载区间内行为）、
+  `hasCompactSupport`（与拓扑层衔接）。
 
 ## 构建
 
