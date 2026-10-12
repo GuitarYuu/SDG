@@ -1728,6 +1728,325 @@ lemma permSum_mul_left {n : ℕ} (a : R) (f : FinPerm n → R) :
 
 end PermSumLin
 
+
+/-! ### 置换符号的乘性（经逆序数的对称平方和）
+
+`sign (compose π τ) = sign π * sign τ`——楔积分次交换律与分次 Leibniz 的地基
+（无选择公理）。证明路线：对称翻转指示器 `flipInd` 的平方和 = 2×守卫三角和；
+三角和沿双射 `τ` 重排；逐点恒等式 `ã + b̃ + c̃ = 2(ãb̃ + b̃c̃ + c̃ã)` 求和得
+`invCount (π∘τ) + invCount τ + invCount π` 为偶数。
+
+注意：`omega` 遇到**蕴含**假设会引入 `Classical.choice`（析取与 `≠` 假设无碍），
+故逐点恒等式的前置事实一律以析取形式（`hπdisj`）给出。 -/
+
+section SignMul
+
+/-- 无序对翻转指示器：`f` 相对自然序是否翻转对 `{u, v}`（对称，对角为零）。 -/
+def flipInd {n : ℕ} (f : Fin n → Fin n) (u v : Fin n) : ℕ :=
+  if (u : ℕ) < (v : ℕ) then (if (f u : ℕ) > (f v : ℕ) then 1 else 0)
+  else (if (f v : ℕ) > (f u : ℕ) then 1 else 0)
+
+lemma flipInd_symm {n : ℕ} (f : Fin n → Fin n) (u v : Fin n) :
+    flipInd f u v = flipInd f v u := by
+  unfold flipInd
+  by_cases h1 : (u : ℕ) < (v : ℕ)
+  · have h2 : ¬ ((v : ℕ) < (u : ℕ)) := by omega
+    simp only [h1, h2, if_true, if_false, ite_eq_left, ite_eq_right]
+  · by_cases h2 : (v : ℕ) < (u : ℕ)
+    · simp only [h1, h2, if_true, if_false, ite_eq_left, ite_eq_right]
+    · have hEq : u = v := Fin.ext (by omega)
+      subst hEq
+      simp only [Nat.lt_irrefl, if_false, if_true, ite_eq_left, ite_eq_right]
+
+/-- 对角为零。 -/
+lemma flipInd_diag {n : ℕ} (f : Fin n → Fin n) (u : Fin n) :
+    flipInd f u u = 0 := by
+  unfold flipInd
+  simp only [Nat.lt_irrefl, if_false, if_true, ite_eq_left, ite_eq_right]
+
+/-- 拆成上下三角两块（每块带守卫）。 -/
+lemma flipInd_split {n : ℕ} (f : Fin n → Fin n) (u v : Fin n) :
+    flipInd f u v
+      = (if (u : ℕ) < (v : ℕ) then (if (f u : ℕ) > (f v : ℕ) then 1 else 0) else 0)
+        + (if (v : ℕ) < (u : ℕ) then (if (f v : ℕ) > (f u : ℕ) then 1 else 0) else 0) := by
+  unfold flipInd
+  by_cases h1 : (u : ℕ) < (v : ℕ)
+  · have h2 : ¬ ((v : ℕ) < (u : ℕ)) := by omega
+    simp only [h1, h2, if_true, if_false, ite_eq_left, ite_eq_right, add_zero]
+  · by_cases h2 : (v : ℕ) < (u : ℕ)
+    · simp only [h1, h2, if_true, if_false, ite_eq_left, ite_eq_right, zero_add]
+    · have hEq : u = v := Fin.ext (by omega)
+      subst hEq
+      simp only [Nat.lt_irrefl, gt_iff_lt, Nat.lt_irrefl, if_false, if_true,
+        ite_eq_left, ite_eq_right]
+
+/-- 带守卫三角和的记号捷径（与 `FinPerm.invCount` 的展开形状一致）。 -/
+def triSum {n : ℕ} (h : Fin n → Fin n → ℕ) : ℕ :=
+  finSum ℕ n (fun j => finSum ℕ n (fun a =>
+    if (a : ℕ) < (j : ℕ) then h a j else 0))
+
+/-- **平方和 = 2×三角和**（对称、对角零的 ℕ 值被加项）。 -/
+lemma finSum_sq_eq_two_tri {n : ℕ} (h : Fin n → Fin n → ℕ)
+    (hsym : ∀ u v, h u v = h v u) (hdiag : ∀ u, h u u = 0) :
+    finSum ℕ n (fun v => finSum ℕ n (fun u => h u v)) = 2 * triSum h := by
+  have hsplit : ∀ u v : Fin n,
+      h u v = (if (u : ℕ) < (v : ℕ) then h u v else 0)
+        + (if (v : ℕ) < (u : ℕ) then h v u else 0) := by
+    intro u v
+    by_cases h1 : (u : ℕ) < (v : ℕ)
+    · have h2 : ¬ ((v : ℕ) < (u : ℕ)) := by omega
+      simp only [h1, h2, if_true, if_false, ite_eq_left, ite_eq_right, add_zero]
+    · by_cases h2 : (v : ℕ) < (u : ℕ)
+      · rw [hsym u v]
+        simp only [h1, h2, if_true, if_false, ite_eq_left, ite_eq_right, zero_add]
+      · have hEq : u = v := Fin.ext (by omega)
+        subst hEq
+        rw [hdiag]
+        simp only [Nat.lt_irrefl, if_false, if_true, ite_eq_left, ite_eq_right]
+  have hinner : ∀ v : Fin n,
+      finSum ℕ n (fun u => (if (u : ℕ) < (v : ℕ) then h u v else 0)
+        + (if (v : ℕ) < (u : ℕ) then h v u else 0))
+    = finSum ℕ n (fun u => (if (u : ℕ) < (v : ℕ) then h u v else 0))
+      + finSum ℕ n (fun u => (if (v : ℕ) < (u : ℕ) then h v u else 0)) :=
+    fun v => finSum_add ℕ n
+      (fun u => (if (u : ℕ) < (v : ℕ) then h u v else 0))
+      (fun u => (if (v : ℕ) < (u : ℕ) then h v u else 0))
+  rw [finSum_congr (R := ℕ) (fun v => finSum_congr (R := ℕ) (fun u => hsplit u v)),
+    finSum_congr (R := ℕ) hinner, finSum_add]
+  have hP : finSum ℕ n (fun v => finSum ℕ n (fun u =>
+      (if (u : ℕ) < (v : ℕ) then h u v else 0))) = triSum h := rfl
+  have hQ : finSum ℕ n (fun v => finSum ℕ n (fun u =>
+      (if (v : ℕ) < (u : ℕ) then h v u else 0))) = triSum h :=
+    finSum_sum_comm ℕ n n (fun i j => (if (i : ℕ) < (j : ℕ) then h i j else 0))
+  rw [hP, hQ, two_mul]
+
+/-- `flipInd` 的三角和恰为逆序数（`a < j` 分支即逆序判定）。 -/
+lemma triSum_flipInd_eq_invCount {n : ℕ} (π : FinPerm n) :
+    triSum (fun a j => flipInd π.toFun a j) = FinPerm.invCount π := by
+  unfold triSum FinPerm.invCount
+  refine finSum_congr ℕ (fun j => finSum_congr ℕ (fun a => ?_))
+  by_cases h : (a : ℕ) < (j : ℕ)
+  · simp only [h, if_true, ite_eq_left]
+    unfold flipInd
+    rw [if_pos h]
+  · simp only [h, if_false, ite_eq_right]
+
+/-- 三角和的加法分配。 -/
+lemma triSum_add {n : ℕ} {h₁ h₂ : Fin n → Fin n → ℕ} :
+    triSum (fun a j => h₁ a j + h₂ a j) = triSum h₁ + triSum h₂ := by
+  have hpt : ∀ j a : Fin n,
+      (if (a : ℕ) < (j : ℕ) then h₁ a j + h₂ a j else 0)
+        = (if (a : ℕ) < (j : ℕ) then h₁ a j else 0)
+          + (if (a : ℕ) < (j : ℕ) then h₂ a j else 0) := by
+    intro j a
+    by_cases h : (a : ℕ) < (j : ℕ)
+    · simp only [h, if_true]
+    · simp only [h, if_false]
+  unfold triSum
+  rw [finSum_congr (R := ℕ) (fun j => finSum_congr (R := ℕ) (fun a => hpt j a)),
+    finSum_congr (R := ℕ) (fun j => finSum_add ℕ n
+      (fun a => if (a : ℕ) < (j : ℕ) then h₁ a j else 0)
+      (fun a => if (a : ℕ) < (j : ℕ) then h₂ a j else 0)),
+    finSum_add]
+
+/-- 三角和提出常系数 2（守卫块内移，经显式 `f` 的 `finSum_mul_left`）。 -/
+lemma triSum_two_mul {n : ℕ} (K : Fin n → Fin n → ℕ) :
+    triSum (fun a j => 2 * K a j) = 2 * triSum K := by
+  have htwo : ∀ j a : Fin n,
+      (if (a : ℕ) < (j : ℕ) then 2 * K a j else 0)
+        = 2 * (if (a : ℕ) < (j : ℕ) then K a j else 0) := by
+    intro j a
+    by_cases h : (a : ℕ) < (j : ℕ)
+    · simp only [h, if_true]
+    · simp only [h, if_false]
+  unfold triSum
+  rw [finSum_congr (R := ℕ) (fun j => finSum_congr (R := ℕ) (fun a => htwo j a)),
+    finSum_congr (R := ℕ) (fun j => finSum_mul_left (R := ℕ) (n := n) (a := 2)
+      (f := fun a => if (a : ℕ) < (j : ℕ) then K a j else 0)),
+    finSum_mul_left (R := ℕ) (n := n) (a := 2)
+      (f := fun j => finSum ℕ n (fun a => if (a : ℕ) < (j : ℕ) then K a j else 0))]
+
+/-- 三角和的逐点守卫替换。 -/
+lemma triSum_congr' {n : ℕ} {f g : Fin n → Fin n → ℕ}
+    (h : ∀ j a : Fin n, (if (a : ℕ) < (j : ℕ) then f a j else 0)
+      = (if (a : ℕ) < (j : ℕ) then g a j else 0)) :
+    triSum f = triSum g := by
+  unfold triSum
+  rw [finSum_congr (R := ℕ) (fun j => finSum_congr (R := ℕ) (fun a => h j a))]
+
+/-- 平方和沿双射 `τ` 的双指标重排（两次单指标 reindex）。 -/
+lemma finSum_sq_reindex {n : ℕ} (τ : Fin n → Fin n) (hτ : Function.Injective τ)
+    (f : Fin n → Fin n → ℕ) :
+    finSum ℕ n (fun v => finSum ℕ n (fun u => f (τ u) (τ v)))
+      = finSum ℕ n (fun v => finSum ℕ n (fun u => f u v)) := by
+  rw [finSum_congr (R := ℕ)
+    (fun v => finSum_reindex (R := ℕ) (n := n) τ hτ (fun u => f u (τ v)))]
+  exact finSum_reindex (R := ℕ) (n := n) τ hτ
+    (fun w => finSum ℕ n (fun u => f u w))
+
+/-- **β-归约形状的 flipInd 展开**（叶子改写用，避免 λ-β 在 Decidable
+实例位置的匹配问题）。 -/
+lemma flipInd_comp {n : ℕ} (π τ : Fin n → Fin n) (u v : Fin n) :
+    flipInd (fun x => π (τ x)) u v
+      = if (u : ℕ) < (v : ℕ) then (if (π (τ u) : ℕ) > (π (τ v) : ℕ) then 1 else 0)
+        else (if (π (τ v) : ℕ) > (π (τ u) : ℕ) then 1 else 0) := rfl
+
+/-- 任意函数的 flipInd 展开（β 干净，替代 simp only [flipInd]）。 -/
+lemma flipInd_def {n : ℕ} (f : Fin n → Fin n) (u v : Fin n) :
+    flipInd f u v
+      = if (u : ℕ) < (v : ℕ) then (if (f u : ℕ) > (f v : ℕ) then 1 else 0)
+        else (if (f v : ℕ) > (f u : ℕ) then 1 else 0) := rfl
+
+/-- **逐点恒等式**：`ã + b̃ + c̃ = 2(ãb̃ + b̃c̃ + c̃ã)`，其中
+`ã = π∘τ` 对 `{u,v}` 的翻转、`b̃ = τ` 的翻转、`c̃ = π` 对像对 `{τu,τv}` 的翻转
+（四情形表；`u = v` 平凡）。 -/
+lemma flipInd_pair {n : ℕ} (π τ : Fin n → Fin n)
+    (hπ : Function.Injective π) (hτ : Function.Injective τ) (u v : Fin n) :
+    flipInd (fun x => π (τ x)) u v + flipInd τ u v + flipInd π (τ u) (τ v)
+      = 2 * (flipInd (fun x => π (τ x)) u v * flipInd τ u v
+        + flipInd τ u v * flipInd π (τ u) (τ v)
+        + flipInd (fun x => π (τ x)) u v * flipInd π (τ u) (τ v)) := by
+  by_cases heq : u = v
+  · subst heq
+    rw [flipInd_diag, flipInd_diag, flipInd_diag]
+  · have hτne : (τ u : ℕ) ≠ (τ v : ℕ) := by
+      intro hc
+      exact heq (hτ (Fin.ext hc))
+    have hπne : (π (τ u) : ℕ) ≠ (π (τ v) : ℕ) := by
+      intro hc
+      exact hτne (congrArg Fin.val (hπ (Fin.ext hc)))
+    have hπdisj : (π (τ u) : ℕ) > (π (τ v) : ℕ)
+        ∨ (π (τ v) : ℕ) > (π (τ u) : ℕ) := by
+      by_cases h3 : (π (τ u) : ℕ) > (π (τ v) : ℕ)
+      · exact Or.inl h3
+      · have h5 : (π (τ u) : ℕ) < (π (τ v) : ℕ) ∨ (π (τ u) : ℕ) = (π (τ v) : ℕ) := by
+          omega
+        rcases h5 with h5 | h5
+        · exact Or.inr h5
+        · exact absurd h5 hπne
+    rw [flipInd_comp]
+    rw [flipInd_def τ]
+    rw [flipInd_def π (τ u) (τ v)]
+    split_ifs <;> omega
+
+/-- **符号乘性**：`sign (compose π τ) = sign π * sign τ`。 -/
+lemma sign_mul (n : ℕ) (R : Type u) [CommRing R] (π τ : FinPerm n) :
+    FinPerm.sign R (FinPerm.compose π τ) = FinPerm.sign R π * FinPerm.sign R τ := by
+  have hT1 : triSum (fun a j => flipInd (fun x => π.toFun (τ.toFun x)) a j)
+      = FinPerm.invCount (FinPerm.compose π τ) := by
+    rw [← triSum_flipInd_eq_invCount (FinPerm.compose π τ), FinPerm.toFun_compose]
+  have hT2 : triSum (fun a j => flipInd τ.toFun a j) = FinPerm.invCount τ :=
+    triSum_flipInd_eq_invCount τ
+  have hT3 : triSum (fun a j => flipInd π.toFun a j) = FinPerm.invCount π :=
+    triSum_flipInd_eq_invCount π
+  -- Tri(c̃) = invCount π（减半链：平方和沿 τ 重排）
+  have hcT : triSum (fun a j => flipInd π.toFun (τ.toFun a) (τ.toFun j))
+      = FinPerm.invCount π := by
+    have hsq1 := finSum_sq_eq_two_tri
+      (fun a j => flipInd π.toFun (τ.toFun a) (τ.toFun j))
+      (fun u v => flipInd_symm π.toFun (τ.toFun u) (τ.toFun v))
+      (fun u => flipInd_diag π.toFun (τ.toFun u))
+    have hsq2 := finSum_sq_reindex τ.toFun τ.toFun_injective
+      (fun a j => flipInd π.toFun a j)
+    have hsq3 := finSum_sq_eq_two_tri (flipInd π.toFun) (flipInd_symm π.toFun)
+      (flipInd_diag π.toFun)
+    have hchain : (2 : ℕ) * triSum (fun a j => flipInd π.toFun (τ.toFun a) (τ.toFun j))
+        = 2 * FinPerm.invCount π := by
+      calc (2 : ℕ) * triSum (fun a j => flipInd π.toFun (τ.toFun a) (τ.toFun j))
+          = finSum ℕ n (fun v => finSum ℕ n (fun u =>
+              flipInd π.toFun (τ.toFun u) (τ.toFun v))) := hsq1.symm
+        _ = finSum ℕ n (fun v => finSum ℕ n (fun u => flipInd π.toFun u v)) := hsq2
+        _ = 2 * triSum (flipInd π.toFun) := hsq3
+        _ = 2 * FinPerm.invCount π := congrArg (2 * ·)
+              (triSum_flipInd_eq_invCount π)
+    exact Nat.eq_of_mul_eq_mul_left (by omega) hchain
+  -- 逐点恒等式的三角求和：Tri(ã) + Tri(b̃) + Tri(c̃) = 2K
+  have hsum : triSum (fun a j => flipInd (fun x => π.toFun (τ.toFun x)) a j
+        + flipInd τ.toFun a j + flipInd π.toFun (τ.toFun a) (τ.toFun j))
+      = 2 * triSum (fun a j => flipInd (fun x => π.toFun (τ.toFun x)) a j
+          * flipInd τ.toFun a j
+        + flipInd τ.toFun a j * flipInd π.toFun (τ.toFun a) (τ.toFun j)
+        + flipInd (fun x => π.toFun (τ.toFun x)) a j
+          * flipInd π.toFun (τ.toFun a) (τ.toFun j)) := by
+    have hpt : ∀ j a : Fin n,
+        (if (a : ℕ) < (j : ℕ) then (flipInd (fun x => π.toFun (τ.toFun x)) a j
+            + flipInd τ.toFun a j + flipInd π.toFun (τ.toFun a) (τ.toFun j)) else 0)
+      = (if (a : ℕ) < (j : ℕ) then 2 * (flipInd (fun x => π.toFun (τ.toFun x)) a j
+            * flipInd τ.toFun a j
+          + flipInd τ.toFun a j * flipInd π.toFun (τ.toFun a) (τ.toFun j)
+          + flipInd (fun x => π.toFun (τ.toFun x)) a j
+            * flipInd π.toFun (τ.toFun a) (τ.toFun j)) else 0) := by
+      intro j a
+      by_cases h : (a : ℕ) < (j : ℕ)
+      · simp only [h, if_true]
+        exact flipInd_pair π.toFun τ.toFun π.toFun_injective τ.toFun_injective a j
+      · simp only [h, if_false]
+    have h1 : triSum (fun a j => flipInd (fun x => π.toFun (τ.toFun x)) a j
+        + flipInd τ.toFun a j + flipInd π.toFun (τ.toFun a) (τ.toFun j))
+      = triSum (fun a j => 2 * (flipInd (fun x => π.toFun (τ.toFun x)) a j
+          * flipInd τ.toFun a j
+        + flipInd τ.toFun a j * flipInd π.toFun (τ.toFun a) (τ.toFun j)
+        + flipInd (fun x => π.toFun (τ.toFun x)) a j
+          * flipInd π.toFun (τ.toFun a) (τ.toFun j))) := triSum_congr' hpt
+    rw [h1, triSum_two_mul]
+  have hmain : FinPerm.invCount (FinPerm.compose π τ) + FinPerm.invCount τ
+      + FinPerm.invCount π
+      = 2 * triSum (fun a j => flipInd (fun x => π.toFun (τ.toFun x)) a j
+          * flipInd τ.toFun a j
+        + flipInd τ.toFun a j * flipInd π.toFun (τ.toFun a) (τ.toFun j)
+        + flipInd (fun x => π.toFun (τ.toFun x)) a j
+          * flipInd π.toFun (τ.toFun a) (τ.toFun j)) := by
+    rw [← hT1, ← hT2, ← hcT]
+    rw [← triSum_add (h₁ := fun a j => flipInd (fun x => π.toFun (τ.toFun x)) a j)
+      (h₂ := fun a j => flipInd τ.toFun a j)]
+    rw [← triSum_add
+      (h₁ := fun a j => flipInd (fun x => π.toFun (τ.toFun x)) a j + flipInd τ.toFun a j)
+      (h₂ := fun a j => flipInd π.toFun (τ.toFun a) (τ.toFun j))]
+    rw [hsum]
+  -- 符号拼装
+  have hpow2 : ∀ k : ℕ, ((-1 : R) ^ k) * ((-1 : R) ^ k) = 1 := by
+    intro k
+    rw [← mul_pow]
+    rw [show ((-1 : R) * (-1 : R)) = 1 from by ring]
+    rw [one_pow]
+  have hY : (-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ)
+      * ((-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ)) = 1 := by
+    have h1 := hpow2 (FinPerm.invCount π)
+    have h2 := hpow2 (FinPerm.invCount τ)
+    calc (-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ)
+          * ((-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ))
+        = ((-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount π))
+          * ((-1 : R)^(FinPerm.invCount τ) * (-1 : R)^(FinPerm.invCount τ)) := by ring
+      _ = 1 := by rw [h1, h2, mul_one]
+  have hkey : (-1 : R)^(FinPerm.invCount (FinPerm.compose π τ))
+      * ((-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ)) = 1 := by
+    rw [← pow_add, ← pow_add]
+    have hex : FinPerm.invCount (FinPerm.compose π τ)
+        + (FinPerm.invCount π + FinPerm.invCount τ)
+      = FinPerm.invCount (FinPerm.compose π τ) + FinPerm.invCount τ
+        + FinPerm.invCount π := by omega
+    rw [hex, hmain, Nat.two_mul, pow_add, hpow2]
+  have hsign : FinPerm.sign R (FinPerm.compose π τ)
+      = (-1 : R)^(FinPerm.invCount (FinPerm.compose π τ)) := by
+    rw [FinPerm.sign, FinPerm.depth_eq_invCount]
+  have hsignπ : FinPerm.sign R π = (-1 : R)^(FinPerm.invCount π) := by
+    rw [FinPerm.sign, FinPerm.depth_eq_invCount]
+  have hsignτ : FinPerm.sign R τ = (-1 : R)^(FinPerm.invCount τ) := by
+    rw [FinPerm.sign, FinPerm.depth_eq_invCount]
+  rw [hsign, hsignπ, hsignτ]
+  calc (-1 : R)^(FinPerm.invCount (FinPerm.compose π τ))
+      = (-1 : R)^(FinPerm.invCount (FinPerm.compose π τ))
+          * (((-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ))
+            * ((-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ))) := by
+        rw [hY, mul_one]
+    _ = (((-1 : R)^(FinPerm.invCount (FinPerm.compose π τ))
+          * ((-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ))))
+        * ((-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ)) := by ring
+    _ = 1 * ((-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ)) := by rw [hkey]
+    _ = (-1 : R)^(FinPerm.invCount π) * (-1 : R)^(FinPerm.invCount τ) := by ring
+
+end SignMul
+
 section WedgeAny
 
 variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
