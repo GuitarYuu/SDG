@@ -390,4 +390,118 @@ theorem coboundary_cup_product {p q : ℕ} (α : Cochain R X p) (β : Cochain R 
 
 end StokesSimplicial
 
+/-! ## Part 5：cup 积在上同调上的良定义性
+
+由函数版分次 Leibniz 直接推出：上积把上闭链对映为上闭链；把一个因子换成
+上边缘（另一个因子为上闭链）只改变上积一个上边缘——即
+`[α] ⌣ [β] := [α ⌣ β]` 良定义。 -/
+
+section CupCohomology
+
+variable {R : Type u} [CommRing R] {X : Type u}
+
+/-- 上链度数重标记（`h : m = n`；顶点经 `Fin.cast` 值恒等复合）。 -/
+def cochainLenCast {m n : ℕ} (h : m = n) (c : Cochain R X m) : Cochain R X n :=
+  fun σ => c (fun k => σ (Fin.cast (show m + 1 = n + 1 from by rw [h]) k))
+
+lemma cochainLenCast_apply {m n : ℕ} (h : m = n) (c : Cochain R X m)
+    (σ : SimplexPts X n) :
+    cochainLenCast h c σ
+      = c (fun k => σ (Fin.cast (show m + 1 = n + 1 from by rw [h]) k)) := rfl
+
+lemma cochainLenCast_zero {m n : ℕ} (h : m = n) :
+    cochainLenCast h (0 : Cochain R X m) = 0 := by
+  funext σ
+  rfl
+
+/-- 度数 cast 与 coboundary 交换。 -/
+lemma coboundary_cochainLenCast {m n : ℕ} (h : m = n) (c : Cochain R X m) :
+    coboundary (cochainLenCast h c)
+      = cochainLenCast (show m + 1 = n + 1 from by rw [h]) (coboundary c) := by
+  subst h
+  rfl
+
+lemma cupLeft_val {p q : ℕ} (k : Fin (p + 1)) :
+    ((cupLeft p q k : Fin (p + q + 1)) : ℕ) = (k : ℕ) := by
+  simp [cupLeft]
+
+lemma cupRight_val {p q : ℕ} (k : Fin (q + 1)) :
+    ((cupRight p q k : Fin (p + q + 1)) : ℕ) = p + (k : ℕ) := by
+  simp [cupRight]
+
+/-- **函数版分次 Leibniz**：∂(c₁ ⌀ c₂) = (∂c₁) ⌀ c₂ + (-1)^p · c₁ ⌀ (∂c₂)
+    作为 Cochain 的等式（点态主定理 `coboundary_cup_product` 的 funext 包装；
+    度数经 `cochainLenCast` 桥接）。 -/
+theorem coboundary_cupProduct {p q : ℕ} (α : Cochain R X p) (β : Cochain R X q) :
+    coboundary (cupProduct α β)
+      = cochainLenCast (show p + 1 + q = p + q + 1 from by omega)
+          (cupProduct (coboundary α) β)
+        + (-1:R)^((p:ℕ)) • cochainLenCast (show p + (q + 1) = p + q + 1 from by omega)
+          (cupProduct α (coboundary β)) := by
+  funext σ
+  have b1 : ∀ m : Fin ((p:ℕ)+2),
+      (fun k => σ (Fin.cast (show p + 1 + q + 1 = p + q + 1 + 1 from by omega) k))
+          (cupLeft ((p:ℕ)+1) q m)
+        = σ (Fin.mk ((m:ℕ)) (by have := m.isLt; omega)) := by
+    intro m
+    apply congrArg σ
+    apply Fin.ext
+    simp only [Fin.val_cast, cupLeft_val, Fin.val_mk]
+  have b2 : ∀ j : Fin (q+1),
+      (fun k => σ (Fin.cast (show p + 1 + q + 1 = p + q + 1 + 1 from by omega) k))
+          (cupRight ((p:ℕ)+1) q j)
+        = σ (Fin.mk (p + 1 + (j:ℕ)) (by have := j.isLt; omega)) := by
+    intro j
+    apply congrArg σ
+    apply Fin.ext
+    simp only [Fin.val_cast, cupRight_val, Fin.val_mk]
+  have b3 : ∀ k : Fin (p+1),
+      (fun l => σ (Fin.cast (show p + (q + 1) + 1 = p + q + 1 + 1 from by omega) l))
+          (cupLeft p (q+1) k)
+        = σ (Fin.mk ((k:ℕ)) (by have := k.isLt; omega)) := by
+    intro k
+    apply congrArg σ
+    apply Fin.ext
+    simp only [Fin.val_cast, cupLeft_val, Fin.val_mk]
+  have b4 : ∀ l : Fin ((q:ℕ)+2),
+      (fun k => σ (Fin.cast (show p + (q + 1) + 1 = p + q + 1 + 1 from by omega) k))
+          (cupRight p (q+1) l)
+        = σ (Fin.mk (p + (l:ℕ)) (by have := l.isLt; omega)) := by
+    intro l
+    apply congrArg σ
+    apply Fin.ext
+    simp only [Fin.val_cast, cupRight_val, Fin.val_mk]
+  rw [coboundary_cup_product α β σ, Pi.add_apply, Pi.smul_apply, smul_eq_mul,
+    cochainLenCast_apply, cochainLenCast_apply, cupProduct_apply, cupProduct_apply,
+    funext b1, funext b2, funext b3, funext b4, mul_assoc]
+
+/-- **cup 积保持上闭链**：两个上闭链的上积仍是上闭链。 -/
+theorem cupProduct_isCocycle {p q : ℕ} (α : Cochain R X p) (β : Cochain R X q)
+    (hα : coboundary α = 0) (hβ : coboundary β = 0) :
+    coboundary (cupProduct α β) = 0 := by
+  rw [coboundary_cupProduct, hα, hβ, cup_zero_left, cup_zero_right,
+    cochainLenCast_zero, cochainLenCast_zero, smul_zero, add_zero]
+
+/-- **左因子良定义性**：把左因子换成上边缘（右因子为上闭链），上积恰为
+    一个上边缘——witness 是 `cupProduct w β`（分次 Leibniz + ∂β = 0）。 -/
+theorem cupProduct_coboundary_left {p q : ℕ} (w : Cochain R X (p+1))
+    (β : Cochain R X q) (hβ : coboundary β = 0) :
+    coboundary (cupProduct w β)
+      = cochainLenCast (show p + 2 + q = p + 1 + q + 1 from by omega)
+        (cupProduct (coboundary w) β) := by
+  rw [coboundary_cupProduct, hβ, cup_zero_right, cochainLenCast_zero, smul_zero,
+    add_zero]
+
+/-- **右因子良定义性**：把右因子换成上边缘（左因子为上闭链），上积恰为
+    一个上边缘——witness 是 `cupProduct α w`（分次 Leibniz + ∂α = 0）。 -/
+theorem cupProduct_coboundary_right {p q : ℕ} (α : Cochain R X p)
+    (w : Cochain R X (q+1)) (hα : coboundary α = 0) :
+    coboundary (cupProduct α w)
+      = (-1:R)^((p:ℕ)) • cochainLenCast
+        (show p + (q + 2) = p + (q + 1) + 1 from by omega)
+        (cupProduct α (coboundary w)) := by
+  rw [coboundary_cupProduct, hα, cup_zero_left, cochainLenCast_zero, zero_add]
+
+end CupCohomology
+
 end SDG.DifferentialForms
