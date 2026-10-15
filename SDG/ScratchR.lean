@@ -741,7 +741,9 @@ lemma permSum_compose_bsPerm_gen {n : ℕ} (R : Type u) [CommRing R] :
             = G (FinPerm.compose π (FinPerm.compose (bsPerm k p hle)
                 (FinPerm.compose (cycLperm k p hlt) tail))) := by
         intro π
-        rw [compose_assoc]
+        rw [compose_assoc π (bsPerm k p hle) (cycLperm k p hlt),
+          compose_assoc π (bsPerm k p hle)
+            (FinPerm.compose (cycLperm k p hlt) tail)]
       rw [permSum_congr hp1]
       rw [permSum_congr hp2]
       rw [permSum_congr hp3]
