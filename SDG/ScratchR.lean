@@ -577,6 +577,187 @@ lemma permSum_compose_swap_step {n : ℕ} (R : Type u) [CommRing R]
   exact permSum_compose_swapPerm (R := R) (N := n)
     (fun τ => Φ (FinPerm.compose τ σ)) a b h
 
+/-- encode 复合引理：编码级复合 = FinPerm 复合。 -/
+lemma encode_compose_encode {n : ℕ} (g : Fin n → Fin n) (hg : Function.Injective g)
+    (h : Fin n → Fin n) (hh : Function.Injective h) :
+    FinPerm.compose (FinPerm.encode g hg) (FinPerm.encode h hh)
+      = FinPerm.encode (g ∘ h) (hg.comp hh) := by
+  apply FinPerm.ext_toFun _ _
+  rw [FinPerm.toFun_compose, FinPerm.toFun_encode, FinPerm.toFun_encode,
+    FinPerm.toFun_encode]
+  rfl
+
+/-- 循环左移的 FinPerm 编码。 -/
+def cycLperm {n : ℕ} (s p : ℕ) (hsp : s + p < n) : FinPerm n :=
+  FinPerm.encode (cycLfun s p hsp) (cycLfun_injective p s hsp)
+
+/-- cycLperm 的相邻对换分解（succ 步：swap 在最外层）。 -/
+lemma cycLperm_succ {n : ℕ} (s p : ℕ) (hsp : s + (p + 1) < n) :
+    cycLperm s (p + 1) hsp
+      = FinPerm.compose
+          (FinPerm.swapPerm (Fin.mk (s + p) (by omega : (s + p : ℕ) < n))
+            (Fin.mk (s + p + 1) hsp))
+          (cycLperm s p (by omega : (s + p : ℕ) < n)) := by
+  apply FinPerm.ext_toFun _ _
+  show (FinPerm.encode (cycLfun s (p + 1) hsp)
+      (cycLfun_injective (p + 1) s hsp)).toFun
+    = (FinPerm.compose
+        (FinPerm.encode (swapFin (Fin.mk (s + p) (by omega : (s + p : ℕ) < n))
+          (Fin.mk (s + p + 1) hsp))
+          (swapFin_injective (Fin.mk (s + p) (by omega : (s + p : ℕ) < n))
+            (Fin.mk (s + p + 1) hsp)))
+        (FinPerm.encode (cycLfun s p (by omega : (s + p : ℕ) < n))
+          (cycLfun_injective p s (by omega : (s + p : ℕ) < n)))).toFun
+  rw [FinPerm.toFun_encode, FinPerm.toFun_compose, FinPerm.toFun_encode,
+    FinPerm.toFun_encode, cycLfun_succ hsp]
+  rfl
+
+/-- 块交换的 FinPerm 编码。 -/
+def bsPerm {n : ℕ} (q p : ℕ) (hsp : q + p ≤ n) : FinPerm n :=
+  FinPerm.encode (bsFunV q p hsp) (bsFunV_injective hsp)
+
+/-- bsPerm 的递推（succ 步）。 -/
+lemma bsPerm_succ {n : ℕ} (q p : ℕ) (hsp : (q + 1) + p ≤ n) :
+    bsPerm (q + 1) p hsp
+      = FinPerm.compose (bsPerm q p (show q + p ≤ n from by omega))
+          (cycLperm q p (show q + p < n from by omega)) := by
+  apply FinPerm.ext_toFun _ _
+  show (FinPerm.encode (bsFunV (q + 1) p hsp) (bsFunV_injective hsp)).toFun
+    = (FinPerm.compose
+        (FinPerm.encode (bsFunV q p (show q + p ≤ n from by omega))
+          (bsFunV_injective (show q + p ≤ n from by omega)))
+        (FinPerm.encode (cycLfun q p (show q + p < n from by omega))
+          (cycLfun_injective p q (show q + p < n from by omega)))).toFun
+  rw [FinPerm.toFun_encode, FinPerm.toFun_compose, FinPerm.toFun_encode,
+    FinPerm.toFun_encode, bsFunV_succ_left hsp]
+  rfl
+
+/-- bsPerm 在 q = 0 时是恒等。 -/
+lemma bsPerm_zero {n : ℕ} (p : ℕ) (hsp : (0 : ℕ) + p ≤ n) :
+    bsPerm 0 p hsp = FinPerm.identity := by
+  show FinPerm.encode (bsFunV 0 p hsp) (bsFunV_injective hsp) = FinPerm.identity
+  apply FinPerm.ext_toFun _ _
+  rw [FinPerm.toFun_encode, FinPerm.toFun_identity]
+  funext k
+  have hid : bsFunV 0 p hsp = id := by
+    funext t
+    by_cases h1 : (t : ℕ) < p
+    · have hv : bsFunV 0 p hsp t
+          = (Fin.mk ((t : ℕ) - 0) (by have ht := t.isLt; omega) : Fin n) :=
+        bsFunV_back hsp (by omega) (by omega)
+      rw [hv]
+      simp only [Fin.val_mk, Nat.sub_zero]
+      exact Fin.ext (by simp only [Fin.val_mk, id_eq])
+    · exact bsFunV_out hsp (by omega)
+  rw [hid, id_eq]
+
+/-- cycLperm 外层链剥除（含尾接 τ）：r 归纳 + swap_step 逐层剥相邻对换。 -/
+lemma permSum_compose_cycL_outer_gen {n : ℕ} (R : Type u) [CommRing R] :
+    ∀ (r : ℕ) (s : ℕ) (hsp : s + r < n + 2), ∀ (τ : FinPerm (n + 2))
+      (G : FinPerm (n + 2) → R),
+      FinPerm.permSum R (fun π => G (FinPerm.compose π
+          (FinPerm.compose (cycLperm s r hsp) τ)))
+        = FinPerm.permSum R (fun π => G (FinPerm.compose π τ)) := by
+  set_option maxHeartbeats 2000000 in
+  intro r
+  induction r with
+  | zero =>
+      intro s hsp τ G
+      have hid : cycLperm s 0 hsp = FinPerm.identity := by
+        unfold cycLperm
+        apply FinPerm.ext_toFun _ _
+        rw [FinPerm.toFun_encode, FinPerm.toFun_identity]
+        funext k
+        show cycLfun s 0 hsp k = id k
+        by_cases h1 : (k : ℕ) = s
+        · rw [cycLfun_left hsp h1]
+          exact Fin.ext (by
+            simp only [Fin.val_mk, Nat.add_zero]
+            exact h1.symm)
+        · rw [cycLfun_out hsp h1 (by have h3 := k.isLt; omega)]
+          rfl
+      rw [hid, FinPerm.compose_identity_left]
+  | succ r ih =>
+      intro s hsp τ G
+      have hsp2 : s + r < n + 2 := by omega
+      have hpoint1 : ∀ π : FinPerm (n + 2),
+          G (FinPerm.compose π (FinPerm.compose (cycLperm s (r + 1) hsp) τ))
+            = G (FinPerm.compose π (FinPerm.compose
+                (FinPerm.compose (FinPerm.swapPerm (Fin.mk (s + r) (by omega : (s + r : ℕ) < n + 2))
+                  (Fin.mk (s + r + 1) hsp)) (cycLperm s r hsp2)) τ)) := by
+        intro π
+        rw [cycLperm_succ s r hsp]
+      have hpoint2 : ∀ π : FinPerm (n + 2),
+          G (FinPerm.compose π (FinPerm.compose
+              (FinPerm.compose (FinPerm.swapPerm (Fin.mk (s + r) (by omega : (s + r : ℕ) < n + 2))
+                (Fin.mk (s + r + 1) hsp)) (cycLperm s r hsp2)) τ))
+            = G (FinPerm.compose π (FinPerm.compose (FinPerm.swapPerm
+                (Fin.mk (s + r) (by omega : (s + r : ℕ) < n + 2))
+                (Fin.mk (s + r + 1) hsp)) (FinPerm.compose (cycLperm s r hsp2) τ))) := by
+        intro π
+        rw [← compose_assoc (FinPerm.swapPerm (Fin.mk (s + r) (by omega : (s + r : ℕ) < n + 2))
+          (Fin.mk (s + r + 1) hsp)) (cycLperm s r hsp2)]
+      rw [permSum_congr hpoint1]
+      rw [permSum_congr hpoint2]
+      rw [permSum_compose_swap_step R G
+        (FinPerm.compose (cycLperm s r hsp2) τ)
+        (Fin.mk (s + r) (by omega : (s + r : ℕ) < n + 2))
+        (Fin.mk (s + r + 1) hsp)
+        (by simp only [Fin.val_mk, Fin.val_succ])]
+      exact ih s hsp2 τ G
+
+set_option maxHeartbeats 8000000 in
+/-- **(R) 块交换链引理（尾巴泛化）**：前缀 bsPerm 可逐层剥除——
+IH 平移 G（G' := fun ρ => G (ρ ∘ cycLperm)）+ cycL_outer_gen 剥内层 cycL 链。 -/
+lemma permSum_compose_bsPerm_gen {n : ℕ} (R : Type u) [CommRing R] :
+    ∀ (k : ℕ) (p : ℕ) (hsp : k + p ≤ n + 2), ∀ (tail : FinPerm (n + 2))
+      (G : FinPerm (n + 2) → R),
+      FinPerm.permSum R (fun π => G (FinPerm.compose π
+          (FinPerm.compose (bsPerm k p hsp) tail)))
+        = FinPerm.permSum R (fun π => G (FinPerm.compose π tail)) := by
+  intro k
+  induction k with
+  | zero =>
+      intro p hsp tail G
+      rw [bsPerm_zero p hsp, FinPerm.compose_identity_left]
+  | succ k ih =>
+      intro p hsp tail G
+      have hle : k + p ≤ n + 2 := by omega
+      have hlt : k + p < n + 2 := by omega
+      have hp1 : ∀ π : FinPerm (n + 2),
+          G (FinPerm.compose π (FinPerm.compose (bsPerm (k + 1) p hsp) tail))
+            = G (FinPerm.compose (FinPerm.compose π (bsPerm (k + 1) p hsp)) tail) := by
+        intro π
+        rw [compose_assoc]
+      have hp2 : ∀ π : FinPerm (n + 2),
+          G (FinPerm.compose (FinPerm.compose π (bsPerm (k + 1) p hsp)) tail)
+            = G (FinPerm.compose (FinPerm.compose π
+                (FinPerm.compose (bsPerm k p hle) (cycLperm k p hlt))) tail) := by
+        intro π
+        rw [bsPerm_succ k p hsp]
+      have hp3 : ∀ π : FinPerm (n + 2),
+          G (FinPerm.compose (FinPerm.compose π
+              (FinPerm.compose (bsPerm k p hle) (cycLperm k p hlt))) tail)
+            = G (FinPerm.compose π (FinPerm.compose (bsPerm k p hle)
+                (FinPerm.compose (cycLperm k p hlt) tail))) := by
+        intro π
+        rw [compose_assoc]
+      rw [permSum_congr hp1]
+      rw [permSum_congr hp2]
+      rw [permSum_congr hp3]
+      exact (ih p hle (FinPerm.compose (cycLperm k p hlt) tail) G).trans
+        (permSum_compose_cycL_outer_gen R k p hlt tail G)
+
+/-- **(R) 块交换主引理**：与块交换的右复合不改变 permSum。 -/
+lemma permSum_compose_bsPerm {n : ℕ} (R : Type u) [CommRing R] :
+    ∀ (k : ℕ) (p : ℕ) (hsp : k + p ≤ n + 2), ∀ (G : FinPerm (n + 2) → R),
+      FinPerm.permSum R (fun π => G (FinPerm.compose π (bsPerm k p hsp)))
+        = FinPerm.permSum R G := by
+  intro k p hsp G
+  have hgen := permSum_compose_bsPerm_gen (R := R) k p hsp FinPerm.identity G
+  simp only [FinPerm.compose_identity_right] at hgen
+  exact hgen
+
 end PermSumRightReindex
 
 end SDG.DifferentialForms
