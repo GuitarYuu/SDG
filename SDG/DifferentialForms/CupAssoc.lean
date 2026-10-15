@@ -86,7 +86,56 @@ theorem cupProduct_assoc {p q r : ℕ} (c₁ : Cochain R X p) (c₂ : Cochain R 
   ext σ
   exact cupProduct_assoc_apply c₁ c₂ c₃ σ
 
-#print axioms SDG.DifferentialForms.cupProduct_assoc_apply
-#print axioms SDG.DifferentialForms.cupProduct_assoc
+/-! ## 上积的单位元 -/
+
+/-- 常值 `1` 的 0-上链（上积的单位元）。 -/
+abbrev cochainOne (R : Type u) [CommRing R] (X : Type u) : Cochain R X 0 :=
+  cochainOfFun (fun _ : X => (1 : R))
+
+/-- **上积左单位元（点态）**：`𝟙 ⌣ c = c`。`𝟙` 因子读 `v₀`（恒值 `1`）；
+`c` 的读值经 `cupRight 0 q`（顶点值 `k`）退化为 `σ` 本身。度数句法
+`0+q` 经顶点域 cast 桥接（值恒等）。 -/
+theorem cupProduct_one_left_apply {q : ℕ} (c₂ : Cochain R X q) (σ : SimplexPts X q) :
+    cupProduct (cochainOne R X) c₂
+        (fun k : Fin (0 + q + 1) => σ (Fin.cast (by omega) k))
+      = c₂ σ := by
+  rw [cupProduct_apply]
+  unfold cochainOne cochainOfFun
+  have hfun : (fun k : Fin (q + 1) => σ (Fin.cast (by omega) (cupRight 0 q k))) = σ := by
+    funext k
+    exact congrArg σ (Fin.ext (by simp only [cast_val_eq, cupRight_val]; omega))
+  rw [hfun]
+  simp
+
+/-- **上积右单位元（点态）**：`c ⌣ 𝟙 = c`。`c` 的读值经 `cupLeft p 0`
+（顶点值 `k`）退化为 `σ` 本身；`𝟙` 因子读 `v_p`（恒值 `1`）。 -/
+theorem cupProduct_one_right_apply {p : ℕ} (c₁ : Cochain R X p) (σ : SimplexPts X p) :
+    cupProduct c₁ (cochainOne R X)
+        (fun k : Fin (p + 0 + 1) => σ (Fin.cast (by omega) k))
+      = c₁ σ := by
+  rw [cupProduct_apply]
+  unfold cochainOne cochainOfFun
+  have hfun : (fun k : Fin (p + 1) => σ (Fin.cast (by omega) (cupLeft p 0 k))) = σ := by
+    funext k
+    exact congrArg σ (Fin.ext (by simp only [cast_val_eq, cupLeft_val]))
+  rw [hfun]
+  simp
+
+/-- **上积左单位元**。 -/
+theorem cupProduct_one_left {q : ℕ} (c₂ : Cochain R X q) :
+    cupProduct (cochainOne R X) c₂ = cochainCast (by omega) c₂ := by
+  ext σ
+  rw [cochainCast_apply]
+  exact cupProduct_one_left_apply c₂ (fun k : Fin (q + 1) => σ (Fin.cast (by omega) k))
+
+/-- **上积右单位元**。 -/
+theorem cupProduct_one_right {p : ℕ} (c₁ : Cochain R X p) :
+    cupProduct c₁ (cochainOne R X) = cochainCast (by omega) c₁ := by
+  ext σ
+  rw [cochainCast_apply]
+  exact cupProduct_one_right_apply c₁ (fun k : Fin (p + 1) => σ (Fin.cast (by omega) k))
+
+#print axioms SDG.DifferentialForms.cupProduct_one_left
+#print axioms SDG.DifferentialForms.cupProduct_one_right
 
 end SDG.DifferentialForms
