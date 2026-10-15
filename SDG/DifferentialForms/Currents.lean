@@ -710,6 +710,46 @@ end IntegralCurrents
 #print axioms SDG.DifferentialForms.chainCurrent_boundary_apply
 #print axioms SDG.DifferentialForms.evalCochain_boundary_eq_family
 #print axioms SDG.DifferentialForms.chainCurrent_boundary_boundary
+/-! ## de Rham 上同调群 -/
+
+section Cohomology
+
+variable {R : Type u} [CommRing R] {X : Type u}
+
+/-- **上边缘子模**：`∂ : Cⁿ → Cⁿ⁺¹` 的像。手工构造——Mathlib 的
+`LinearMap.range` 传递依赖 `Classical.choice`，为通过无选择审计自建。 -/
+def coboundaries (n : ℕ) : Submodule R (Cochain R X (n + 1)) where
+  carrier := {c | ∃ b : Cochain R X n, coboundary b = c}
+  add_mem' := by
+    rintro c₁ c₂ ⟨b₁, hb₁⟩ ⟨b₂, hb₂⟩
+    refine ⟨b₁ + b₂, ?_⟩
+    rw [← coboundaryLinear_apply, coboundaryLinear.map_add,
+      show coboundaryLinear b₁ = coboundary b₁ from rfl,
+      show coboundaryLinear b₂ = coboundary b₂ from rfl, hb₁, hb₂]
+  zero_mem' := by
+    refine ⟨0, ?_⟩
+    rw [← coboundaryLinear_apply, coboundaryLinear.map_zero]
+  smul_mem' := by
+    rintro r c ⟨b, hb⟩
+    refine ⟨r • b, ?_⟩
+    rw [← coboundaryLinear_apply, coboundaryLinear.map_smul,
+      show coboundaryLinear b = coboundary b from rfl, hb]
+
+@[simp]
+theorem mem_coboundaries {n : ℕ} {c : Cochain R X (n + 1)} :
+    c ∈ coboundaries n ↔ ∃ b : Cochain R X n, coboundary b = c :=
+  Iff.rfl
+
+/-- 上边缘含于上循环：∂² = 0 的子模表述（`IsCoboundary.isCocycle`）。 -/
+theorem coboundaries_le_cocycles {n : ℕ} :
+    coboundaries (R := R) (X := X) n ≤ cocycles (R := R) (X := X) (n := n + 1) := by
+  intro x hx
+  rw [mem_coboundaries] at hx
+  rcases hx with ⟨b, hb⟩
+  exact IsCoboundary.isCocycle ⟨b, hb⟩
+
+end Cohomology
+
 #print axioms SDG.DifferentialForms.IsChainCycle
 #print axioms SDG.DifferentialForms.IsChainBoundary
 #print axioms SDG.DifferentialForms.IsCocycle
@@ -728,5 +768,8 @@ end IntegralCurrents
 #print axioms SDG.DifferentialForms.IntegralCurrent.apply_congr_on
 #print axioms SDG.DifferentialForms.IntegralCurrent.apply_congr_density
 #print axioms SDG.DifferentialForms.IntegralCurrent.hasCompactSupport
+#print axioms SDG.DifferentialForms.coboundaries
+#print axioms SDG.DifferentialForms.mem_coboundaries
+#print axioms SDG.DifferentialForms.coboundaries_le_cocycles
 
 end SDG.DifferentialForms
