@@ -748,6 +748,78 @@ theorem coboundaries_le_cocycles {n : ℕ} :
   rcases hx with ⟨b, hb⟩
   exact IsCoboundary.isCocycle ⟨b, hb⟩
 
+/-- 上边缘的加法子群（comap 到上循环底类型的显式构造——绕开
+Submodule/`⧸` 记号的实例菱形：`leftRel` 直接消费 AddSubgroup，
+不经过 Submodule 的环路径表达）。 -/
+def coboundariesAdd (n : ℕ) :
+    AddSubgroup (cocycles (R := R) (X := X) (n := n + 1)) where
+  carrier := {x | ∃ b : Cochain R X n, (x : Cochain R X (n + 1)) = coboundary b}
+  add_mem' := by
+    rintro a b ha hb
+    obtain ⟨ba, hba⟩ := ha
+    obtain ⟨bb, hbb⟩ := hb
+    refine ⟨ba + bb, ?_⟩
+    show ((a + b : cocycles (R := R) (X := X) (n := n + 1)) : Cochain R X (n + 1))
+        = coboundary (ba + bb)
+    rw [show ((a + b : _) : Cochain R X (n + 1))
+          = (a : Cochain R X (n + 1)) + (b : Cochain R X (n + 1)) from rfl, hba, hbb,
+      ← coboundaryLinear_apply, ← coboundaryLinear_apply, ← coboundaryLinear_apply,
+      coboundaryLinear.map_add]
+  zero_mem' := by
+    refine ⟨0, ?_⟩
+    show ((0 : cocycles (R := R) (X := X) (n := n + 1)) : Cochain R X (n + 1))
+        = coboundary 0
+    rw [← coboundaryLinear_apply, coboundaryLinear.map_zero, Submodule.coe_zero]
+  neg_mem' := by
+    rintro a ha
+    obtain ⟨ba, hba⟩ := ha
+    refine ⟨-ba, ?_⟩
+    show ((-a : cocycles (R := R) (X := X) (n := n + 1)) : Cochain R X (n + 1))
+        = coboundary (-ba)
+    rw [show ((-a : _) : Cochain R X (n + 1)) = -(a : Cochain R X (n + 1)) from rfl, hba,
+      ← coboundaryLinear_apply, ← coboundaryLinear_apply, LinearMap.map_neg]
+
+/-- 上同调的集合胚：`α ~ β ⟺ α - β ∈ Bⁿ`（差为上边缘）。自建——
+`QuotientAddGroup.leftRel` 传递依赖 `Classical.choice`，过不了无选择
+审计；纯子模性质的 Setoid 零选择。 -/
+def deRhamSetoid (n : ℕ) : Setoid (cocycles (R := R) (X := X) (n := n + 1)) where
+  r a b :=
+    (a : Cochain R X (n + 1)) - (b : Cochain R X (n + 1)) ∈ coboundaries (R := R) (X := X) n
+  iseqv := by
+    constructor
+    · intro a
+      simpa using zero_mem (coboundaries (R := R) (X := X) n)
+    · intro a b h
+      simpa using neg_mem h
+    · intro a b c h₁ h₂
+      simpa using add_mem h₁ h₂
+
+/-- **de Rham 上同调群** `Hⁿ := Zⁿ/Bⁿ`（商类型；群结构 instance 的
+提升留待后续）。 -/
+def deRhamCohomology (n : ℕ) : Type u :=
+  Quotient (deRhamSetoid (R := R) (X := X) n)
+
+/-- 上同调类投影：上循环 `α` 的类 `[α] ∈ Hⁿ`。 -/
+def deRhamClass {n : ℕ} {α : Cochain R X (n + 1)} (hα : IsCocycle α) :
+    deRhamCohomology (R := R) (X := X) n :=
+  Quotient.mk (deRhamSetoid (R := R) (X := X) n) ⟨α, hα⟩
+
+/-- 类的良定义：差为上边缘的两个上循环同类。 -/
+theorem deRhamClass_eq {n : ℕ} {α β : Cochain R X (n + 1)} (hα : IsCocycle α)
+    (hβ : IsCocycle β) (h : α - β ∈ coboundaries (R := R) (X := X) n) :
+    deRhamClass hα = deRhamClass hβ :=
+  Quotient.sound (by
+    show (α - β : Cochain R X (n + 1)) ∈ coboundaries (R := R) (X := X) n
+    exact h)
+
+/-- **常值 1 的 0-上链是上循环**：`∂𝟙 = 0`——`[𝟙] ∈ H⁰` 良定义
+（与 `CupAssoc.lean` 的 `cochainOne` 定义等价）。 -/
+theorem cochainOfFun_one_isCocycle : IsCocycle (cochainOfFun (fun _ : X => (1 : R))) := by
+  show coboundary (cochainOfFun (fun _ : X => (1 : R))) = 0
+  funext σ
+  rw [coboundary_apply]
+  simp [cochainOfFun, finSum_two]
+
 end Cohomology
 
 #print axioms SDG.DifferentialForms.IsChainCycle
@@ -768,8 +840,14 @@ end Cohomology
 #print axioms SDG.DifferentialForms.IntegralCurrent.apply_congr_on
 #print axioms SDG.DifferentialForms.IntegralCurrent.apply_congr_density
 #print axioms SDG.DifferentialForms.IntegralCurrent.hasCompactSupport
+
 #print axioms SDG.DifferentialForms.coboundaries
 #print axioms SDG.DifferentialForms.mem_coboundaries
 #print axioms SDG.DifferentialForms.coboundaries_le_cocycles
+#print axioms SDG.DifferentialForms.deRhamSetoid
+#print axioms SDG.DifferentialForms.deRhamCohomology
+#print axioms SDG.DifferentialForms.deRhamClass
+#print axioms SDG.DifferentialForms.deRhamClass_eq
+#print axioms SDG.DifferentialForms.cochainOfFun_one_isCocycle
 
 end SDG.DifferentialForms
