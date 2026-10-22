@@ -741,14 +741,15 @@ lemma permSum_compose_bsPerm_gen {n : ℕ} (R : Type u) [CommRing R] :
             = G (FinPerm.compose π (FinPerm.compose (bsPerm k p hle)
                 (FinPerm.compose (cycLperm k p hlt) tail))) := by
         intro π
-        rw [compose_assoc π (bsPerm k p hle) (cycLperm k p hlt),
-          compose_assoc π (bsPerm k p hle)
-            (FinPerm.compose (cycLperm k p hlt) tail)]
+        rw [← compose_assoc π
+          (FinPerm.compose (bsPerm k p hle) (cycLperm k p hlt)) tail,
+          ← compose_assoc (bsPerm k p hle) (cycLperm k p hlt) tail]
+      have hih := ih p hle (FinPerm.compose (cycLperm k p hlt) tail) G
+      have hout := permSum_compose_cycL_outer_gen R p k hlt tail G
       rw [permSum_congr hp1]
       rw [permSum_congr hp2]
       rw [permSum_congr hp3]
-      exact (ih p hle (FinPerm.compose (cycLperm k p hlt) tail) G).trans
-        (permSum_compose_cycL_outer_gen R k p hlt tail G)
+      exact hih.trans hout
 
 /-- **(R) 块交换主引理**：与块交换的右复合不改变 permSum。 -/
 lemma permSum_compose_bsPerm {n : ℕ} (R : Type u) [CommRing R] :
