@@ -810,6 +810,71 @@ theorem cochainOfFun_one_isCocycle : IsCocycle (cochainOfFun (fun _ : X => (1 : 
   rw [coboundary_apply]
   simp [cochainOfFun, finSum_two]
 
+/-! ### 电流同调群与配对 -/
+
+/-- 电流边缘子群（Current 层；手工构造——`LinearMap.range` 带
+choice，过不了无选择审计）。 -/
+theorem currentBoundaryLinear_eq {n : ℕ} (T : Current R X (n + 1)) :
+    currentBoundaryLinear (R := R) (X := X) T = currentBoundary T := rfl
+
+def currentBoundariesAdd (n : ℕ) : AddSubgroup (Current R X (n + 1)) where
+  carrier := {S | ∃ T : Current R X (n + 2), currentBoundary T = S}
+  add_mem' := by
+    rintro S₁ S₂ ⟨T₁, hT₁⟩ ⟨T₂, hT₂⟩
+    refine ⟨T₁ + T₂, ?_⟩
+    rw [← currentBoundaryLinear_eq, currentBoundaryLinear.map_add,
+      currentBoundaryLinear_eq, currentBoundaryLinear_eq, hT₁, hT₂]
+  zero_mem' := by
+    refine ⟨0, ?_⟩
+    rw [← currentBoundaryLinear_eq, currentBoundaryLinear.map_zero]
+  neg_mem' := by
+    rintro S ⟨T, hT⟩
+    refine ⟨-T, ?_⟩
+    rw [← currentBoundaryLinear_eq, LinearMap.map_neg currentBoundaryLinear T,
+      currentBoundaryLinear_eq, hT]
+
+/-- **电流同调的集合胚**：`T ~ U ⟺ T - U ∈ Bₙ`（差为边缘电流）。
+定义在循环电流底类型上（`Subtype.val` 显式投影，避开 `↑` 的实例
+搜索）；与 `deRhamSetoid` 完全对偶。 -/
+def currentSetoid (n : ℕ) : Setoid (chainCycles (R := R) (X := X) (n := n)) where
+  r a b := Subtype.val a - Subtype.val b ∈ currentBoundariesAdd (R := R) (X := X) n
+  iseqv := by
+    constructor
+    · intro a
+      simpa using zero_mem (currentBoundariesAdd (R := R) (X := X) n)
+    · intro a b h
+      simpa using neg_mem h
+    · intro a b c h₁ h₂
+      simpa using add_mem h₁ h₂
+
+/-- 循环电流的类投影：`[T] ∈ Hₙ`。 -/
+def currentClass {n : ℕ} {T : Current R X (n + 1)} (hT : IsChainCycle T) :
+    Quotient (currentSetoid (R := R) (X := X) n) :=
+  Quotient.mk (currentSetoid (R := R) (X := X) (n := n)) ⟨T, hT⟩
+
+/-- 类的良定义：差为边缘的两个循环电流同类。 -/
+theorem currentClass_eq {n : ℕ} {T U : Current R X (n + 1)} (hT : IsChainCycle T)
+    (hU : IsChainCycle U) (h : T - U ∈ currentBoundariesAdd (R := R) (X := X) n) :
+    currentClass hT = currentClass hU :=
+  Quotient.sound (by
+    show (T - U : Current R X (n + 1)) ∈ currentBoundariesAdd (R := R) (X := X) n
+    exact h)
+
+/-- **配对的类层良定义**：循环电流类与上循环类的配对在代表元选取下
+不变——`pairing_cycle_cocycle_congr` 的直接派生。这是 Currents 理论的
+收官恒等式：配对 `⟨[T], [c]⟩ := T c` 良定义于 `Hₙ × Hⁿ`。 -/
+theorem pairing_class_well_defined {n : ℕ} {T T' : Current R X (n + 1)}
+    {c c' : Cochain R X (n + 1)} (_hT : IsChainCycle T) (_hT' : IsChainCycle T')
+    (_hc : IsCocycle c) (_hc' : IsCocycle c')
+    (hTT' : ∃ S : Current R X (n + 2), T' = T + currentBoundary S)
+    (hcc' : c - c' ∈ coboundaries (R := R) (X := X) n) :
+    T' c' = T c := by
+  obtain ⟨S, hS⟩ := hTT'
+  obtain ⟨b, hb⟩ := hcc'
+  exact pairing_cycle_cocycle_congr T T' c c' _hT _hc ⟨S, hS⟩ ⟨-b, by
+    rw [← coboundaryLinear_apply, LinearMap.map_neg, coboundaryLinear_apply, hb]
+    abel⟩
+
 end Cohomology
 
 #print axioms SDG.DifferentialForms.IsChainCycle
@@ -839,5 +904,9 @@ end Cohomology
 #print axioms SDG.DifferentialForms.deRhamClass
 #print axioms SDG.DifferentialForms.deRhamClass_eq
 #print axioms SDG.DifferentialForms.cochainOfFun_one_isCocycle
+#print axioms SDG.DifferentialForms.currentSetoid
+#print axioms SDG.DifferentialForms.currentClass
+#print axioms SDG.DifferentialForms.currentClass_eq
+#print axioms SDG.DifferentialForms.pairing_class_well_defined
 
 end SDG.DifferentialForms
