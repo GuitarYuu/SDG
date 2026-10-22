@@ -819,4 +819,414 @@ lemma bsFunV_natAdd {q p : ℕ} (hT : p + q = q + p) (i : Fin p) :
 end GradCommSlot
 end PermSumRightReindex
 
+section GradComm
+
+/-! ## 分次交换律组装（E3 收官）
+
+目标：`wedgeAnyFun ω η v = (-1)^(p*q) • wedgeAnyFun η ω (v 经 ambient 转置)`。
+
+架构（关键决策）：`wedgeAnyFun` 的 ambient 锁定字面 `p + q`，而 `(R)` 链
+（`permSum_compose_bsPerm`）只在 `n + 2` 层级存在。ambient 的 cases 重写
+（`p + q` 与 `N + 2` 互换）因 motive 类型不正确不可行（`v` 的类型依赖
+`p + q`，wedgeAnyFun 应用对泛化 ambient 不合类型）。正解：**不做 ambient
+重写**——主引理带显式运输等式 `hA : p + q = N + 2`、`hE : q + p = N + 2`，
+两侧经 `permSum_typeCast` + `sign_permCast` + cast 消去搬到 `FinPerm (N + 2)`
+求和世界（`wedgeAnyFun_permSum_cast`），在 N+2 世界内完成 `(R)` 归位 +
+槽位恒等式 + `sign_mul`/`bsPerm_sign` 收符号。最终定理按 `2 ≤ p + q`
+分派：主分支 `obtain N` 直接调用；`p + q ≤ 1` 三个具体退化引理。 -/
+
+variable {R : Type u} [CommRing R] {X : Type u} [Microlinear R X]
+
+/-- cast 复合消去：`cast h.symm ∘ cast h = id`（点态，val 层平凡）。 -/
+lemma finCast_cancel {a b : ℕ} (h : a = b) (s : Fin a) :
+    Fin.cast h.symm (Fin.cast h s) = s := by
+  apply Fin.ext
+  rw [Fin.val_cast, Fin.val_cast]
+
+/-- sign 的 ambient-cast 不变性：subst 后 `permCast rfl π = π`。 -/
+lemma sign_permCast {m n : ℕ} (h : m = n) (π : FinPerm m) :
+    FinPerm.sign R (permCast h π) = FinPerm.sign R π := by
+  subst h
+  rw [permCast_id]
+
+/-- **块交换的符号**：`sign (bsPerm q p hsp) = (-1)^(q*p)`。
+由 (P') 于恒等置换处取：encode ∘ id 桥回 bsPerm。 -/
+lemma bsPerm_sign {n q p : ℕ} (hsp : q + p ≤ n) :
+    FinPerm.sign R (bsPerm q p hsp) = (-1 : R)^(q * p) := by
+  have h1 := sign_encode_bsFunV (R := R) q p hsp FinPerm.identity (bsFunV_injective hsp)
+  have hE : FinPerm.encode (bsFunV q p hsp ∘ FinPerm.identity.toFun)
+      (Function.Injective.comp (bsFunV_injective hsp) FinPerm.identity.toFun_injective)
+      = bsPerm q p hsp := by
+    apply FinPerm.ext_toFun _ _
+    unfold bsPerm
+    rw [FinPerm.toFun_encode, FinPerm.toFun_encode]
+    funext k
+    rw [FinPerm.toFun_identity]
+    rfl
+  rw [hE] at h1
+  rw [h1, FinPerm.sign_identity R, mul_one]
+
+/-- N+2 世界的槽位恒等式 A：块交换把 η-块第 j 槽送回原 η-位置
+（双 cast 形：入口沿 hE 运输、出口沿 hA 运输）。 -/
+lemma bsFunV_cast_hE {q p N : ℕ} (hE : q + p = N + 2) (hA : p + q = N + 2) (j : Fin q) :
+    bsFunV q p (show q + p ≤ N + 2 from by omega)
+        (Fin.cast hE (Fin.castAdd p j))
+      = Fin.cast hA (Fin.natAdd p j) := by
+  apply Fin.ext
+  have hj := j.isLt
+  have hval : ((Fin.cast hE (Fin.castAdd p j) : Fin (N + 2)) : ℕ) < q := by
+    rw [Fin.val_cast, Fin.val_castAdd]
+    omega
+  rw [bsFunV_front _ hval, Fin.val_mk, Fin.val_cast, Fin.val_castAdd,
+    Fin.val_cast, Fin.val_natAdd]
+  omega
+
+/-- N+2 世界的槽位恒等式 B：块交换把 ω-块第 i 槽送回原 ω-位置。 -/
+lemma bsFunV_natAdd_hE {q p N : ℕ} (hE : q + p = N + 2) (hA : p + q = N + 2) (i : Fin p) :
+    bsFunV q p (show q + p ≤ N + 2 from by omega)
+        (Fin.cast hE (Fin.natAdd q i))
+      = Fin.cast hA (Fin.castAdd q i) := by
+  apply Fin.ext
+  have hi := i.isLt
+  have hval1 : (q : ℕ) ≤ ((Fin.cast hE (Fin.natAdd q i) : Fin (N + 2)) : ℕ) := by
+    rw [Fin.val_cast, Fin.val_natAdd]
+    omega
+  have hval2 : ((Fin.cast hE (Fin.natAdd q i) : Fin (N + 2)) : ℕ) < q + p := by
+    rw [Fin.val_cast, Fin.val_natAdd]
+    omega
+  rw [bsFunV_back _ hval1 hval2, Fin.val_mk, Fin.val_cast, Fin.val_natAdd,
+    Fin.val_cast, Fin.val_castAdd]
+  omega
+
+set_option maxHeartbeats 2000000 in
+/-- **ambient 运输引理**：把 `wedgeAnyFun` 的 permSum 表达式搬到任意
+ambient `m`（`h : p + q = m`），槽位经 `Fin.cast h` 运输。
+`permSum_typeCast` + `sign_permCast` + cast 消去的三合一桥，
+是 N+2 世界主引理两侧的统一入口。 -/
+lemma wedgeAnyFun_permSum_cast {p q m : ℕ} (h : p + q = m) {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (w : Fin m → TangentFiber R X x) :
+    wedgeAnyFun ω η (fun t : Fin (p + q) => w (Fin.cast h t))
+      = FinPerm.permSum R (fun π : FinPerm m => FinPerm.sign R π *
+          (ω (fun i : Fin p => w (π.toFun (Fin.cast h (Fin.castAdd q i)))) *
+          η (fun j : Fin q => w (π.toFun (Fin.cast h (Fin.natAdd p j)))))) := by
+  unfold wedgeAnyFun
+  rw [← permSum_typeCast h (fun π : FinPerm m => FinPerm.sign R π *
+      (ω (fun i : Fin p => w (π.toFun (Fin.cast h (Fin.castAdd q i)))) *
+      η (fun j : Fin q => w (π.toFun (Fin.cast h (Fin.natAdd p j))))))]
+  have hpoint : ∀ τ : FinPerm (p + q),
+      FinPerm.sign R τ *
+        (ω (fun i : Fin p => w (Fin.cast h (τ.toFun (Fin.castAdd q i)))) *
+        η (fun j : Fin q => w (Fin.cast h (τ.toFun (Fin.natAdd p j)))))
+      = FinPerm.sign R (permCast h τ) *
+        (ω (fun i : Fin p =>
+            w ((permCast h τ).toFun (Fin.cast h (Fin.castAdd q i)))) *
+        η (fun j : Fin q =>
+            w ((permCast h τ).toFun (Fin.cast h (Fin.natAdd p j))))) := by
+    intro τ
+    rw [sign_permCast]
+    have hslotA : (fun i : Fin p =>
+            w ((permCast h τ).toFun (Fin.cast h (Fin.castAdd q i))))
+        = (fun i : Fin p => w (Fin.cast h (τ.toFun (Fin.castAdd q i)))) := by
+      funext i
+      unfold permCast
+      rw [FinPerm.toFun_encode, finCast_cancel]
+    have hslotB : (fun j : Fin q =>
+            w ((permCast h τ).toFun (Fin.cast h (Fin.natAdd p j))))
+        = (fun j : Fin q => w (Fin.cast h (τ.toFun (Fin.natAdd p j)))) := by
+      funext j
+      unfold permCast
+      rw [FinPerm.toFun_encode, finCast_cancel]
+    rw [hslotA, hslotB]
+  rw [permSum_congr hpoint]
+
+set_option maxHeartbeats 4000000 in
+/-- **N+2 桥世界主引理**：显式运输等式下分次交换律成立。
+两侧经 `wedgeAnyFun_permSum_cast` 搬到 `FinPerm (N + 2)` 求和；
+`(R)` `permSum_compose_bsPerm` 归位后点态收符号
+（sign_mul + bsPerm_sign + 槽位恒等式 + mul 交换）。 -/
+lemma wedgeAnyFun_grad_comm_at {p q N : ℕ} (hA : p + q = N + 2) (hE : q + p = N + 2)
+    {x : X} (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun ω η v
+      = (-1 : R)^(p * q) • wedgeAnyFun η ω
+          (fun t : Fin (q + p) => v (Fin.cast (Nat.add_comm q p) t)) := by
+  obtain ⟨w, hwdef⟩ : ∃ w : Fin (N + 2) → TangentFiber R X x,
+      ∀ t, w t = v (Fin.cast hA.symm t) :=
+    ⟨fun t => v (Fin.cast hA.symm t), fun t => rfl⟩
+  have hpow1 : (-1 : R)^(p * q) * (-1 : R)^(p * q) = 1 := by
+    rw [← mul_pow (a := (-1 : R)) (b := (-1 : R)) (n := p * q),
+      show ((-1 : R) * (-1 : R)) = 1 from by ring, one_pow]
+  have hLv : (fun t : Fin (p + q) => w (Fin.cast hA t)) = v := by
+    funext t
+    rw [hwdef (Fin.cast hA t)]
+    exact congrArg v (finCast_cancel hA t)
+  have hRv : (fun t : Fin (q + p) => v (Fin.cast (Nat.add_comm q p) t))
+      = (fun t : Fin (q + p) => w (Fin.cast hE t)) := by
+    funext t
+    rw [hwdef (Fin.cast hE t)]
+    exact congrArg v (Fin.ext (by simp only [Fin.val_cast]))
+  rw [hRv, ← hLv, wedgeAnyFun_permSum_cast hA ω η w,
+    wedgeAnyFun_permSum_cast hE η ω w, smul_eq_mul]
+  have hsp'' : q + p ≤ N + 2 := by omega
+  -- (R) 归位：Σ Gq = Σ Gq(π ∘ bs)
+  rw [← permSum_compose_bsPerm R q p hsp'' (fun π : FinPerm (N + 2) =>
+    FinPerm.sign R π *
+      (η (fun j : Fin q => w (π.toFun (Fin.cast hE (Fin.castAdd p j)))) *
+      ω (fun i : Fin p => w (π.toFun (Fin.cast hE (Fin.natAdd q i))))))]
+  -- 点态核心
+  have hpoint : ∀ π : FinPerm (N + 2),
+      FinPerm.sign R (FinPerm.compose π (bsPerm q p hsp'')) *
+        (η (fun j : Fin q => w ((FinPerm.compose π (bsPerm q p hsp'')).toFun
+            (Fin.cast hE (Fin.castAdd p j)))) *
+        ω (fun i : Fin p => w ((FinPerm.compose π (bsPerm q p hsp'')).toFun
+            (Fin.cast hE (Fin.natAdd q i)))))
+      = (-1 : R)^(p * q) * (FinPerm.sign R π *
+        (ω (fun i : Fin p => w (π.toFun (Fin.cast hA (Fin.castAdd q i)))) *
+        η (fun j : Fin q => w (π.toFun (Fin.cast hA (Fin.natAdd p j)))))) := by
+    intro π
+    have hslotπ1 : ∀ j : Fin q, w ((FinPerm.compose π (bsPerm q p hsp'')).toFun
+        (Fin.cast hE (Fin.castAdd p j)))
+        = w (π.toFun (Fin.cast hA (Fin.natAdd p j))) := by
+      intro j
+      unfold bsPerm
+      rw [FinPerm.toFun_compose, FinPerm.toFun_encode]
+      simp only []
+      rw [bsFunV_cast_hE hE hA]
+    have hslotπ2 : ∀ i : Fin p, w ((FinPerm.compose π (bsPerm q p hsp'')).toFun
+        (Fin.cast hE (Fin.natAdd q i)))
+        = w (π.toFun (Fin.cast hA (Fin.castAdd q i))) := by
+      intro i
+      unfold bsPerm
+      rw [FinPerm.toFun_compose, FinPerm.toFun_encode]
+      simp only []
+      rw [bsFunV_natAdd_hE hE hA]
+    rw [sign_mul (N + 2) R, bsPerm_sign]
+    simp only [hslotπ1, hslotπ2]
+    rw [Nat.mul_comm q p]
+    ring
+  rw [permSum_congr hpoint, permSum_mul_left, ← mul_assoc, hpow1, one_mul]
+
+/-- 退化 (0,0)：双平凡因子（Fin 0 槽函数两两相等）。 -/
+lemma wedgeAnyFun_grad_comm_zero_zero {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 0]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin 0]→ₗ[R] R)
+    (v : Fin (0 + 0) → TangentFiber R X x) :
+    wedgeAnyFun ω η v
+      = (-1 : R)^(0 * 0) • wedgeAnyFun η ω
+          (fun t : Fin (0 + 0) => v (Fin.cast (Nat.add_comm 0 0) t)) := by
+  unfold wedgeAnyFun
+  rw [zero_mul, pow_zero, one_smul]
+  have hpt : ∀ π : FinPerm (0 + 0),
+      FinPerm.sign R π *
+        (ω (fun i : Fin 0 => v (π.toFun (Fin.castAdd 0 i))) *
+        η (fun j : Fin 0 => v (π.toFun (Fin.natAdd 0 j))))
+      = FinPerm.sign R π *
+        (η (fun j : Fin 0 =>
+            v (Fin.cast (Nat.add_comm 0 0) (π.toFun (Fin.castAdd 0 j)))) *
+        ω (fun i : Fin 0 =>
+            v (Fin.cast (Nat.add_comm 0 0) (π.toFun (Fin.natAdd 0 i))))) := by
+    intro π
+    have hEq0 : ∀ f : Fin 0 → TangentFiber R X x, f = fun t => t.elim0 :=
+      fun f => funext (fun t => t.elim0)
+    have hωL : ω (fun i : Fin 0 => v (π.toFun (Fin.castAdd 0 i)))
+        = ω (fun t => t.elim0) := congrArg ω (hEq0 _)
+    have hηL : η (fun j : Fin 0 => v (π.toFun (Fin.natAdd 0 j)))
+        = η (fun t => t.elim0) := congrArg η (hEq0 _)
+    have hηR : η (fun j : Fin 0 =>
+          v (Fin.cast (Nat.add_comm 0 0) (π.toFun (Fin.castAdd 0 j))))
+        = η (fun t => t.elim0) := congrArg η (hEq0 _)
+    have hωR : ω (fun i : Fin 0 =>
+          v (Fin.cast (Nat.add_comm 0 0) (π.toFun (Fin.natAdd 0 i))))
+        = ω (fun t => t.elim0) := congrArg ω (hEq0 _)
+    rw [hωL, hηL, hηR, hωR]
+    ring
+  rw [permSum_congr hpt]
+
+/-- 退化 (0,1)：ω 因子平凡，η 槽经 natAdd 0 / castAdd 0 值等值。 -/
+lemma wedgeAnyFun_grad_comm_zero_one {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 0]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (v : Fin (0 + 1) → TangentFiber R X x) :
+    wedgeAnyFun ω η v
+      = (-1 : R)^(0 * 1) • wedgeAnyFun η ω
+          (fun t : Fin (1 + 0) => v (Fin.cast (Nat.add_comm 1 0) t)) := by
+  unfold wedgeAnyFun
+  rw [zero_mul, pow_zero, one_smul]
+  have hpt : ∀ π : FinPerm (0 + 1),
+      FinPerm.sign R π *
+        (ω (fun i : Fin 0 => v (π.toFun (Fin.castAdd 1 i))) *
+        η (fun j : Fin 1 => v (π.toFun (Fin.natAdd 0 j))))
+      = FinPerm.sign R π *
+        (η (fun j : Fin 1 =>
+            v (Fin.cast (Nat.add_comm 1 0) (π.toFun (Fin.castAdd 0 j)))) *
+        ω (fun i : Fin 0 =>
+            v (Fin.cast (Nat.add_comm 1 0) (π.toFun (Fin.natAdd 1 i))))) := by
+    intro π
+    have hEq0 : ∀ f : Fin 0 → TangentFiber R X x, f = fun t => t.elim0 :=
+      fun f => funext (fun t => t.elim0)
+    have hωL : ω (fun i : Fin 0 => v (π.toFun (Fin.castAdd 1 i)))
+        = ω (fun t => t.elim0) := congrArg ω (hEq0 _)
+    have hωR : ω (fun i : Fin 0 =>
+          v (Fin.cast (Nat.add_comm 1 0) (π.toFun (Fin.natAdd 1 i))))
+        = ω (fun t => t.elim0) := congrArg ω (hEq0 _)
+    have hlam : (fun j : Fin 1 => v (π.toFun (Fin.natAdd 0 j)))
+        = (fun j : Fin 1 =>
+            v (Fin.cast (Nat.add_comm 1 0) (π.toFun (Fin.castAdd 0 j)))) := by
+      funext j
+      have hFin : (Fin.natAdd 0 j : Fin (0 + 1))
+          = Fin.cast (Nat.add_comm 1 0) (Fin.castAdd 0 j) := by
+        apply Fin.ext
+        rw [Fin.val_natAdd, Fin.val_cast, Fin.val_castAdd]
+        omega
+      rw [hFin]
+      rfl
+    rw [hωL, hωR, congrArg η hlam]
+    ring
+  rw [permSum_congr hpt]
+
+/-- 退化 (1,0)：η 因子平凡，ω 槽经 castAdd 0 / natAdd 0 值等值。 -/
+lemma wedgeAnyFun_grad_comm_one_zero {x : X}
+    (ω : TangentFiber R X x [⋀^Fin 1]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin 0]→ₗ[R] R)
+    (v : Fin (1 + 0) → TangentFiber R X x) :
+    wedgeAnyFun ω η v
+      = (-1 : R)^(1 * 0) • wedgeAnyFun η ω
+          (fun t : Fin (0 + 1) => v (Fin.cast (Nat.add_comm 0 1) t)) := by
+  unfold wedgeAnyFun
+  rw [one_mul, pow_zero, one_smul]
+  have hpt : ∀ π : FinPerm (1 + 0),
+      FinPerm.sign R π *
+        (ω (fun i : Fin 1 => v (π.toFun (Fin.castAdd 0 i))) *
+        η (fun j : Fin 0 => v (π.toFun (Fin.natAdd 1 j))))
+      = FinPerm.sign R π *
+        (η (fun j : Fin 0 =>
+            v (Fin.cast (Nat.add_comm 0 1) (π.toFun (Fin.castAdd 1 j)))) *
+        ω (fun i : Fin 1 =>
+            v (Fin.cast (Nat.add_comm 0 1) (π.toFun (Fin.natAdd 0 i))))) := by
+    intro π
+    have hEq0 : ∀ f : Fin 0 → TangentFiber R X x, f = fun t => t.elim0 :=
+      fun f => funext (fun t => t.elim0)
+    have hηL : η (fun j : Fin 0 => v (π.toFun (Fin.natAdd 1 j)))
+        = η (fun t => t.elim0) := congrArg η (hEq0 _)
+    have hηR : η (fun j : Fin 0 =>
+          v (Fin.cast (Nat.add_comm 0 1) (π.toFun (Fin.castAdd 1 j))))
+        = η (fun t => t.elim0) := congrArg η (hEq0 _)
+    have hlam : (fun i : Fin 1 => v (π.toFun (Fin.castAdd 0 i)))
+        = (fun i : Fin 1 =>
+            v (Fin.cast (Nat.add_comm 0 1) (π.toFun (Fin.natAdd 0 i)))) := by
+      funext i
+      have hFin : (Fin.castAdd 0 i : Fin (1 + 0))
+          = Fin.cast (Nat.add_comm 0 1) (Fin.natAdd 0 i) := by
+        apply Fin.ext
+        rw [Fin.val_castAdd, Fin.val_cast, Fin.val_natAdd]
+        omega
+      rw [hFin]
+      rfl
+    rw [hηL, hηR, congrArg ω hlam]
+    ring
+  rw [permSum_congr hpt]
+
+set_option maxHeartbeats 4000000 in
+/-- **分次交换律（点态，E3 主定理）**：`ω∧η = (-1)^{p·q} · η∧ω`
+（ambient 经 `Fin.cast (Nat.add_comm q p)` 转置）。
+主分支：`obtain N : p + q = N + 2` + N+2 桥主引理；
+`p + q ≤ 1` 时三个具体退化引理。 -/
+lemma wedgeAnyFun_grad_comm {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun ω η v
+      = (-1 : R)^(p * q) • wedgeAnyFun η ω
+          (fun t : Fin (q + p) => v (Fin.cast (Nat.add_comm q p) t)) := by
+  sorry
+
+#print axioms wedgeAnyFun_permSum_cast
+#print axioms sign_permCast
+#print axioms bsPerm_sign
+#print axioms wedgeAnyFun_grad_comm_at
+#print axioms wedgeAnyFun_grad_comm_zero_zero
+#print axioms wedgeAnyFun_grad_comm_zero_one
+#print axioms wedgeAnyFun_grad_comm_one_zero
+#print axioms Nat.lt_or_ge
+#print axioms Nat.eq_zero_or_pos
+
+theorem probeMain (p q : ℕ) (h2 : 2 ≤ p + q) : ∃ N : ℕ, p + q = N + 2 ∧ q + p = N + 2 := by
+  obtain ⟨N, hN⟩ : ∃ N : ℕ, p + q = N + 2 := ⟨p + q - 2, by omega⟩
+  exact ⟨N, hN, by omega⟩
+
+theorem probeGlue (p q : ℕ) : True := by
+  rcases Nat.lt_or_ge (p + q) 2 with h1 | h2
+  · rcases Nat.eq_zero_or_pos p with hp0 | hp1
+    · subst hp0
+      rcases Nat.eq_zero_or_pos q with hq0 | hq1
+      · subst hq0
+        trivial
+      · have hq1' : q = 1 := by omega
+        subst hq1'
+        trivial
+    · rcases Nat.eq_zero_or_pos q with hq0 | hq1
+      · have hp1' : p = 1 := by omega
+        subst hp1'
+        subst hq0
+        trivial
+      · omega
+  · trivial
+
+#print axioms probeMain
+#print axioms probeGlue
+
+theorem probeSig {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) :
+    wedgeAnyFun ω η v
+      = (-1 : R)^(p * q) • wedgeAnyFun η ω
+          (fun t : Fin (q + p) => v (Fin.cast (Nat.add_comm q p) t)) := sorry
+
+theorem probeGlue4 {p q : ℕ} (h2 : 2 ≤ p + q) : ∃ N : ℕ, p + q = N + 2 := by
+  obtain ⟨N, hN⟩ : ∃ N, p + q = N + 2 := ⟨p + q - 2, by omega⟩
+  exact ⟨N, hN⟩
+
+#print axioms probeSig
+
+theorem probeGlue5 {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x) : True := by
+  rcases Nat.lt_or_ge (p + q) 2 with h1 | h2
+  · rcases Nat.eq_zero_or_pos p with hp0 | hp1
+    · subst hp0
+      rcases Nat.eq_zero_or_pos q with hq0 | hq1
+      · subst hq0
+        trivial
+      · have hq1' : q = 1 := by omega
+        subst hq1'
+        trivial
+    · rcases Nat.eq_zero_or_pos q with hq0 | hq1
+      · have hp1' : p = 1 := by omega
+        subst hp1'
+        subst hq0
+        trivial
+      · omega
+  · trivial
+#print axioms probeGlue4
+#print axioms probeGlue5
+#print axioms probeGlue6
+
+theorem probeGlue6 {p q : ℕ} {x : X}
+    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
+    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
+    (v : Fin (p + q) → TangentFiber R X x)
+    (h1 : p + q < 2) (hp1 : 1 ≤ p) (hq1 : 0 < q) :
+    wedgeAnyFun ω η v
+      = (-1 : R)^(p * q) • wedgeAnyFun η ω
+          (fun t : Fin (q + p) => v (Fin.cast (Nat.add_comm q p) t)) := by
+  omega
+#print axioms wedgeAnyFun_grad_comm
+
+end GradComm
+
 end SDG.DifferentialForms
