@@ -1141,91 +1141,25 @@ lemma wedgeAnyFun_grad_comm {p q : ℕ} {x : X}
     wedgeAnyFun ω η v
       = (-1 : R)^(p * q) • wedgeAnyFun η ω
           (fun t : Fin (q + p) => v (Fin.cast (Nat.add_comm q p) t)) := by
-  sorry
-
-#print axioms wedgeAnyFun_permSum_cast
-#print axioms sign_permCast
-#print axioms bsPerm_sign
-#print axioms wedgeAnyFun_grad_comm_at
-#print axioms wedgeAnyFun_grad_comm_zero_zero
-#print axioms wedgeAnyFun_grad_comm_zero_one
-#print axioms wedgeAnyFun_grad_comm_one_zero
-#print axioms Nat.lt_or_ge
-#print axioms Nat.eq_zero_or_pos
-
-theorem probeMain (p q : ℕ) (h2 : 2 ≤ p + q) : ∃ N : ℕ, p + q = N + 2 ∧ q + p = N + 2 := by
-  obtain ⟨N, hN⟩ : ∃ N : ℕ, p + q = N + 2 := ⟨p + q - 2, by omega⟩
-  exact ⟨N, hN, by omega⟩
-
-theorem probeGlue (p q : ℕ) : True := by
   rcases Nat.lt_or_ge (p + q) 2 with h1 | h2
   · rcases Nat.eq_zero_or_pos p with hp0 | hp1
     · subst hp0
       rcases Nat.eq_zero_or_pos q with hq0 | hq1
       · subst hq0
-        trivial
+        exact wedgeAnyFun_grad_comm_zero_zero ω η v
       · have hq1' : q = 1 := by omega
         subst hq1'
-        trivial
+        exact wedgeAnyFun_grad_comm_zero_one ω η v
     · rcases Nat.eq_zero_or_pos q with hq0 | hq1
       · have hp1' : p = 1 := by omega
         subst hp1'
         subst hq0
-        trivial
-      · omega
-  · trivial
+        exact wedgeAnyFun_grad_comm_one_zero ω η v
+      · exact False.elim (by omega)
+  · obtain ⟨N, hN⟩ : ∃ N, p + q = N + 2 := ⟨p + q - 2, by omega⟩
+    have hE : q + p = N + 2 := by omega
+    exact wedgeAnyFun_grad_comm_at hN hE ω η v
 
-#print axioms probeMain
-#print axioms probeGlue
-
-theorem probeSig {p q : ℕ} {x : X}
-    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
-    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
-    (v : Fin (p + q) → TangentFiber R X x) :
-    wedgeAnyFun ω η v
-      = (-1 : R)^(p * q) • wedgeAnyFun η ω
-          (fun t : Fin (q + p) => v (Fin.cast (Nat.add_comm q p) t)) := sorry
-
-theorem probeGlue4 {p q : ℕ} (h2 : 2 ≤ p + q) : ∃ N : ℕ, p + q = N + 2 := by
-  obtain ⟨N, hN⟩ : ∃ N, p + q = N + 2 := ⟨p + q - 2, by omega⟩
-  exact ⟨N, hN⟩
-
-#print axioms probeSig
-
-theorem probeGlue5 {p q : ℕ} {x : X}
-    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
-    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
-    (v : Fin (p + q) → TangentFiber R X x) : True := by
-  rcases Nat.lt_or_ge (p + q) 2 with h1 | h2
-  · rcases Nat.eq_zero_or_pos p with hp0 | hp1
-    · subst hp0
-      rcases Nat.eq_zero_or_pos q with hq0 | hq1
-      · subst hq0
-        trivial
-      · have hq1' : q = 1 := by omega
-        subst hq1'
-        trivial
-    · rcases Nat.eq_zero_or_pos q with hq0 | hq1
-      · have hp1' : p = 1 := by omega
-        subst hp1'
-        subst hq0
-        trivial
-      · omega
-  · trivial
-#print axioms probeGlue4
-#print axioms probeGlue5
-#print axioms probeGlue6
-
-theorem probeGlue6 {p q : ℕ} {x : X}
-    (ω : TangentFiber R X x [⋀^Fin p]→ₗ[R] R)
-    (η : TangentFiber R X x [⋀^Fin q]→ₗ[R] R)
-    (v : Fin (p + q) → TangentFiber R X x)
-    (h1 : p + q < 2) (hp1 : 1 ≤ p) (hq1 : 0 < q) :
-    wedgeAnyFun ω η v
-      = (-1 : R)^(p * q) • wedgeAnyFun η ω
-          (fun t : Fin (q + p) => v (Fin.cast (Nat.add_comm q p) t)) := by
-  omega
-#print axioms wedgeAnyFun_grad_comm
 
 end GradComm
 
