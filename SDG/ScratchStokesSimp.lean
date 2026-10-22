@@ -502,6 +502,39 @@ theorem cupProduct_coboundary_right {p q : ℕ} (α : Cochain R X p)
         (cupProduct α (coboundary w)) := by
   rw [coboundary_cupProduct, hα, cup_zero_left, cochainLenCast_zero, zero_add]
 
+/-! ## cup 单位律 -/
+
+/-- **cup 左单位律**：`1 ⌀ α = α`。直接内联 cochainOfFun 避免多层 delta。 -/
+theorem cupProduct_unit_left {q : ℕ} (α : Cochain R X q) :
+    cupProduct (cochainOfFun (fun _ => (1 : R))) α
+      = cochainLenCast (show q = 0 + q from by omega) α := by
+  funext σ
+  rw [cochainLenCast_apply, cupProduct_apply]
+  have h1 : cochainOfFun (fun _ => (1 : R))
+      (fun k : Fin (0 + 1) => σ (cupLeft 0 q k)) = 1 := rfl
+  rw [h1, one_mul]
+  congr 1
+  funext k
+  apply congrArg σ
+  apply Fin.ext
+  rw [cupRight_val, Fin.val_cast]
+  omega
+
+/-- **cup 右单位律**：`α ⌀ 1 = α`。 -/
+theorem cupProduct_unit_right {p : ℕ} (α : Cochain R X p) :
+    cupProduct α (cochainOfFun (fun _ => (1 : R))) = α := by
+  funext σ
+  rw [cupProduct_apply]
+  have h1 : cochainOfFun (fun _ => (1 : R))
+      (fun k : Fin (0 + 1) => σ (cupRight p 0 k)) = 1 := rfl
+  rw [h1, mul_one]
+  rfl
+
+/-- 单位律在上同调层面成立（右）。 -/
+theorem coboundary_cupProduct_unit_right {p : ℕ} (α : Cochain R X p) :
+    coboundary (cupProduct α (cochainOfFun (fun _ => (1 : R)))) = coboundary α := by
+  rw [cupProduct_unit_right]
+
 end CupCohomology
 
 end SDG.DifferentialForms
