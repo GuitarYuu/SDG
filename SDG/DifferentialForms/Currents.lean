@@ -834,8 +834,8 @@ def currentBoundariesAdd (n : ℕ) : AddSubgroup (Current R X (n + 1)) where
       currentBoundaryLinear_eq, hT]
 
 /-- **电流同调的集合胚**：`T ~ U ⟺ T - U ∈ Bₙ`（差为边缘电流）。
-定义在循环电流底类型上（`Subtype.val` 显式投影，避开 `↑` 的实例
-搜索）；与 `deRhamSetoid` 完全对偶。 -/
+定义在循环电流底类型上（循环性由底类型自带）；与 `deRhamSetoid`
+完全对偶。 -/
 def currentSetoid (n : ℕ) : Setoid (chainCycles (R := R) (X := X) (n := n)) where
   r a b := Subtype.val a - Subtype.val b ∈ currentBoundariesAdd (R := R) (X := X) n
   iseqv := by
@@ -866,14 +866,16 @@ theorem currentClass_eq {n : ℕ} {T U : Current R X (n + 1)} (hT : IsChainCycle
 theorem pairing_class_well_defined {n : ℕ} {T T' : Current R X (n + 1)}
     {c c' : Cochain R X (n + 1)} (_hT : IsChainCycle T) (_hT' : IsChainCycle T')
     (_hc : IsCocycle c) (_hc' : IsCocycle c')
-    (hTT' : ∃ S : Current R X (n + 2), T' = T + currentBoundary S)
+    (hTT' : T - T' ∈ currentBoundariesAdd (R := R) (X := X) n)
     (hcc' : c - c' ∈ coboundaries (R := R) (X := X) n) :
     T' c' = T c := by
   obtain ⟨S, hS⟩ := hTT'
   obtain ⟨b, hb⟩ := hcc'
-  exact pairing_cycle_cocycle_congr T T' c c' _hT _hc ⟨S, hS⟩ ⟨-b, by
-    rw [← coboundaryLinear_apply, LinearMap.map_neg, coboundaryLinear_apply, hb]
-    abel⟩
+  refine pairing_cycle_cocycle_congr T T' c c' _hT _hc ⟨-S, ?_⟩ ⟨-b, ?_⟩
+  · rw [← currentBoundaryLinear_eq, LinearMap.map_neg currentBoundaryLinear S,
+      currentBoundaryLinear_eq, ← sub_eq_add_neg, hS, sub_sub_cancel]
+  · rw [← coboundaryLinear_apply, LinearMap.map_neg, coboundaryLinear_apply, hb]
+    abel
 
 end Cohomology
 
