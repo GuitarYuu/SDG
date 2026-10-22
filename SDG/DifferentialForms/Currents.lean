@@ -877,6 +877,31 @@ theorem pairing_class_well_defined {n : ℕ} {T T' : Current R X (n + 1)}
   · rw [← coboundaryLinear_apply, LinearMap.map_neg, coboundaryLinear_apply, hb]
     abel
 
+/-- 电流同调的加法同余关系（`AddCon` 包装——商的加法交换群结构由
+Mathlib 现成 instance 提供；与 `deRhamCon` 对偶）。 -/
+def currentCon (n : ℕ) : AddCon (chainCycles (R := R) (X := X) (n := n)) where
+  toSetoid := currentSetoid (R := R) (X := X) n
+  add' := by
+    rintro a₁ b₁ a₂ b₂ h₁ h₂
+    show ((Subtype.val (a₁ + a₂) - Subtype.val (b₁ + b₂) : Current R X (n + 1)) :
+            Current R X (n + 1)) ∈ currentBoundariesAdd (R := R) (X := X) n
+    have hab : ((Subtype.val (a₁ + a₂) - Subtype.val (b₁ + b₂) : Current R X (n + 1)) :
+            Current R X (n + 1))
+        = (Subtype.val a₁ - Subtype.val b₁) + (Subtype.val a₂ - Subtype.val b₂) :=
+      add_sub_add_comm _ _ _ _
+    rw [hab]
+    exact add_mem h₁ h₂
+
+/-- **电流同调群** `Hₙ := Zₙ / Bₙ`：加法同余的商类型（`AddCon` 商；
+加法交换群结构 instance 的提升见 RESUME 记录的路线）。 -/
+def currentHomology (n : ℕ) : Type u :=
+  AddCon.Quotient (currentCon (R := R) (X := X) n)
+
+/-- 电流同调类投影：`[T] ∈ Hₙ`。 -/
+def currentHomologyClass {n : ℕ} {T : Current R X (n + 1)} (hT : IsChainCycle T) :
+    currentHomology (R := R) (X := X) n :=
+  AddCon.toQuotient ⟨T, hT⟩
+
 end Cohomology
 
 #print axioms SDG.DifferentialForms.IsChainCycle
@@ -910,5 +935,8 @@ end Cohomology
 #print axioms SDG.DifferentialForms.currentClass
 #print axioms SDG.DifferentialForms.currentClass_eq
 #print axioms SDG.DifferentialForms.pairing_class_well_defined
+#print axioms SDG.DifferentialForms.currentCon
+#print axioms SDG.DifferentialForms.currentHomology
+#print axioms SDG.DifferentialForms.currentHomologyClass
 
 end SDG.DifferentialForms
