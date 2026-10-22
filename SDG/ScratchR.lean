@@ -761,6 +761,62 @@ lemma permSum_compose_bsPerm {n : ℕ} (R : Type u) [CommRing R] :
   simp only [FinPerm.compose_identity_right] at hgen
   exact hgen
 
+section CastBridge
+
+variable {R : Type u} [CommRing R]
+
+/-- FinPerm 的类型转换（encode 基，toFun 可直接计算）。 -/
+def permCast {m n : ℕ} (h : m = n) (π : FinPerm m) : FinPerm n :=
+  FinPerm.encode
+    (fun k => Fin.cast h (π.toFun (Fin.cast (h.symm) k)))
+    (Function.Injective.comp (Fin.cast_injective (h := h))
+      (Function.Injective.comp π.toFun_injective
+        (Fin.cast_injective (h := h.symm))))
+
+lemma permCast_id {m : ℕ} (π : FinPerm m) : permCast rfl π = π := by
+  apply FinPerm.ext_toFun _ _
+  unfold permCast
+  funext k
+  rw [FinPerm.toFun_encode]
+  rfl
+
+/-- permSum 的类型桥：m = n 时两类求和一致。 -/
+lemma permSum_typeCast {m n : ℕ} (h : m = n) (f : FinPerm n → R) :
+    FinPerm.permSum R (fun π : FinPerm m => f (permCast h π))
+      = FinPerm.permSum R f := by
+  subst h
+  rw [permSum_congr (fun π => congrArg f (permCast_id π))]
+
+end CastBridge
+
+
+section GradCommSlot
+
+variable {R : Type u} [CommRing R]
+
+/-- 槽位恒等式 A：块交换把 η-块第 j 槽送回原 η-位置（hT-cast 形）。 -/
+lemma bsFunV_castAdd {q p : ℕ} (hT : p + q = q + p) (j : Fin q) :
+    bsFunV q p (le_refl (q + p)) (Fin.castAdd p j)
+      = Fin.cast hT (Fin.natAdd p j) := by
+  apply Fin.ext
+  have hj := j.isLt
+  rw [bsFunV_front (le_refl (q + p)) (show ((Fin.castAdd p j : Fin (q + p)) : ℕ) < q from by
+    simp only [Fin.val_castAdd]; omega), Fin.val_cast, Fin.val_mk, Fin.val_castAdd,
+    Fin.val_natAdd, Nat.add_comm]
+
+/-- 槽位恒等式 B：块交换把 ω-块第 i 槽送回原 ω-位置（hT-cast 形）。 -/
+lemma bsFunV_natAdd {q p : ℕ} (hT : p + q = q + p) (i : Fin p) :
+    bsFunV q p (le_refl (q + p)) (Fin.natAdd q i)
+      = Fin.cast hT (Fin.castAdd q i) := by
+  apply Fin.ext
+  have hi := i.isLt
+  rw [bsFunV_back (le_refl (q + p)) (show (q : ℕ) ≤ ((Fin.natAdd q i : Fin (q + p)) : ℕ) from by
+    simp only [Fin.val_natAdd]; omega)
+    (show ((Fin.natAdd q i : Fin (q + p)) : ℕ) < q + p from by
+    simp only [Fin.val_natAdd]; omega), Fin.val_cast, Fin.val_mk, Fin.val_natAdd,
+    Fin.val_castAdd, Nat.add_sub_cancel_left]
+
+end GradCommSlot
 end PermSumRightReindex
 
 end SDG.DifferentialForms
