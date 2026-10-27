@@ -6,10 +6,8 @@ import SDG.DifferentialForms.Algebra
 F 线在 cochain 世界的最后一件（Algebra.lean 的 deferred 项）。
 上积为 Alexander-Whitney 型：`(c₁ ∪ c₂)(σ) = c₁(σ₀..σ_p) · c₂(σ_p..σ_{p+q})`。
 
-证明策略（RESUME 第三十七接力点）：
-1. cupLeft/cupRight 与 coFace 的复合分解引理（j ≤ p / j ≥ p+1 两段）；
-2. LHS 双指标拆分（finSum_split_at × 2 拆出 i = p 与 i = p+1）；
-3. 前后缀重排后与 RHS 两项的展开配对；中间项相消。
+层级备忘：σ : Fin (p+q+2) → X（(p+q+1)-单形）；
+cupLeft (p+1) q : Fin (p+2) → Fin (p+q+2)；cupRight p (q+1) : Fin (q+2) → Fin (p+q+2)。
 -/
 
 namespace SDG.DifferentialForms
@@ -18,23 +16,95 @@ section CupLeibniz
 
 variable {R : Type u} [CommRing R] {X : Type}
 
-/-- cupLeft 的 succ 位移：第 `j` 面与 cupLeft 复合在前段 = castSucc-型后继。 -/
-lemma coFace_cupLeft_le {p q : ℕ} (σ : Fin (p + q + 2) → X) (j : Fin (p + 1))
-    (hj : (j : ℕ) ≤ (p : ℕ)) :
-    coFace (fun k : Fin (p + 1) => σ (cupLeft p q k)) j
-      = fun k : Fin (p + 1) =>
-          σ ((Fin.cast (by omega : (p + q + 1) = (p + 1) + (q + 1))
-              (Fin.castSucc (Fin.cast (by omega) j.succAbove k)))) := by
-  funext k
-  show σ (cupLeft p q (j.succAbove k))
-    = σ ((Fin.cast (by omega : (p + q + 1) = (p + 1) + (q + 1))
-        (Fin.castSucc (Fin.cast (by omega) j.succAbove k))))
+/-- **L1**：`(σ ∘ cupLeft (p+1) q)` 的第 `j` 面（`j ≤ p`）
+= `(coFace σ j)` 限制在 `cupLeft p q` 上（前段不受位移影响）。 -/
+lemma coFace_cupLeft_front {p q : ℕ} (σ : Fin (p + q + 2) → X) (j : Fin (p + 2))
+    (hj : (j : ℕ) ≤ (p : ℕ)) (k : Fin (p + 1)) :
+    cupLeft (p + 1) q (j.succAbove k)
+      = (Fin.castLE (by have h1 := j.isLt; omega) j).succAbove (cupLeft p q k) := by
+  apply Fin.ext
+  rw [succAbove_val]
   have h1 := j.isLt
   have h2 := k.isLt
-  simp only [cupLeft, Fin.val_cast, Fin.val_castAdd, Fin.val_castSucc,
-    Fin.succAbove_val_succ (Fin.cast (by omega) j) (Fin.cast (by omega) k)]
-  unfold Fin.succAbove
-  split <;> simp only [Fin.val_mk] <;> omega
+  show ((Fin.succAbove j k : Fin (p + q + 2)) : ℕ)
+    = ((Fin.succAbove (Fin.castLE (by have h1 := j.isLt; omega) j)
+      (cupLeft p q k) : Fin (p + q + 2)) : ℕ)
+  rw [succAbove_val]
+  simp only [cupLeft, Fin.val_cast, Fin.val_castAdd, Fin.val_natAdd]
+  split <;> omega
+
+/-- **L3**：`(σ ∘ cupRight (p+1) q)`（常值侧）的第 `j` 面（`j ≤ p`）
+= `(coFace σ j)` 限制在 `cupRight p q` 上（后段位移一位）。 -/
+lemma coFace_cupRight_front {p q : ℕ} (σ : Fin (p + q + 2) → X) (j : Fin (p + 2))
+    (hj : (j : ℕ) ≤ (p : ℕ)) (k : Fin (q + 1)) :
+    cupRight (p + 1) q k
+      = (Fin.castLE (by have h1 := j.isLt; omega) j).succAbove (cupRight p q k) := by
+  apply Fin.ext
+  rw [succAbove_val]
+  have h1 := j.isLt
+  have h2 := k.isLt
+  show ((Fin.succAbove j k : Fin (p + q + 2)) : ℕ)
+    = ((Fin.succAbove (Fin.castLE (by have h1 := j.isLt; omega) j)
+      (cupRight p q k) : Fin (p + q + 2)) : ℕ)
+  rw [succAbove_val]
+  simp only [cupRight, Fin.val_cast, Fin.val_natAdd]
+  omega
+
+/-- **L5**：`(σ ∘ cupLeft p (q+1))` 与 cupLeft p q：`j ≥ p+1` 时前段不变。 -/
+lemma coFace_cupLeft_back {p q : ℕ} (σ : Fin (p + q + 2) → X) (j : Fin (p + q + 2))
+    (hj : (p : ℕ) < (j : ℕ)) (k : Fin (p + 1)) :
+    cupLeft p (q + 1) k = (Fin.castLE (by omega) j).succAbove (cupLeft p q k) := by
+  apply Fin.ext
+  rw [succAbove_val]
+  have h1 := j.isLt
+  have h2 := k.isLt
+  show ((Fin.succAbove j k : Fin (p + q + 2)) : ℕ)
+    = ((Fin.succAbove (Fin.castLE (by omega) j)
+      (cupLeft p q k) : Fin (p + q + 2)) : ℕ)
+  rw [succAbove_val]
+  simp only [cupLeft, Fin.val_cast, Fin.val_castAdd, Fin.val_natAdd]
+  omega
+
+/-- **L4**：`(σ ∘ cupRight p (q+1))` 的第 `j` 面（`j ≥ 1`）
+= `(coFace σ (p+j))` 限制在 `cupRight p q` 上。 -/
+lemma coFace_cupRight_back {p q : ℕ} (σ : Fin (p + q + 2) → X) (j : Fin (q + 2))
+    (hj : (1 : ℕ) ≤ (j : ℕ)) (k : Fin (q + 1)) :
+    cupRight p (q + 1) (j.succAbove k)
+      = (Fin.natAdd p (Fin.castSucc j)).succAbove (cupRight p q k) := by
+  apply Fin.ext
+  rw [succAbove_val]
+  have h1 := j.isLt
+  have h2 := k.isLt
+  show ((Fin.succAbove j k : Fin (p + q + 2)) : ℕ)
+    = ((Fin.succAbove (Fin.natAdd p (Fin.castSucc j)) (cupRight p q k) :
+      Fin (p + q + 2)) : ℕ)
+  rw [succAbove_val]
+  simp only [cupRight, Fin.val_cast, Fin.val_natAdd, Fin.val_castSucc]
+  split <;> omega
+
+/-- **L2a**：共享顶点对（∂c₁ 末项的 c₁-因子）：
+`(coFace σ (p+q+1-位)) ∘ cupLeft p q = σ ∘ cupLeft p (q+1)`。 -/
+lemma coFace_cupLeft_last {p q : ℕ} (σ : Fin (p + q + 2) → X) (k : Fin (p + 1)) :
+    (coFace σ (Fin.natAdd p (Fin.last (q + 1)))) (cupLeft p q k)
+      = σ (cupLeft p (q + 1) k) := by
+  have h1 := k.isLt
+  show σ ((Fin.natAdd p (Fin.last (q + 1)) : Fin (p + q + 2)).succAbove (cupLeft p q k))
+    = σ (cupLeft p (q + 1) k)
+  rw [succAbove_val]
+  simp only [cupLeft, cupRight, Fin.val_cast, Fin.val_castAdd, Fin.val_natAdd,
+    Fin.val_last]
+  omega
+
+/-- **L2b**：共享顶点对（∂c₂ 首项的 c₂-因子）：
+`(coFace σ p) ∘ cupRight p q = (σ ∘ cupRight p (q+1))` 的第 `0` 面。 -/
+lemma coFace_cupRight_zero {p q : ℕ} (σ : Fin (p + q + 2) → X) (k : Fin (q + 1)) :
+    (coFace σ (Fin.castLE (by omega : p ≤ p + 1) (0 : Fin (p + 1)))) (cupRight p q k)
+      = σ ((σ ∘ cupRight p (q + 1)) (0.succAbove k)) := by
+  show σ ((Fin.castLE (by omega : p ≤ p + 1) (0 : Fin (p + 1))).succAbove (cupRight p q k))
+    = σ ((0 : Fin (q + 2)).succAbove (cupRight p (q + 1) k))
+  rw [succAbove_val]
+  simp only [cupRight, Fin.val_cast, Fin.val_natAdd, Fin.val_zero, Fin.val_succ]
+  split <;> omega
 
 end CupLeibniz
 
