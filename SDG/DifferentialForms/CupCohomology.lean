@@ -245,6 +245,129 @@ theorem deRhamCup_apply {n m : ℕ} {α : Cochain R X (n + 1)} {β : Cochain R X
     deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ)
       = deRhamClass (cupClass hα hβ) := rfl
 
+/-! ### 商层双线性
+
+`deRhamCup` 对商加法的双线性：加法左/右分配、零吸收、负相容。
+底层原料：`cup_add_left/right`、`cup_zero_left/right`（Algebra）、
+`cochainLenCast_add/zero`（本文件）、类投影的 `rfl` 展开
+（`AddCon.toQuotient` 的加法/零透明）。全部无选择公理。 -/
+
+/-- 上循环对加法封闭（∂ 的加法性经 `coboundaryLinear`）。 -/
+theorem isCocycle_add {n : ℕ} {α β : Cochain R X n}
+    (hα : IsCocycle α) (hβ : IsCocycle β) : IsCocycle (α + β) := by
+  show coboundary (α + β) = 0
+  rw [← coboundaryLinear_apply, LinearMap.map_add, coboundaryLinear_apply,
+    coboundaryLinear_apply, hα, hβ, add_zero]
+
+/-- 上循环对零封闭。 -/
+theorem isCocycle_zero {n : ℕ} : IsCocycle (0 : Cochain R X n) := by
+  show coboundary (0 : Cochain R X n) = 0
+  rw [← coboundaryLinear_apply, coboundaryLinear.map_zero]
+
+/-- 上循环对取负封闭。 -/
+theorem isCocycle_neg {n : ℕ} {α : Cochain R X n} (hα : IsCocycle α) :
+    IsCocycle (-α) := by
+  show coboundary (-α) = 0
+  rw [← coboundaryLinear_apply, LinearMap.map_neg, coboundaryLinear_apply, hα, neg_zero]
+
+/-- 底层 Cochain 相等则类相等（`deRhamClass` 的值只依赖底链，
+proof irrelevance）。 -/
+theorem deRhamClass_congr {n : ℕ} {c₁ c₂ : Cochain R X (n + 1)}
+    (h₁ : IsCocycle c₁) (h₂ : IsCocycle c₂) (h : c₁ = c₂) :
+    deRhamClass (R := R) (X := X) h₁ = deRhamClass h₂ := by
+  cases h
+  rfl
+
+/-- 类加法收进单个类（`AddCon.toQuotient` 的加法透明）。 -/
+theorem deRhamClass_add {n : ℕ} {α β : Cochain R X (n + 1)}
+    (hα : IsCocycle α) (hβ : IsCocycle β) :
+    deRhamClass hα + deRhamClass hβ
+      = deRhamClass (isCocycle_add hα hβ) := rfl
+
+/-- 零类（`Hⁿ` 的加法单位元 = 零上循环的类）。 -/
+theorem deRhamClass_zero {n : ℕ} : (0 : deRhamCohomology (R := R) (X := X) n)
+    = deRhamClass (R := R) (X := X) (α := (0 : Cochain R X (n + 1)))
+        isCocycle_zero := rfl
+
+/-- **商层 cup 左分配**：`([α] + [α']) ⌣ [β] = [α]⌣[β] + [α']⌣[β]`。 -/
+theorem deRhamCup_add_left {n m : ℕ} {α α' : Cochain R X (n + 1)}
+    {β : Cochain R X (m + 1)}
+    (hα : IsCocycle α) (hα' : IsCocycle α') (hβ : IsCocycle β) :
+    deRhamCup (R := R) (X := X) n m (deRhamClass hα + deRhamClass hα')
+        (deRhamClass hβ)
+      = deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ)
+        + deRhamCup (R := R) (X := X) n m (deRhamClass hα') (deRhamClass hβ) := by
+  rw [deRhamClass_add hα hα', deRhamCup_apply (isCocycle_add hα hα') hβ,
+    deRhamCup_apply hα hβ, deRhamCup_apply hα' hβ,
+    deRhamClass_add (cupClass hα hβ) (cupClass hα' hβ)]
+  exact deRhamClass_congr _ _ (by rw [← cochainLenCast_add, ← cup_add_left])
+
+/-- **商层 cup 右分配**：`[α] ⌣ ([β] + [β']) = [α]⌣[β] + [α]⌣[β']`。 -/
+theorem deRhamCup_add_right {n m : ℕ} {α : Cochain R X (n + 1)}
+    {β β' : Cochain R X (m + 1)}
+    (hα : IsCocycle α) (hβ : IsCocycle β) (hβ' : IsCocycle β') :
+    deRhamCup (R := R) (X := X) n m (deRhamClass hα)
+        (deRhamClass hβ + deRhamClass hβ')
+      = deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ)
+        + deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ') := by
+  rw [deRhamClass_add hβ hβ', deRhamCup_apply hα (isCocycle_add hβ hβ'),
+    deRhamCup_apply hα hβ, deRhamCup_apply hα hβ',
+    deRhamClass_add (cupClass hα hβ) (cupClass hα hβ')]
+  exact deRhamClass_congr _ _ (by rw [← cochainLenCast_add, ← cup_add_right])
+
+/-- **商层 cup 左零吸收**：`0 ⌣ [β] = 0`。 -/
+theorem deRhamCup_zero_left {n m : ℕ} {β : Cochain R X (m + 1)}
+    (hβ : IsCocycle β) :
+    deRhamCup (R := R) (X := X) n m 0 (deRhamClass hβ) = 0 := by
+  rw [deRhamClass_zero, deRhamCup_apply isCocycle_zero hβ, deRhamClass_zero]
+  exact deRhamClass_congr _ _ (by rw [cup_zero_left, cochainLenCast_zero])
+
+/-- **商层 cup 右零吸收**：`[α] ⌣ 0 = 0`。 -/
+theorem deRhamCup_zero_right {n m : ℕ} {α : Cochain R X (n + 1)}
+    (hα : IsCocycle α) :
+    deRhamCup (R := R) (X := X) n m (deRhamClass hα) 0 = 0 := by
+  rw [deRhamClass_zero, deRhamCup_apply hα isCocycle_zero, deRhamClass_zero]
+  exact deRhamClass_congr _ _ (by rw [cup_zero_right, cochainLenCast_zero])
+
+/-- **商层 cup 左负相容**（群律后承：`add_left` + `zero_left`）：
+`(-[α]) ⌣ [β] = -([α]⌣[β])`。 -/
+theorem deRhamCup_neg_left {n m : ℕ} {α : Cochain R X (n + 1)}
+    {β : Cochain R X (m + 1)}
+    (hα : IsCocycle α) (hβ : IsCocycle β) :
+    deRhamCup (R := R) (X := X) n m (-deRhamClass hα) (deRhamClass hβ)
+      = -deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ) := by
+  have hsum : deRhamCup (R := R) (X := X) n m
+      (deRhamClass hα + deRhamClass (isCocycle_neg hα)) (deRhamClass hβ)
+      = deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ)
+        + deRhamCup (R := R) (X := X) n m (-deRhamClass hα) (deRhamClass hβ) :=
+    deRhamCup_add_left hα (isCocycle_neg hα) hβ
+  have hzero : deRhamClass hα + deRhamClass (isCocycle_neg hα) = 0 := by
+    rw [deRhamClass_add hα (isCocycle_neg hα)]
+    exact deRhamClass_congr (isCocycle_add hα (isCocycle_neg hα)) isCocycle_zero
+      (by show (α + -α : Cochain R X (n+1)) = 0
+          rw [add_neg_cancel])
+  rw [hzero, deRhamCup_zero_left hβ] at hsum
+  exact eq_neg_of_add_eq_zero_right hsum.symm
+
+/-- **商层 cup 右负相容**（群律后承）：`[α] ⌣ (-[β]) = -([α]⌣[β])`。 -/
+theorem deRhamCup_neg_right {n m : ℕ} {α : Cochain R X (n + 1)}
+    {β : Cochain R X (m + 1)}
+    (hα : IsCocycle α) (hβ : IsCocycle β) :
+    deRhamCup (R := R) (X := X) n m (deRhamClass hα) (-deRhamClass hβ)
+      = -deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ) := by
+  have hsum : deRhamCup (R := R) (X := X) n m (deRhamClass hα)
+      (deRhamClass hβ + deRhamClass (isCocycle_neg hβ))
+      = deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ)
+        + deRhamCup (R := R) (X := X) n m (deRhamClass hα) (-deRhamClass hβ) :=
+    deRhamCup_add_right hα hβ (isCocycle_neg hβ)
+  have hzero : deRhamClass hβ + deRhamClass (isCocycle_neg hβ) = 0 := by
+    rw [deRhamClass_add hβ (isCocycle_neg hβ)]
+    exact deRhamClass_congr (isCocycle_add hβ (isCocycle_neg hβ)) isCocycle_zero
+      (by show (β + -β : Cochain R X (m+1)) = 0
+          rw [add_neg_cancel])
+  rw [hzero, deRhamCup_zero_right hα] at hsum
+  exact eq_neg_of_add_eq_zero_right hsum.symm
+
 end CupCohomologyQuotient
 
 end SDG.DifferentialForms
