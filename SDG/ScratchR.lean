@@ -1161,6 +1161,96 @@ lemma wedgeAnyFun_grad_comm {p q : ℕ} {x : X}
     exact wedgeAnyFun_grad_comm_at hN hE ω η v
 
 
+/-- cast 的另一方向消去：`cast h ∘ cast h.symm = id`（val 层平凡）。 -/
+lemma finCast_symm_cancel {a b : ℕ} (h : a = b) (t : Fin b) :
+    Fin.cast h (Fin.cast h.symm t) = t := by
+  apply Fin.ext
+  rw [Fin.val_cast, Fin.val_cast]
+
+/-- **形的度数重标记**：沿 `Fin.cast h` 预合成重排槽位（Ω^m → Ω^n）。
+多线性/交错性结构全部从 ω 继承（wedgeAny/precompose 同款手工构造，
+零选择公理）。 -/
+def formLenCast {m n : ℕ} (h : m = n) (ω : FiberwiseDifferentialForm R X m) :
+    FiberwiseDifferentialForm R X n := fun x =>
+  { toMultilinearMap :=
+      { toFun := fun v => ω x (fun i => v (Fin.cast h i))
+        map_update_add' := by
+          intro _dec v i x₁ x₂
+          have hupd : ∀ a : TangentFiber R X x,
+              (fun k : Fin m => (Function.update v i a) (Fin.cast h k))
+                = Function.update (fun k : Fin m => v (Fin.cast h k))
+                    (Fin.cast h.symm i) a := by
+            intro a
+            funext k
+            by_cases hk : Fin.cast h k = i
+            · have hkeq : k = Fin.cast h.symm i := by
+                rw [← finCast_cancel h k, hk]
+              rw [hk, Function.update_self, hkeq, Function.update_self]
+            · have hne : k ≠ Fin.cast h.symm i := by
+                intro hEq
+                exact hk (by rw [hEq, finCast_symm_cancel h])
+              rw [Function.update_of_ne hk, Function.update_of_ne hne]
+          rw [hupd (x₁ + x₂), (ω x).map_update_add, hupd x₁, hupd x₂]
+        map_update_smul' := by
+          intro _dec v i c x₁
+          have hupd : ∀ a : TangentFiber R X x,
+              (fun k : Fin m => (Function.update v i a) (Fin.cast h k))
+                = Function.update (fun k : Fin m => v (Fin.cast h k))
+                    (Fin.cast h.symm i) a := by
+            intro a
+            funext k
+            by_cases hk : Fin.cast h k = i
+            · have hkeq : k = Fin.cast h.symm i := by
+                rw [← finCast_cancel h k, hk]
+              rw [hk, Function.update_self, hkeq, Function.update_self]
+            · have hne : k ≠ Fin.cast h.symm i := by
+                intro hEq
+                exact hk (by rw [hEq, finCast_symm_cancel h])
+              rw [Function.update_of_ne hk, Function.update_of_ne hne]
+          rw [hupd (c • x₁), (ω x).map_update_smul, hupd x₁] }
+    map_eq_zero_of_eq' := by
+      intro v i j hv hij
+      have hw : (fun k : Fin m => v (Fin.cast h k)) (Fin.cast h.symm i)
+          = (fun k : Fin m => v (Fin.cast h k)) (Fin.cast h.symm j) := by
+        show v (Fin.cast h (Fin.cast h.symm i)) = v (Fin.cast h (Fin.cast h.symm j))
+        rw [finCast_symm_cancel h, finCast_symm_cancel h]
+        exact hv
+      have hne : Fin.cast h.symm i ≠ Fin.cast h.symm j := by
+        intro hEq
+        refine hij ?_
+        rw [← finCast_symm_cancel h i, ← finCast_symm_cancel h j, hEq]
+      exact (ω x).map_eq_zero_of_eq (fun k : Fin m => v (Fin.cast h k)) hw hne }
+
+lemma formLenCast_apply {m n : ℕ} (h : m = n) (ω : FiberwiseDifferentialForm R X m)
+    (x : X) (v : Fin n → TangentFiber R X x) :
+    formLenCast h ω x v = ω x (fun i => v (Fin.cast h i)) := rfl
+
+lemma formLenCast_id {n : ℕ} (ω : FiberwiseDifferentialForm R X n) :
+    formLenCast rfl ω = ω := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  show ω x (fun i : Fin n => v (Fin.cast rfl i)) = ω x v
+  have hfun : (fun i : Fin n => v (Fin.cast rfl i)) = v := by
+    funext i
+    rfl
+  rw [hfun]
+
+/-- **分次交换律（形级，E3 收官）**：ω ∧ η = (-1)^{p·q} · η ∧ ω
+（ambient 差 q+p vs p+q 经 formLenCast 沿 Nat.add_comm q p 运输；
+点态核心为 wedgeAnyFun_grad_comm）。 -/
+theorem wedgeAny_grad_comm {p q : ℕ} (h2 : ∃ y : R, y * 2 = 1)
+    (ω : FiberwiseDifferentialForm R X p) (η : FiberwiseDifferentialForm R X q) :
+    wedgeAny h2 ω η
+      = (-1 : R)^(p * q) • formLenCast (Nat.add_comm q p) (wedgeAny h2 η ω) := by
+  funext x
+  apply AlternatingMap.ext
+  intro v
+  rw [wedgeAny_apply, Pi.smul_apply, AlternatingMap.smul_apply,
+    formLenCast_apply, wedgeAny_apply]
+  exact wedgeAnyFun_grad_comm (ω x) (η x) v
+
+
 end GradComm
 
 end SDG.DifferentialForms
