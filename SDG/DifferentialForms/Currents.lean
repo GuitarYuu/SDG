@@ -786,8 +786,11 @@ def deRhamCohomology (n : ℕ) : Type u :=
   (deRhamCon (R := R) (X := X) n).Quotient
 
 instance instAddCommGroupDeRhamCohomology :
-    AddCommGroup (deRhamCohomology (R := R) (X := X) n) :=
-  inferInstanceAs (AddCommGroup (deRhamCon (R := R) (X := X) n).Quotient)
+    AddCommGroup (deRhamCohomology (R := R) (X := X) n) := by
+  have h : AddCommGroup (AddCon.Quotient (deRhamCon (R := R) (X := X) n)) :=
+    AddCon.addCommGroup (M := ↥(cocycles (R := R) (X := X) (n := n + 1)))
+      (deRhamCon (R := R) (X := X) n)
+  exact h
 
 /-- 上同调类投影：上循环 `α` 的类 `[α] ∈ Hⁿ`。 -/
 def deRhamClass {n : ℕ} {α : Cochain R X (n + 1)} (hα : IsCocycle α) :
@@ -911,6 +914,62 @@ def currentHomologyClass {n : ℕ} {T : Current R X (n + 1)} (hT : IsChainCycle 
     currentHomology (R := R) (X := X) n :=
   AddCon.toQuotient ⟨T, hT⟩
 
+/-- **类层配对**：`⟨[T], [c]⟩ := T c`——由 `pairing_class_well_defined`
+良定义于 `Hₙ × Hⁿ`（电流同调 × de Rham 上同调）。 -/
+def deRhamPairing (n : ℕ) :
+    Quotient (currentSetoid (R := R) (X := X) n) →
+      Quotient (deRhamSetoid (R := R) (X := X) n) → R :=
+  Quotient.lift₂ (fun a b => (Subtype.val a) (Subtype.val b))
+    (by
+      intro ca₁ cb₁ ca₂ cb₂ h₁ h₂
+      have h₁' : (Subtype.val ca₁ - Subtype.val ca₂) ∈
+          currentBoundariesAdd (R := R) (X := X) n := h₁
+      have h₂' : (Subtype.val cb₁ - Subtype.val cb₂) ∈ coboundaries (R := R) (X := X) n := h₂
+      refine pairing_class_well_defined ca₂.2 ca₁.2 cb₂.2 cb₁.2 ?_ ?_
+      · have h := neg_mem h₁'
+        simpa using h
+      · have h := neg_mem h₂'
+        rw [mem_coboundaries] at h ⊢
+        obtain ⟨b, hb⟩ := h
+        refine ⟨b, ?_⟩
+        simpa using hb)
+
+@[simp]
+theorem deRhamPairing_class {n : ℕ} {T : Current R X (n + 1)} (hT : IsChainCycle T)
+    {c : Cochain R X (n + 1)} (hc : IsCocycle c) :
+    deRhamPairing (R := R) (X := X) n (currentClass hT) (deRhamClass hc) = T c := rfl
+
+/-- 类层配对对第一个变元（电流同调类）的加法性：
+`⟨[T₁] + [T₂], [c]⟩ = ⟨[T₁], [c]⟩ + ⟨[T₂], [c]⟩`。 -/
+theorem deRhamPairing_add_left {n : ℕ} {T₁ T₂ : Current R X (n + 1)}
+    (hT₁ : IsChainCycle T₁) (hT₂ : IsChainCycle T₂)
+    {c : Cochain R X (n + 1)} (hc : IsCocycle c) :
+    deRhamPairing (R := R) (X := X) n
+        (currentHomologyClass hT₁ + currentHomologyClass hT₂) (deRhamClass hc)
+      = deRhamPairing (R := R) (X := X) n (currentHomologyClass hT₁) (deRhamClass hc)
+        + deRhamPairing (R := R) (X := X) n (currentHomologyClass hT₂) (deRhamClass hc) := rfl
+
+/-- 类层配对对第二个变元（上同调类）的加法性：
+`⟨[T], [c₁] + [c₂]⟩ = ⟨[T], [c₁]⟩ + ⟨[T], [c₂]⟩`。 -/
+theorem deRhamPairing_add_right {n : ℕ} {T : Current R X (n + 1)} (hT : IsChainCycle T)
+    {c₁ c₂ : Cochain R X (n + 1)} (hc₁ : IsCocycle c₁) (hc₂ : IsCocycle c₂) :
+    deRhamPairing (R := R) (X := X) n (currentHomologyClass hT)
+        (deRhamClass hc₁ + deRhamClass hc₂)
+      = deRhamPairing (R := R) (X := X) n (currentHomologyClass hT) (deRhamClass hc₁)
+        + deRhamPairing (R := R) (X := X) n (currentHomologyClass hT) (deRhamClass hc₂) := by
+  have key : ∀ (c : Cochain R X (n + 1)) (hc : IsCocycle c),
+      deRhamPairing (R := R) (X := X) n (currentHomologyClass hT) (deRhamClass hc) = T c :=
+    fun _ _ => rfl
+  calc deRhamPairing (R := R) (X := X) n (currentHomologyClass hT)
+        (deRhamClass hc₁ + deRhamClass hc₂)
+    _ = T (Subtype.val ((⟨c₁, hc₁⟩ + ⟨c₂, hc₂⟩ :
+            cocycles (R := R) (X := X) (n := n + 1)))) := rfl
+    _ = T (c₁ + c₂) := rfl
+    _ = T c₁ + T c₂ := by rw [LinearMap.map_add]
+    _ = deRhamPairing (R := R) (X := X) n (currentHomologyClass hT) (deRhamClass hc₁)
+        + deRhamPairing (R := R) (X := X) n (currentHomologyClass hT) (deRhamClass hc₂) := by
+        rw [key c₁ hc₁, key c₂ hc₂]
+
 end Cohomology
 
 #print axioms SDG.DifferentialForms.IsChainCycle
@@ -948,5 +1007,9 @@ end Cohomology
 #print axioms SDG.DifferentialForms.currentHomology
 #print axioms SDG.DifferentialForms.currentHomologyClass
 #print axioms SDG.DifferentialForms.instAddCommGroupCurrentHomology
+#print axioms SDG.DifferentialForms.deRhamPairing
+#print axioms SDG.DifferentialForms.deRhamPairing_class
+#print axioms SDG.DifferentialForms.deRhamPairing_add_left
+#print axioms SDG.DifferentialForms.deRhamPairing_add_right
 
 end SDG.DifferentialForms
