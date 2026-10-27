@@ -1,7 +1,7 @@
 import SDG.DifferentialForms.Algebra
 
 /-!
-# Stokes 形式积分基础设施（单纯层）
+# Stokes 形式积分基础设施与 cup 的上同调性（单纯层，主线）
 
 1. **边界积分** `boundaryIntegral` 与 Stokes 对偶（∫_σ ∂c = ∫_{∂σ} c，
    链侧 ∂² = 0 由 D2 里程碑 `coboundary_coboundary` 给出）；
