@@ -892,10 +892,19 @@ def currentCon (n : ℕ) : AddCon (chainCycles (R := R) (X := X) (n := n)) where
     rw [hab]
     exact add_mem h₁ h₂
 
-/-- **电流同调群** `Hₙ := Zₙ / Bₙ`：加法同余的商类型（`AddCon` 商；
-加法交换群结构 instance 的提升见 RESUME 记录的路线）。 -/
+/-- **电流同调群** `Hₙ := Zₙ / Bₙ`：加法同余的商（`AddCon` 商——
+`AddCommGroup` 结构由 Mathlib 的 surjective 搬运 instance 现成提供；
+与 `deRhamCohomology` 对偶）。 -/
 def currentHomology (n : ℕ) : Type u :=
   AddCon.Quotient (currentCon (R := R) (X := X) n)
+
+instance instAddCommGroupCurrentHomology :
+    AddCommGroup (currentHomology (R := R) (X := X) n) := by
+  have h : AddCommGroup (AddCon.Quotient (currentCon (R := R) (X := X) n)) :=
+    AddCon.addCommGroup (M := ↥(chainCycles (R := R) (X := X) (n := n)))
+      (currentCon (R := R) (X := X) n)
+  exact h
+
 
 /-- 电流同调类投影：`[T] ∈ Hₙ`。 -/
 def currentHomologyClass {n : ℕ} {T : Current R X (n + 1)} (hT : IsChainCycle T) :
@@ -938,5 +947,6 @@ end Cohomology
 #print axioms SDG.DifferentialForms.currentCon
 #print axioms SDG.DifferentialForms.currentHomology
 #print axioms SDG.DifferentialForms.currentHomologyClass
+#print axioms SDG.DifferentialForms.instAddCommGroupCurrentHomology
 
 end SDG.DifferentialForms
