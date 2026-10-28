@@ -1,5 +1,6 @@
 import SDG.DifferentialForms.Currents
 import SDG.DifferentialForms.StokesCup
+import SDG.DifferentialForms.CupAssoc
 
 /-!
 # Hⁿ 商层 cup 组装
@@ -147,6 +148,57 @@ lemma cast_cup_coboundary_right_mem {n m : ℕ}
     (cupProduct (α : Cochain R X (n + 1)) w), ?_⟩
   rw [← coboundaryLinear_apply, map_smul, coboundaryLinear_apply]
   exact (coboundary_cast_cup_coboundary_right α w).symm
+
+section DegreeTransport
+
+/-- cocycles 的度数 transport：沿 `Fin.cast`-式 cochainLenCast 把
+`cocycles (n+1)` 的元素搬到 `cocycles (m+1)`（∂ 与 cast 交换 +
+cast 零）。 -/
+def cocyclesCast {n m : ℕ} (H : n = m) (a : cocycles (R := R) (X := X) (n := n + 1)) :
+    cocycles (R := R) (X := X) (n := m + 1) :=
+  ⟨cochainLenCast (show n + 1 = m + 1 from by rw [H]) (a : Cochain R X (n + 1)),
+    by
+      show coboundary _ = 0
+      rw [coboundary_cochainLenCast, cocycles_property a, cochainLenCast_zero]⟩
+
+/-- 底 transport 点态。 -/
+lemma cocyclesCast_apply {n m : ℕ} (H : n = m)
+    (a : cocycles (R := R) (X := X) (n := n + 1)) :
+    (cocyclesCast H a : Cochain R X (m + 1))
+      = cochainLenCast (show n + 1 = m + 1 from by rw [H]) (a : Cochain R X (n + 1)) := rfl
+
+/-- **H 层度数 transport**：`Hⁿ → H^m`（沿度数等式 `n = m`）。
+底映射沿 cochainLenCast，上边缘差被 cast 保（`coboundary_cochainLenCast`
+的差吸收：cast(∂w) = ∂(cast w)）。 -/
+def deRhamCohomologyCast {n m : ℕ} (H : n = m) :
+    deRhamCohomology (R := R) (X := X) n →
+      deRhamCohomology (R := R) (X := X) m :=
+    Quotient.map (sa := (deRhamCon (R := R) (X := X) n).toSetoid)
+      (sb := (deRhamCon (R := R) (X := X) m).toSetoid)
+      (fun a : cocycles (R := R) (X := X) (n := n + 1) => cocyclesCast H a)
+      (fun a₁ b₁ h => by
+        have h' : (a₁ : Cochain R X (n + 1)) - (b₁ : Cochain R X (n + 1))
+            ∈ coboundaries (R := R) (X := X) n := h
+        rw [mem_coboundaries] at h'
+        obtain ⟨w, hw⟩ := h'
+        show ((cocyclesCast H a₁ : Cochain R X (m + 1))
+          - (cocyclesCast H b₁ : Cochain R X (m + 1))) ∈ coboundaries (R := R) (X := X) m
+        rw [cocyclesCast_apply, cocyclesCast_apply, ← cochainLenCast_sub, ← hw,
+          mem_coboundaries]
+        exact ⟨cochainLenCast (show n = m from by rw [H]) w, by
+          rw [coboundary_cochainLenCast]⟩)
+
+/-- H 层 transport 点态（类形式）。 -/
+lemma deRhamCohomologyCast_apply {n m : ℕ} (H : n = m) {α : Cochain R X (n + 1)}
+    (hα : IsCocycle α) :
+    deRhamCohomologyCast H (deRhamClass hα)
+      = deRhamClass (by
+          have hC : IsCocycle (cochainLenCast (show n + 1 = m + 1 from by rw [H]) α) :=
+            by show coboundary _ = 0
+               rw [coboundary_cochainLenCast, hα, cochainLenCast_zero]
+          exact hC) := rfl
+
+end DegreeTransport
 
 /-- **良定义性（左因子）**：右因子同类固定时，左因子的类代表元替换
 不改变底类型 cup 的类（左差 = ∂w 经左差吸收吸收）。 -/
