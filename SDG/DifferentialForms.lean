@@ -5,6 +5,7 @@ import SDG.DifferentialForms.Currents
 import SDG.DifferentialForms.CupAssoc
 import SDG.DifferentialForms.StokesCup
 import SDG.DifferentialForms.CupCohomology
+import SDG.DifferentialForms.CohomologyModule
 
 /-!
 # SDG.DifferentialForms
@@ -15,5 +16,6 @@ import SDG.DifferentialForms.CupCohomology
 电流（currents）层：拓扑/紧支撑结构与电流空间在 `Currents`，
 上积结合律在 `CupAssoc`，Stokes 积分层与 cup 的分次 Leibniz /
 上同调良定义性在 `StokesCup`，**de Rham 上同调环的商层乘法
-`deRhamCup`（Hⁿ × H^m → H^{n+m+1}）在 `CupCohomology`**。
+`deRhamCup`（Hⁿ × H^m → H^{n+m+1}）在 `CupCohomology`**，
+双侧同调群的 `Module R` 结构与配对 R-双线性在 `CohomologyModule`。
 -/
