@@ -26,7 +26,6 @@ theorem sderiv_integralR_add_const {R : Type u} [SDG.Integration.IsIntegration R
 
 end FTC
 
-<<<<<<< HEAD
 section FTC_UI
 
 /-- **微积分基本定理（UnitInterval 版）**：
@@ -53,7 +52,4 @@ theorem integral_ftc_UI {R : Type u} [SDG.Integration.IsIntegration R]
 
 end FTC_UI
 
-
-=======
->>>>>>> fork/feature/differential-forms-core
 end SDG.DifferentialForms
