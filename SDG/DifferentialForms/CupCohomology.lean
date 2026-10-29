@@ -1,6 +1,7 @@
 import SDG.DifferentialForms.Currents
 import SDG.DifferentialForms.StokesCup
 import SDG.DifferentialForms.CupAssoc
+import SDG.DifferentialForms.CohomologyModule
 
 /-!
 # Hⁿ 商层 cup 组装
@@ -199,6 +200,53 @@ lemma deRhamCohomologyCast_apply {n m : ℕ} (H : n = m) {α : Cochain R X (n + 
           exact hC) := rfl
 
 end DegreeTransport
+
+/-- cup 对左因子 cast 的交换：cast 后作 cup = 作 cup 后 cast（度数
+沿 omega 等式提升）。 -/
+lemma cup_cast_left {p p' q : ℕ} (h : p = p') (c₁ : Cochain R X p)
+    (c₂ : Cochain R X q) :
+    cupProduct (cochainLenCast h c₁) c₂
+      = cochainLenCast (show p + q = p' + q from by omega) (cupProduct c₁ c₂) := by
+  funext σ
+  rw [cochainLenCast_apply, cupProduct_apply, cochainLenCast_apply, cupProduct_apply]
+  congr 1
+  · funext k
+    apply congrArg σ
+    apply Fin.ext
+    rw [Fin.val_cast, cupLeft_val, cupLeft_val]
+  · funext k
+    apply congrArg σ
+    apply Fin.ext
+    rw [Fin.val_cast, cupRight_val, cupRight_val]
+    omega
+
+/-- cup 对右因子 cast 的交换。 -/
+lemma cup_cast_right {p q q' : ℕ} (h : q = q') (c₁ : Cochain R X p)
+    (c₂ : Cochain R X q) :
+    cupProduct c₁ (cochainLenCast h c₂)
+      = cochainLenCast (show p + q = p + q' from by omega) (cupProduct c₁ c₂) := by
+  funext σ
+  rw [cochainLenCast_apply, cupProduct_apply, cochainLenCast_apply, cupProduct_apply]
+  congr 1
+  · funext k
+    apply congrArg σ
+    apply Fin.ext
+    rw [Fin.val_cast, cupLeft_val, cupLeft_val]
+  · funext k
+    apply congrArg σ
+    apply Fin.ext
+    rw [Fin.val_cast, cupRight_val, cupRight_val]
+
+/-- **结合律的 cast 形式化**：\`(α ⌣ β) ⌣ γ = cast(α ⌣ (β ⌣ γ))\`
+（cupProduct_assoc 的 cochainLenCast 桥装）。 -/
+lemma cup_assoc_cast {p q r : ℕ} (α : Cochain R X p) (β : Cochain R X q)
+    (γ : Cochain R X r) :
+    cupProduct (cupProduct α β) γ
+      = cochainLenCast (show (p + q) + r = p + (q + r) from by omega)
+          (cupProduct α (cupProduct β γ)) := by
+  funext σ
+  rw [cochainLenCast_apply, cupProduct_assoc_apply]
+  rfl
 
 /-- **良定义性（左因子）**：右因子同类固定时，左因子的类代表元替换
 不改变底类型 cup 的类（左差 = ∂w 经左差吸收吸收）。 -/
@@ -419,6 +467,33 @@ theorem deRhamCup_neg_right {n m : ℕ} {α : Cochain R X (n + 1)}
           rw [add_neg_cancel])
   rw [hzero, deRhamCup_zero_right hα] at hsum
   exact eq_neg_of_add_eq_zero_right hsum.symm
+
+/-! #### 商层 cup 的数乘相容
+
+`Hⁿ` 的 `Module R` 结构（`CohomologyModule`）与商层 cup 的相容性——
+de Rham 上同调环作为 R-代数的最后一块商层拼图。底层原料：
+`cup_smul_left/right`（Algebra）、`cochainLenCast_smul`（本文件）、
+`deRhamClass_smul`（CohomologyModule）。 -/
+
+/-- **商层 cup 左数乘相容**：`(r•[α]) ⌣ [β] = r•([α]⌣[β])`。 -/
+theorem deRhamCup_smul_left {n m : ℕ} (r : R) {α : Cochain R X (n + 1)}
+    {β : Cochain R X (m + 1)}
+    (hα : IsCocycle α) (hβ : IsCocycle β) :
+    deRhamCup (R := R) (X := X) n m (r • deRhamClass hα) (deRhamClass hβ)
+      = r • deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ) := by
+  rw [deRhamClass_smul, deRhamCup_apply (isCocycle_smul r hα) hβ,
+    deRhamCup_apply hα hβ, deRhamClass_smul]
+  exact deRhamClass_congr _ _ (by rw [cup_smul_left, cochainLenCast_smul])
+
+/-- **商层 cup 右数乘相容**：`[α] ⌣ (r•[β]) = r•([α]⌣[β])`。 -/
+theorem deRhamCup_smul_right {n m : ℕ} (r : R) {α : Cochain R X (n + 1)}
+    {β : Cochain R X (m + 1)}
+    (hα : IsCocycle α) (hβ : IsCocycle β) :
+    deRhamCup (R := R) (X := X) n m (deRhamClass hα) (r • deRhamClass hβ)
+      = r • deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ) := by
+  rw [deRhamClass_smul, deRhamCup_apply hα (isCocycle_smul r hβ),
+    deRhamCup_apply hα hβ, deRhamClass_smul]
+  exact deRhamClass_congr _ _ (by rw [cup_smul_right, cochainLenCast_smul])
 
 end CupCohomologyQuotient
 
