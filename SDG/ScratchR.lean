@@ -62,22 +62,27 @@ def simplexIntegral2 {R : Type u} [SDG.Integration.IsIntegration R]
   SDG.Integration.integralR
     (fun t₁ => SDG.Integration.integralR (fun t₂ => f t₁ t₂) t₁ (1 - t₁)) 0 1
 
-/-- 对第二变量加法：内外两层 integralR 的线性直接推定。 -/
+/-- 对第二变量加法：内层 integralR 的线性直接推定。 -/
 theorem simplexIntegral2_add {R : Type u} [SDG.Integration.IsIntegration R]
     (f g h : R → R → R)
     (hfg : ∀ t₁ t₂ : R, f t₁ t₂ + g t₁ t₂ = h t₁ t₂) :
     simplexIntegral2 f + simplexIntegral2 g = simplexIntegral2 h := by
+  have hinner : ∀ t₁ : R,
+      SDG.Integration.integralR (fun t₂ => f t₁ t₂) t₁ (1 - t₁)
+        + SDG.Integration.integralR (fun t₂ => g t₁ t₂) t₁ (1 - t₁)
+      = SDG.Integration.integralR (fun t₂ => h t₁ t₂) t₁ (1 - t₁) := by
+    intro t₁
+    rw [← SDG.Integration.integralR_add
+        (f := fun t₂ => f t₁ t₂) (g := fun t₂ => g t₁ t₂)
+        (a := t₁) (b := 1 - t₁)]
+    exact congrArg (fun w => SDG.Integration.integralR w t₁ (1 - t₁))
+      (funext fun t₂ => hfg t₁ t₂)
   unfold simplexIntegral2
   rw [← SDG.Integration.integralR_add
       (f := fun t₁ => SDG.Integration.integralR (fun t₂ => f t₁ t₂) t₁ (1 - t₁))
       (g := fun t₁ => SDG.Integration.integralR (fun t₂ => g t₁ t₂) t₁ (1 - t₁))]
-  refine congrArg (fun F => SDG.Integration.integralR F 0 1)
-    (funext fun t₁ => ?_)
-  rw [← SDG.Integration.integralR_add
-      (f := fun t₂ => f t₁ t₂) (g := fun t₂ => g t₁ t₂)
-      (a := t₁) (b := 1 - t₁)]
-  exact congrArg (fun w => SDG.Integration.integralR w t₁ (1 - t₁))
-    (funext fun t₂ => hfg t₁ t₂)
+  exact congrArg (fun F => SDG.Integration.integralR F 0 1)
+    (funext fun t₁ => hinner t₁)
 
 end SimplexIntegral
 
