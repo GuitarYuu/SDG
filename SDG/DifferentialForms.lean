@@ -6,6 +6,7 @@ import SDG.DifferentialForms.CupAssoc
 import SDG.DifferentialForms.StokesCup
 import SDG.DifferentialForms.CupCohomology
 import SDG.DifferentialForms.CohomologyModule
+import SDG.DifferentialForms.AlgebraicForms
 
 /-!
 # SDG.DifferentialForms
