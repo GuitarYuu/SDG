@@ -1,5 +1,6 @@
 import SDG.DifferentialForms
 import SDG.Integration
+import SDG.ScratchR
 
 /-! 全库核心定理 axiom 批量审计（第四十四接力点体检轮）。
 预期：全部 `[propext, Quot.sound]`，零 Classical.choice / sorryAx。 -/
@@ -56,3 +57,23 @@ import SDG.Integration
 -- Integration：单变量积分核心
 #print axioms SDG.Integration.sderiv_I_spec
 #print axioms SDG.Integration.primitive_unique
+
+-- LieBracket：反对称性（第五十接力点新增）
+#print axioms TangentVectorField.transformationCommutator_mul_cancel
+#print axioms TangentVectorField.lieBracketTransform_neg_mul_apply
+#print axioms TangentVectorField.lieBracketTransform_neg_comm
+#print axioms TangentVectorField.lieBracket_apply_neg
+#print axioms TangentVectorField.lieBracket_antisymm
+
+-- AlgebraicForms：Koszul 外微分 def 层 + 分次 Leibniz（M3）
+#print axioms SDG.DifferentialForms.fieldDeriv_mul
+#print axioms SDG.DifferentialForms.algD1_algSMul
+
+-- CupCohomology：商层 cup 结合律（第五十接力点新增）
+#print axioms SDG.DifferentialForms.cochainLenCast_trans
+#print axioms SDG.DifferentialForms.cupCocycleZ_assoc_tree
+#print axioms SDG.DifferentialForms.deRhamCup_assoc
+
+-- ScratchR：FTC / 分部积分（第五十接力点修正）
+#print axioms SDG.DifferentialForms.integral_I_mul_parts
+#print axioms SDG.DifferentialForms.integral_I_parts
