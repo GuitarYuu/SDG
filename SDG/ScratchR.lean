@@ -86,4 +86,44 @@ theorem simplexIntegral2_add {R : Type u} [SDG.Integration.IsIntegration R]
 
 end SimplexIntegral
 
+section IBP
+
+/-- **乘积的积分恒等式（UnitInterval 版）**：
+`∫_0^1 (G'·H + G·H') = G(1)·H(1) - G(0)·H(0)`——
+被积函数经乘积导数 `sderiv_I_mul` 逐点改写为 `(G·H)'`，
+再由 `integral_ftc_UI` 收尾。
+（注：这是 FTC + 乘积法则的组合恒等式；经典分部积分
+`∫ G'·H = G(1)·H(1) - G(0)·H(0) - ∫ G·H'` 见 `integral_I_parts`。） -/
+theorem integral_I_mul_parts {R : Type u} [SDG.Integration.IsIntegration R]
+    (G H : SDG.Order.UnitInterval R → R) :
+    SDG.Integration.integral
+        (fun t => SDG.Integration.sderiv_I G t * H t
+          + G t * SDG.Integration.sderiv_I H t) 0 1
+      = G 1 * H 1 - G 0 * H 0 := by
+  have hprod : (fun t => SDG.Integration.sderiv_I (fun u => G u * H u) t)
+      = (fun t => SDG.Integration.sderiv_I G t * H t
+        + G t * SDG.Integration.sderiv_I H t) :=
+    funext fun t => SDG.Integration.sderiv_I_mul G H t
+  have hstep : SDG.Integration.integral
+        (fun t => SDG.Integration.sderiv_I G t * H t
+          + G t * SDG.Integration.sderiv_I H t) 0 1
+      = SDG.Integration.integral
+        (fun t => SDG.Integration.sderiv_I (fun u => G u * H u) t) 0 1 := by
+    rw [hprod]
+  rw [hstep]
+  exact integral_ftc_UI (fun u => G u * H u)
+
+/-- **分部积分（经典对称形，UnitInterval 版）**：
+`∫_0^1 G'·H = G(1)·H(1) - G(0)·H(0) - ∫_0^1 G·H'`——
+由 `integral_I_mul_parts` + `integral_add` 组装。 -/
+theorem integral_I_parts {R : Type u} [SDG.Integration.IsIntegration R]
+    (G H : SDG.Order.UnitInterval R → R) :
+    SDG.Integration.integral (fun t => SDG.Integration.sderiv_I G t * H t) 0 1
+      = G 1 * H 1 - G 0 * H 0
+        - SDG.Integration.integral (fun t => G t * SDG.Integration.sderiv_I H t) 0 1 := by
+  rw [← integral_I_mul_parts G H, SDG.Integration.integral_add]
+  ring
+
+end IBP
+
 end SDG.DifferentialForms
