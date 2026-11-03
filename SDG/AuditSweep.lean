@@ -77,3 +77,11 @@ import SDG.ScratchR
 -- ScratchR：FTC / 分部积分（第五十接力点修正）
 #print axioms SDG.DifferentialForms.integral_I_mul_parts
 #print axioms SDG.DifferentialForms.integral_I_parts
+
+-- AlgebraicForms：场导子/algD 线性性（第五十一接力点新增）
+#print axioms SDG.DifferentialForms.fieldDeriv_add
+#print axioms SDG.DifferentialForms.fieldDeriv_smul
+#print axioms SDG.DifferentialForms.algD0_add
+#print axioms SDG.DifferentialForms.algD0_smul
+#print axioms SDG.DifferentialForms.algD1_add
+#print axioms SDG.DifferentialForms.algD1_smul
