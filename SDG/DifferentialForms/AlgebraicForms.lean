@@ -79,8 +79,9 @@ theorem fieldDeriv_mul (ξ : TangentVectorField R X) (f g : X → R) :
 def algD0 (f : X → R) (ξ : TangentVectorField R X) : X → R :=
   fieldDeriv ξ f
 
-/-- 1-形式（场变元）：向量场 → 函数。 -/
-def AlgForm1 (R : Type u) [IsKockLawvere_one R] (X : Type u) :=
+/-- 1-形式（场变元）：向量场 → 函数。`abbrev`（reducible）：Pi 型的
+Add/SMul 实例直接透传，`ω₁ + ω₂`、`c • ω` 逐点可用。 -/
+abbrev AlgForm1 (R : Type u) [IsKockLawvere_one R] (X : Type u) :=
   TangentVectorField R X → (X → R)
 
 /-- **1-形式的 Koszul 外微分**：
@@ -150,10 +151,74 @@ theorem algD1_algSMul [Microlinear R X] [PropertyW R X]
   ring
 
 /-- 0-形式版本的同一恒等式（`algD0` 记法）：外微分的乘积法则——
-`d(f·ω)(ξ) 处的 Leibniz`，即 `d₀(f·ω) = f·d₀ω + ω·d₀f` 的场求值形。 -/
+`d₀(f·ω) = f·d₀ω + ω·d₀f` 的场求值形。 -/
 theorem algD0_mul (f g : X → R) (ξ : TangentVectorField R X) :
     algD0 (f * g) ξ = f * algD0 g ξ + g * algD0 f ξ :=
   fieldDeriv_mul ξ f g
+
+/-! ### 场导子的线性性（KL 唯一性直推）-/
+
+/-- **场导子的加法性**：`ξ(f + g) = ξf + ξg`（KL 唯一性：两条
+展开式的系数相加）。 -/
+theorem fieldDeriv_add (ξ : TangentVectorField R X) (f g : X → R) :
+    fieldDeriv ξ (f + g) = fieldDeriv ξ f + fieldDeriv ξ g := by
+  funext x
+  have key : ∀ d : D R, (f + g) (ξ.1 x d)
+      = (f + g) (ξ.1 x 0) + (fieldDeriv ξ f x + fieldDeriv ξ g x) * (d : R) := by
+    intro d
+    have hf := fieldDeriv_spec ξ f x d
+    have hg := fieldDeriv_spec ξ g x d
+    rw [show ξ.1 x 0 = x from ξ.2 x]
+    show f (ξ.1 x d) + g (ξ.1 x d)
+      = f x + g x + (fieldDeriv ξ f x + fieldDeriv ξ g x) * (d : R)
+    rw [hf, hg]
+    ring
+  exact ((IsKockLawvere_one.isKockLawvere_one (R := R)
+    (fun d : D R => (f + g) ((TangentVectorField.toFiber ξ x).1 d))).property.right _ key).symm
+
+/-- **场导子的数乘性**：`ξ(c·f) = c·ξf`。 -/
+theorem fieldDeriv_smul (ξ : TangentVectorField R X) (c : R) (f : X → R) :
+    fieldDeriv ξ (c • f) = c • fieldDeriv ξ f := by
+  funext x
+  have key : ∀ d : D R, (c • f) (ξ.1 x d)
+      = (c • f) (ξ.1 x 0) + (c * fieldDeriv ξ f x) * (d : R) := by
+    intro d
+    have hf := fieldDeriv_spec ξ f x d
+    rw [show ξ.1 x 0 = x from ξ.2 x]
+    show c * f (ξ.1 x d) = c * f x + c * fieldDeriv ξ f x * (d : R)
+    rw [hf]
+    ring
+  exact ((IsKockLawvere_one.isKockLawvere_one (R := R)
+    (fun d : D R => (c • f) ((TangentVectorField.toFiber ξ x).1 d))).property.right _ key).symm
+
+/-! ### M3 续：algD 的线性性（复空间 Ω̂⁰ → Ω̂¹ → Ω̂² 是 R-线性映射）-/
+
+/-- 0-形式外微分的加法性。 -/
+theorem algD0_add (f g : X → R) (ξ : TangentVectorField R X) :
+    algD0 (f + g) ξ = algD0 f ξ + algD0 g ξ :=
+  fieldDeriv_add ξ f g
+
+/-- 0-形式外微分的数乘性。 -/
+theorem algD0_smul (c : R) (f : X → R) (ξ : TangentVectorField R X) :
+    algD0 (c • f) ξ = c • algD0 f ξ :=
+  fieldDeriv_smul ξ c f
+
+/-- **1-形式 Koszul 外微分的加法性**：`d(ω₁ + ω₂) = dω₁ + dω₂`
+（场导子加法性 + 逐点 ring）。 -/
+theorem algD1_add [Microlinear R X] [PropertyW R X]
+    (ω₁ ω₂ : AlgForm1 R X) (ξ η : TangentVectorField R X) :
+    algD1 (ω₁ + ω₂) ξ η = algD1 ω₁ ξ η + algD1 ω₂ ξ η := by
+  funext x
+  simp only [algD1, Pi.add_apply, Pi.sub_apply, fieldDeriv_add]
+  ring
+
+/-- **1-形式 Koszul 外微分的数乘性**：`d(c·ω) = c·dω`。 -/
+theorem algD1_smul [Microlinear R X] [PropertyW R X]
+    (c : R) (ω : AlgForm1 R X) (ξ η : TangentVectorField R X) :
+    algD1 (c • ω) ξ η = c • algD1 ω ξ η := by
+  funext x
+  simp only [algD1, Pi.smul_apply, Pi.sub_apply, fieldDeriv_smul, smul_eq_mul]
+  ring
 
 end AlgebraicForms
 
