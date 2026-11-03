@@ -106,6 +106,55 @@ theorem algD1_apply [Microlinear R X] [PropertyW R X]
 theorem algD0_eq_fieldDeriv (f : X → R) (ξ : TangentVectorField R X) :
     algD0 f ξ = fieldDeriv ξ f := rfl
 
+/-! ### M3：分次 Leibniz（函数数乘下的 1-形式外微分）-/
+
+/-- 1-形式按函数数乘（逐点）：`(f ⬝ ω)(ξ) = f · (ω ξ)`。 -/
+def algSMul (f : X → R) (ω : AlgForm1 R X) : AlgForm1 R X :=
+  fun ξ => f * ω ξ
+
+/-- `algSMul` 的求值展开（定义桥梁）。 -/
+theorem algSMul_apply (f : X → R) (ω : AlgForm1 R X)
+    (ξ : TangentVectorField R X) (x : X) :
+    algSMul f ω ξ x = f x * ω ξ x := rfl
+
+/-- **分次 Leibniz（函数数乘，1-形式 Koszul 外微分）**：
+`d(f·ω)(ξ, η) = (ξf)·ω(η) - (ηf)·ω(ξ) + f·dω(ξ, η)`——
+即 `d(fω) = df·ω + f·dω` 的求值形式（`df` 即 0-形式外微分 `algD0`）。
+
+证明：乘积法则 `fieldDeriv_mul` 展开前两项，第三项由 `algSMul` 定义直接
+提出 `f`，逐点重排为 Leibniz 形。 -/
+theorem algD1_algSMul [Microlinear R X] [PropertyW R X]
+    (f : X → R) (ω : AlgForm1 R X) (ξ η : TangentVectorField R X) :
+    algD1 (algSMul f ω) ξ η
+      = (fun x => fieldDeriv ξ f x * ω η x - fieldDeriv η f x * ω ξ x)
+        + f * algD1 ω ξ η := by
+  funext x
+  have hp1 : fieldDeriv ξ ((algSMul f ω) η) x
+      = f x * fieldDeriv ξ (ω η) x + ω η x * fieldDeriv ξ f x :=
+    congrFun (fieldDeriv_mul ξ f (ω η)) x
+  have hp2 : fieldDeriv η ((algSMul f ω) ξ) x
+      = f x * fieldDeriv η (ω ξ) x + ω ξ x * fieldDeriv η f x :=
+    congrFun (fieldDeriv_mul η f (ω ξ)) x
+  show fieldDeriv ξ ((algSMul f ω) η) x - fieldDeriv η ((algSMul f ω) ξ) x
+      - (algSMul f ω) (lieBracket ξ η) x
+    = (fieldDeriv ξ f x * ω η x - fieldDeriv η f x * ω ξ x)
+      + f x * (fieldDeriv ξ (ω η) x - fieldDeriv η (ω ξ) x
+        - ω (lieBracket ξ η) x)
+  rw [hp1, hp2]
+  show f x * fieldDeriv ξ (ω η) x + ω η x * fieldDeriv ξ f x
+      - (f x * fieldDeriv η (ω ξ) x + ω ξ x * fieldDeriv η f x)
+      - f x * ω (lieBracket ξ η) x
+    = (fieldDeriv ξ f x * ω η x - fieldDeriv η f x * ω ξ x)
+      + f x * (fieldDeriv ξ (ω η) x - fieldDeriv η (ω ξ) x
+        - ω (lieBracket ξ η) x)
+  ring
+
+/-- 0-形式版本的同一恒等式（`algD0` 记法）：外微分的乘积法则——
+`d(f·ω)(ξ) 处的 Leibniz`，即 `d₀(f·ω) = f·d₀ω + ω·d₀f` 的场求值形。 -/
+theorem algD0_mul (f g : X → R) (ξ : TangentVectorField R X) :
+    algD0 (f * g) ξ = f * algD0 g ξ + g * algD0 f ξ :=
+  fieldDeriv_mul ξ f g
+
 end AlgebraicForms
 
 end SDG.DifferentialForms

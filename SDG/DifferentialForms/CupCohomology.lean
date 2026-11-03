@@ -38,6 +38,15 @@ lemma cochainLenCast_add {m n : ℕ} (h : m = n) (c₁ c₂ : Cochain R X m) :
   funext σ
   rfl
 
+/-- 度数 cast 的复合律：先沿 `hab` 再沿 `hbc` 的两次 cast 等于沿复合
+等式的一次 cast（`Fin.cast` 的 def 级复合：两层 `⟨val, _⟩` 塌缩，
+pointwise rfl）。 -/
+lemma cochainLenCast_trans {a b c : ℕ} (hab : a = b) (hbc : b = c)
+    (W : Cochain R X a) :
+    cochainLenCast hbc (cochainLenCast hab W) = cochainLenCast (hab.trans hbc) W := by
+  funext σ
+  rfl
+
 /-- 度数 cast 保减法。 -/
 lemma cochainLenCast_sub {m n : ℕ} (h : m = n) (c₁ c₂ : Cochain R X m) :
     cochainLenCast h (c₁ - c₂) = cochainLenCast h c₁ - cochainLenCast h c₂ := by
@@ -202,51 +211,90 @@ lemma deRhamCohomologyCast_apply {n m : ℕ} (H : n = m) {α : Cochain R X (n + 
 end DegreeTransport
 
 /-- cup 对左因子 cast 的交换：cast 后作 cup = 作 cup 后 cast（度数
-沿 omega 等式提升）。 -/
+沿 omega 等式提升）。证明：两因子的槽函数等式分别作为显式函数等式
+have（点态 `Fin.ext` + def 级值展开；`congr 1` 的乘法分量顺序不可预测，
+故不用 congr-bullet 结构）。 -/
 lemma cup_cast_left {p p' q : ℕ} (h : p = p') (c₁ : Cochain R X p)
     (c₂ : Cochain R X q) :
     cupProduct (cochainLenCast h c₁) c₂
       = cochainLenCast (show p + q = p' + q from by omega) (cupProduct c₁ c₂) := by
   funext σ
   rw [cochainLenCast_apply, cupProduct_apply, cochainLenCast_apply, cupProduct_apply]
-  congr 1
-  · funext k
-    apply congrArg σ
-    apply Fin.ext
-    rw [Fin.val_cast, cupLeft_val, cupLeft_val]
-  · funext k
-    apply congrArg σ
-    apply Fin.ext
-    rw [Fin.val_cast, cupRight_val, cupRight_val]
-    omega
+  have hL : (fun k : Fin (p + 1) =>
+        σ (cupLeft p' q (Fin.cast (show p + 1 = p' + 1 from by rw [h]) k)))
+      = (fun k : Fin (p + 1) =>
+        σ (Fin.cast (show p + q + 1 = p' + q + 1 from by omega) (cupLeft p q k))) := by
+    funext k
+    exact congrArg σ (Fin.ext (by simp only [cupLeft, Fin.val_cast, Fin.val_castAdd]))
+  have hR : (fun k : Fin (q + 1) => σ (cupRight p' q k))
+      = (fun k : Fin (q + 1) =>
+        σ (Fin.cast (show p + q + 1 = p' + q + 1 from by omega) (cupRight p q k))) := by
+    funext k
+    exact congrArg σ (Fin.ext
+      (by simp only [cupRight, Fin.val_cast, Fin.val_natAdd]; omega))
+  rw [congrArg c₁ hL, congrArg c₂ hR]
 
-/-- cup 对右因子 cast 的交换。 -/
+/-- cup 对右因子 cast 的交换（组件顺序鲁棒的证明结构，见
+`cup_cast_left` 注记）。 -/
 lemma cup_cast_right {p q q' : ℕ} (h : q = q') (c₁ : Cochain R X p)
     (c₂ : Cochain R X q) :
     cupProduct c₁ (cochainLenCast h c₂)
       = cochainLenCast (show p + q = p + q' from by omega) (cupProduct c₁ c₂) := by
   funext σ
   rw [cochainLenCast_apply, cupProduct_apply, cochainLenCast_apply, cupProduct_apply]
-  congr 1
-  · funext k
-    apply congrArg σ
-    apply Fin.ext
-    rw [Fin.val_cast, cupLeft_val, cupLeft_val]
-  · funext k
-    apply congrArg σ
-    apply Fin.ext
-    rw [Fin.val_cast, cupRight_val, cupRight_val]
+  have hL : (fun k : Fin (p + 1) => σ (cupLeft p q' k))
+      = (fun k : Fin (p + 1) =>
+        σ (Fin.cast (show p + q + 1 = p + q' + 1 from by omega) (cupLeft p q k))) := by
+    funext k
+    exact congrArg σ (Fin.ext (by simp only [cupLeft, Fin.val_cast, Fin.val_castAdd]))
+  have hR : (fun k : Fin (q + 1) =>
+        σ (cupRight p q' (Fin.cast (show q + 1 = q' + 1 from by rw [h]) k)))
+      = (fun k : Fin (q + 1) =>
+        σ (Fin.cast (show p + q + 1 = p + q' + 1 from by omega) (cupRight p q k))) := by
+    funext k
+    exact congrArg σ (Fin.ext (by simp only [cupRight, Fin.val_cast, Fin.val_natAdd]))
+  rw [congrArg c₁ hL, congrArg c₂ hR]
 
-/-- **结合律的 cast 形式化**：\`(α ⌣ β) ⌣ γ = cast(α ⌣ (β ⌣ γ))\`
-（cupProduct_assoc 的 cochainLenCast 桥装）。 -/
+/-- **结合律的 cast 形式化**：`(α ⌣ β) ⌣ γ = cast(α ⌣ (β ⌣ γ))`
+（cupProduct_assoc 的 cochainLenCast 桥装；cast 方向：源度
+`p + (q + r)`，目标度 `(p + q) + r`；两 rw 后两侧只差证明项，rw 的
+尾随 rfl 自动闭合）。 -/
 lemma cup_assoc_cast {p q r : ℕ} (α : Cochain R X p) (β : Cochain R X q)
     (γ : Cochain R X r) :
     cupProduct (cupProduct α β) γ
-      = cochainLenCast (show (p + q) + r = p + (q + r) from by omega)
+      = cochainLenCast (show p + (q + r) = (p + q) + r from by omega)
           (cupProduct α (cupProduct β γ)) := by
   funext σ
   rw [cochainLenCast_apply, cupProduct_assoc_apply]
-  rfl
+
+/-- **三因子上闭链 cup 的 cast-树一致性**：`cocycleCupZ (cocycleCupZ α β) γ`
+与 `cocycleCupZ α (cocycleCupZ β γ)` 的底层 Cochain（经 H 层度数运输后）
+相等——商层 cup 结合律的 Cochain 层核心。证明：两条 cast 路线各自经
+`cup_cast_left/right` 吸收因子 cast、`cochainLenCast_trans` 折叠成单次
+cast、`cup_assoc_cast` 换结合括号，最后两条复合等式的 cast 经
+`cochainLenCast_congr`（proof irrelevance）合一。 -/
+lemma cupCocycleZ_assoc_tree {n m k : ℕ} (α : Cochain R X (n + 1))
+    (β : Cochain R X (m + 1)) (γ : Cochain R X (k + 1)) :
+    cochainLenCast
+        (show (n + (m + k + 1) + 1) + 1 = ((n + m + 1) + k + 1) + 1 from by omega)
+        (cochainLenCast
+          (show n + 1 + ((m + k + 1) + 1) = (n + (m + k + 1) + 1) + 1 from by omega)
+          (cupProduct α
+            (cochainLenCast (show m + 1 + (k + 1) = (m + k + 1) + 1 from by omega)
+              (cupProduct β γ))))
+      = cochainLenCast
+          (show (n + m + 1) + 1 + (k + 1) = ((n + m + 1) + k + 1) + 1 from by omega)
+          (cupProduct (cochainLenCast (show n + 1 + (m + 1) = (n + m + 1) + 1 from by omega)
+              (cupProduct α β))
+            γ) := by
+  rw [cup_cast_right (show m + 1 + (k + 1) = (m + k + 1) + 1 from by omega) α
+    (cupProduct β γ),
+    cochainLenCast_trans, cochainLenCast_trans,
+    cup_cast_left (show n + 1 + (m + 1) = (n + m + 1) + 1 from by omega)
+      (cupProduct α β) γ,
+    cochainLenCast_trans, cup_assoc_cast α β γ, cochainLenCast_trans]
+  -- 两侧各为单次 cast 包同一个三因子 cup，只差复合等式的证明项
+  --（def 展开后 λ 体 proof-irrelevant），rw 的尾随 rfl 自动闭合。
 
 /-- **良定义性（左因子）**：右因子同类固定时，左因子的类代表元替换
 不改变底类型 cup 的类（左差 = ∂w 经左差吸收吸收）。 -/
@@ -494,6 +542,33 @@ theorem deRhamCup_smul_right {n m : ℕ} (r : R) {α : Cochain R X (n + 1)}
   rw [deRhamClass_smul, deRhamCup_apply hα (isCocycle_smul r hβ),
     deRhamCup_apply hα hβ, deRhamClass_smul]
   exact deRhamClass_congr _ _ (by rw [cup_smul_right, cochainLenCast_smul])
+
+/-! #### 商层 cup 结合律
+
+de Rham 上同调环乘法结合律的商层组装。两侧的 H 度数句法不同
+（`n + (m + k + 1) + 1` vs `(n + m + 1) + k + 1`），左侧经
+`deRhamCohomologyCast` 运输到右侧度数——这正是该运输引理的
+设计用途（第四十二接力点）。底层核心：`cupCocycleZ_assoc_tree`。 -/
+
+/-- **商层 cup 结合律**：`([α]⌣[β])⌣[γ] = [α]⌣([β]⌣[γ])`（左侧经
+`deRhamCohomologyCast` 从度数 `n + (m + k + 1) + 1` 运输到
+`(n + m + 1) + k + 1`）。 -/
+theorem deRhamCup_assoc {n m k : ℕ}
+    {α : Cochain R X (n + 1)} {β : Cochain R X (m + 1)} {γ : Cochain R X (k + 1)}
+    (hα : IsCocycle α) (hβ : IsCocycle β) (hγ : IsCocycle γ) :
+    deRhamCohomologyCast (R := R) (X := X)
+        (show n + (m + k + 1) + 1 = (n + m + 1) + k + 1 from by omega)
+        (deRhamCup (R := R) (X := X) n (m + k + 1) (deRhamClass hα)
+          (deRhamCup (R := R) (X := X) m k (deRhamClass hβ) (deRhamClass hγ)))
+      = deRhamCup (R := R) (X := X) (n + m + 1) k
+          (deRhamCup (R := R) (X := X) n m (deRhamClass hα) (deRhamClass hβ))
+          (deRhamClass hγ) := by
+  rw [deRhamCup_apply hβ hγ, deRhamCup_apply hα (cupClass hβ hγ),
+    deRhamCohomologyCast_apply
+      (show n + (m + k + 1) + 1 = (n + m + 1) + k + 1 from by omega)
+      (cupClass hα (cupClass hβ hγ)),
+    deRhamCup_apply hα hβ, deRhamCup_apply (cupClass hα hβ) hγ]
+  exact deRhamClass_congr _ _ (cupCocycleZ_assoc_tree α β γ)
 
 end CupCohomologyQuotient
 

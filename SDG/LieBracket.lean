@@ -253,4 +253,87 @@ lemma lieBracket_basePoint {R X} [CommRing R] [Microlinear R X] [PropertyW R X]
     (lieBracket ξ η).1 x 0 = x :=
   (lieBracket ξ η).2 x
 
+/-! ## 李括号的反对称性 -/
+
+/-- 交换子与其反序交换子逐点互逆：`[ξ,η]_{(d₁,d₂)} ∘ [η,ξ]_{(d₂,d₁)} = id`。
+
+展开后四对无穷小平移 `ξ_{±d₁}`、`η_{±d₂}` 两两相邻相消（由无穷小平移
+`ξ_d` 以 `ξ_{-d}` 为双侧逆直接得出）。 -/
+theorem transformationCommutator_mul_cancel {R X} [CommRing R] [Microlinear R X]
+    (ξ η : TangentVectorField R X) (d₁ d₂ : D R) (x : X) :
+    transformationCommutator ξ η d₁ d₂ (transformationCommutator η ξ d₂ d₁ x) = x := by
+  have hξr : ∀ y : X, ξ.1 (ξ.1 y (-d₁)) d₁ = y := infTranslation_rightInverse ξ d₁
+  have hξl : ∀ y : X, ξ.1 (ξ.1 y d₁) (-d₁) = y := infTranslation_leftInverse ξ d₁
+  have hηr : ∀ y : X, η.1 (η.1 y (-d₂)) d₂ = y := infTranslation_rightInverse η d₂
+  have hηl : ∀ y : X, η.1 (η.1 y d₂) (-d₂) = y := infTranslation_leftInverse η d₂
+  simp only [transformationCommutator_apply]
+  rw [hξr, hηr, hξl, hηl]
+
+/-- **括号变换的反参数公式**（反对称性的桥）：
+`t_{ξη}(-(d₁·d₂)) = [η,ξ]_{(d₂,d₁)}`（逐点）。
+
+证明：`t_{ξη}(-δ)` 是 `t_{ξη}(δ)` 的逆（无穷小平移可逆性，δ := d₁·d₂）；
+而 `t_{ξη}(δ) = [ξ,η]_{(d₁,d₂)}`（Property W 刻画），后者与
+`[η,ξ]_{(d₂,d₁)}` 逐点互逆（前引理）。对 `[η,ξ]_{(d₂,d₁)}(x)` 应用
+左逆关系：`t(-δ)([η,ξ](x)) = [η,ξ](x)`，再用互逆性把内层改写为 `x`，
+即得 `t(-δ)(x) = [η,ξ]_{(d₂,d₁)}(x)`。 -/
+theorem lieBracketTransform_neg_mul_apply {R X} [CommRing R] [Microlinear R X]
+    [PropertyW R X]
+    (ξ η : TangentVectorField R X) (d₁ d₂ : D R) (x : X) :
+    lieBracketTransform ξ η (-(D.mul R d₁ d₂)) x
+      = transformationCommutator η ξ d₂ d₁ x := by
+  have hcancel := transformationCommutator_mul_cancel ξ η d₁ d₂ x
+  have hinv := infTranslation_invertible (lieBracket ξ η) (D.mul R d₁ d₂)
+  have h1 : (lieBracket ξ η).1
+        ((lieBracket ξ η).1 (transformationCommutator η ξ d₂ d₁ x) (D.mul R d₁ d₂))
+        (-(D.mul R d₁ d₂))
+      = transformationCommutator η ξ d₂ d₁ x :=
+    hinv.1 (transformationCommutator η ξ d₂ d₁ x)
+  have hspec : ∀ y : X, (lieBracket ξ η).1 y (D.mul R d₁ d₂)
+      = transformationCommutator ξ η d₁ d₂ y := fun y => lieBracket_spec ξ η y d₁ d₂
+  rw [hspec, hcancel] at h1
+  exact h1
+
+/-- **括号变换的反对称性**：`t_{ηξ}(d) = t_{ξη}(-d)`（对所有一阶量 d）。
+
+两侧都是反序交换子 `τ(d₁,d₂) := [η,ξ]_{(d₂,d₁)}` 的 Property W 因子化：
+`lieBracketTransform η ξ`（spec + 一阶量乘法交换），以及
+`d ↦ lieBracketTransform ξ η (-d)`（反参数桥引理）。由因子化唯一性相等。 -/
+theorem lieBracketTransform_neg_comm {R X} [CommRing R] [Microlinear R X] [PropertyW R X]
+    (ξ η : TangentVectorField R X) (d : D R) :
+    lieBracketTransform η ξ d = lieBracketTransform ξ η (-d) := by
+  obtain ⟨t'', hspec'', huniq''⟩ :=
+    PropertyW.propertyW (R := R) (M := X → X)
+      (fun d₁ d₂ => transformationCommutator η ξ d₂ d₁)
+      (fun d₁ => transformationCommutator_leftAxis η ξ d₁)
+      (fun d₂ => transformationCommutator_rightAxis η ξ d₂)
+  have hw1 : ∀ d₁ d₂ : D R, lieBracketTransform η ξ (D.mul R d₁ d₂)
+      = transformationCommutator η ξ d₂ d₁ := by
+    intro d₁ d₂
+    rw [D.mul_comm R d₁ d₂]
+    exact lieBracketTransform_spec η ξ d₂ d₁
+  have hw2 : ∀ d₁ d₂ : D R, lieBracketTransform ξ η (-(D.mul R d₁ d₂))
+      = transformationCommutator η ξ d₂ d₁ := by
+    intro d₁ d₂
+    funext x
+    exact lieBracketTransform_neg_mul_apply ξ η d₁ d₂ x
+  have hW1 : lieBracketTransform η ξ = t'' := huniq'' _ hw1
+  have hW2 : (fun d' => lieBracketTransform ξ η (-d')) = t'' := huniq'' _ hw2
+  exact congrFun (hW1.trans hW2.symm) d
+
+/-- **李括号的逐点反参数公式**：`[η,ξ](x)(d) = [ξ,η](x)(-d)`。 -/
+theorem lieBracket_apply_neg {R X} [CommRing R] [Microlinear R X] [PropertyW R X]
+    (ξ η : TangentVectorField R X) (x : X) (d : D R) :
+    (lieBracket η ξ).1 x d = (lieBracket ξ η).1 x (-d) :=
+  congrFun (lieBracketTransform_neg_comm ξ η d) x
+
+/-- **李括号的反对称性**：`[η, ξ] = (-1) • [ξ, η]`（标量 `-1` 数乘形式）。 -/
+theorem lieBracket_antisymm {R X} [CommRing R] [Microlinear R X] [PropertyW R X]
+    (ξ η : TangentVectorField R X) :
+    lieBracket η ξ = (-1 : R) • lieBracket ξ η := by
+  have hrfl : ∀ (x : X) (d : D R), ((-1 : R) • lieBracket ξ η).1 x d
+      = (lieBracket ξ η).1 x ((-1 : R) • d) := fun x d => rfl
+  refine Subtype.ext (funext fun x => funext fun d => ?_)
+  rw [lieBracket_apply_neg ξ η x d, hrfl x d, D.neg_one_smul]
+
 end TangentVectorField
