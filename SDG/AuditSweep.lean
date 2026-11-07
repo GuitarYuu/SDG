@@ -160,3 +160,6 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.algD2_zero
 #print axioms SDG.DifferentialForms.algD3_zero
 #print axioms SDG.DifferentialForms.algD_d3_exact
+
+-- AlgebraicForms：2-形式反对称重组（第六十一接力点续）
+#print axioms SDG.DifferentialForms.algForm2_regroup
