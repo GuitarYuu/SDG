@@ -163,3 +163,6 @@ import SDG.ScratchR
 
 -- AlgebraicForms：2-形式反对称重组（第六十一接力点续）
 #print axioms SDG.DifferentialForms.algForm2_regroup
+
+-- AlgebraicForms：d²|₂（2-形式层好形式类，d² 全链收官，第六十三接力点）
+#print axioms SDG.DifferentialForms.algD_d2_two_form

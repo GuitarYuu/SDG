@@ -3,26 +3,38 @@
 ## 1. 是否已有相关形式化？
 
 ### 已知的 SDG / 微分几何形式化项目
+（2026-11-07 核实：已通读 Brasca–Clemente 原文 arXiv:2603.17457v3 全文 32 页）
 
 | 项目 | 证明助手 | 范围 | 与本项目的关系 |
 |---|---|---|---|
-| Mathlib 的 `SmoothSpace` 系列 | Lean 4 | 经典微分几何（流形、切丛、微分形式、Stokes） | **不同框架**——经典路线（局部坐标+拓扑），非合成路线 |
-| Fermat (Coq) | Coq | SDG 基础探索（KL 公理、微线性） | 研究原型，未涉及微分形式/de Rham 复形/上同调 |
-| Agda/HoTT 中的 SDG | Agda/HoTT | 微线性、无穷小群 | 不同逻辑基础 |
-| Isabelle 的形式化 | Isabelle/HOL | 各种分析 | 独立框架 |
+| **Brasca–Clemente，《Synthetic Differential Geometry in Lean》**（arXiv:2603.17457v3，2026-10-19，已过同行评审） | Lean 4 + mathlib | **SDG 基础微积分**：Dₖ、KL 公理（Koc06 公理 1 与 1′）、导数 ∂ 与消去引理、Leibniz/链式/幂法则、**单变量 Taylor（Thm 4.2.3）与多变量 Taylor（Thm 5.2.4，主定理）**、偏导交换 ∂ᵢ∂ⱼ=∂ⱼ∂ᵢ（Prop 5.1.4） | **直接相关、必须引用**。只做 Taylor 展开侧；全文**无**微分形式、外微分 d、d²=0、楔积、李括号、电流、上同调、积分公理、微线性（逐节核对） |
+| SynthLean（Nawrocki et al., CPP 2026） | Lean 4 | 合成数学推理框架 | 相邻领域，非 SDG de Rham |
+| Mathlib 的经典微分几何 | Lean 4 | 流形、切丛、微分形式、Stokes | **不同框架**——经典路线（局部坐标+拓扑），非合成路线 |
+| Fermat (Coq)、Agda/HoTT SDG | Coq/Agda | SDG 基础探索（KL、微线性） | 研究原型，未涉及 de Rham 复形 |
 
-> **注意**：以上列表基于 2026-11 的知识，建议投稿前用 Google Scholar
-> 搜索 "Synthetic Differential Geometry" + "Lean" / "Coq" / "formalization"
-> 确认是否有新出现的相关工作。
+> **Brasca–Clemente 的工程方法**（对照）：显式添加**唯一选择公理**
+> `axiom axiom_unique_choice`（Koc06 II.3.4 在 topos 内成立、Lean 需显式加入）；
+> Damiano Testa 的 choice-linter；**fork mathlib** 改写 1.6 万+ 条声明为
+> choice-free（Rat.instField、`Fintype (Fin n)` 等）。他们把 smooth topos /
+> well-adapted models 留给 "forthcoming work"——该赛道已占，本项目不竞争。
+>
+> **本项目对照优势**：零 fork（Fin 专用构造性替身 `FinPerm`/`finSum`/`finProd`）、
+> **不引入唯一选择公理**（KL 数据化 + 子类型投影）——111 条核心声明 axiom
+> 足迹为 `[propext, Quot.sound]`，严格小于他们的
+> `[propext, Quot.sound, axiom_unique_choice]`。诚实注记：他们的 KL 假设
+> （∃! 形式）本身比我们的数据化 KL 稍弱，在 topos 内部二者等价
+> （呼应其 Remark 4.1.2），论文中应写明。
 
-### 发表的空白点
+### 发表的空白点（核实后修正）
 
-1. **首个** Lean 4 中的 SDG 形式化（KL 公理 + 微线性 + 切丛 + 形式层全套）
-2. **首个** 无选择公理的 de Rham 复形 d²=0 构造性证明（两层：单纯+场变元）
-3. **首个** SDG 框架下的李括号形式化（Property W 因子化路线，Kock I.9）
-4. **首个** SDG 电流层与 Stokes 配对的形式化
-5. **NoChoice 审计范式**：可复用的构造性形式化方法论
-6. **111 条核心声明的 axiom 审计**：全部在 [propext, Quot.sound] 内
+1. ~~"首个 Lean 4 SDG 形式化"~~ ——已被 Brasca–Clemente 占据（Taylor 微积分侧）。
+   **本项目定位改为：把 Lean 4 的 SDG 形式化从 Taylor 微积分推进到 de Rham 复形。**
+2. **首个** 微分形式 + Koszul 外微分 + **d²=0** 的 SDG 形式化（两层：单纯层+场变元层；场变元层含 0/1/2-形式三层 d²=0 与三阶链 d³）——他们全文未涉及
+3. **首个** SDG 李括号形式化（Property W 因子化路线、反对称、交换子公式、Jacobi）——他们连向量场对象都没有
+4. **首个** SDG 电流层与 Stokes 配对、Hⁿ/Hₙ 同调群、cup 积——他们未涉及
+5. **微线性理论**（Microlinear R R ⇒ KL 全 schema、方向导数沿切向量和可加）——他们不需要也未发展
+6. **积分层**（FTC、分部积分）——他们连 Kock 积分公理都未引入
+7. 更小公理足迹 + 不 fork mathlib 的构造性方法论（与他们的 fork 路线形成方法论对照）
 
 ---
 
@@ -40,11 +52,13 @@
 
 ### 推荐论文主题
 
-**Option A（推荐）：完整 SDG 形式化论文**
+**Option A（推荐）：de Rham 复形形式化论文**
 
-> "A Constructive Formalization of Synthetic Differential Geometry in Lean 4"
-> 覆盖 KL 公理 → 微线性 → 切丛 → 微分形式 → de Rham 复形 → d²=0 → 上同调
-> 卖点：首个 Lean 4 SDG；无选择公理；111 条审计
+> "The de Rham Complex in Synthetic Differential Geometry: A Choice-Free
+> Formalization in Lean 4"
+> 覆盖 微分形式 → Koszul d → d²=0（两层）→ 李括号 → 电流层 → 上同调
+> 卖点：把 SDG 形式化从 Brasca–Clemente 的 Taylor 微积分推进到 de Rham 链；
+> 零选择公理（连唯一选择也不用）；111 条审计；微线性与李括号理论
 > 页数：20-30 页
 
 **Option B：聚焦 d²=0 技术论文**

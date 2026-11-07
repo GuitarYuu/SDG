@@ -1271,6 +1271,225 @@ theorem algForm2_regroup [Microlinear R X] [PropertyW R X] (α : AlgForm2 R X)
   rw [h1, hneg]
   simp only [Pi.neg_apply]
 
+/-- **⭐⭐ d² = 0（2-形式层，好形式类）——d² 全链收官**：对与函数作用相容且
+反对称的 2-形式 α（场可加 `hadd`、零保持 `hzero`、三体折叠 `hfold`、
+反对称 `halt` 四假设；负线性由前两者内部推导），Koszul 外微分的平方为零：
+`algD3 (algD2 α) ξ₀ ξ₁ ξ₂ ξ₃ = 0`。
+
+证明：Koszul 4-顶点全展开（72 项）——12 对二阶导数原子（外层 4 组与
+括号槽 6 组经交换子公式 `fieldDeriv_lieBracket` 展开后两两相消）、
+12 对「导数-括号槽」原子两两相消、6 个交叉 α-括号原子经 `halt`（hx 桥）
+配对相消；**剩余 12 个二重括号原子按尾参数重组为 4 组 Jacobi 三元组**
+（5 条 `algForm2_regroup` 负形→正形桥 + 直接项），每组恰为函数层 Jacobi
+`fieldDeriv_jacobi` 的实例，由 `hfold` 逐组清零收官。全部无选择公理。 -/
+theorem algD_d2_two_form [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (α : AlgForm2 R X)
+    (hadd : ∀ φ ψ : TangentVectorField R X, α (φ + ψ) = α φ + α ψ)
+    (hzero : α 0 = 0)
+    (hfold : ∀ φ₁ φ₂ φ₃ : TangentVectorField R X,
+      (∀ g : X → R, fieldDeriv φ₁ g + fieldDeriv φ₂ g + fieldDeriv φ₃ g = 0) →
+      α φ₁ + α φ₂ + α φ₃ = 0)
+    (halt : ∀ φ ψ : TangentVectorField R X, α φ ψ = -α ψ φ)
+    (ξ₀ ξ₁ ξ₂ ξ₃ : TangentVectorField R X) :
+    algD3 (algD2 α) ξ₀ ξ₁ ξ₂ ξ₃ = 0 := by
+  funext x
+  -- 负线性由可加性 + 零保持内部推导（接口与 d²|₁ 定理平行）
+  have hneg : ∀ φ : TangentVectorField R X, α ((-1 : R) • φ) = -α φ := by
+    intro φ
+    have h1 : α ((-1 : R) • φ + φ) = α ((-1 : R) • φ) + α φ := hadd _ _
+    rw [field_add_neg_smul φ, hzero] at h1
+    exact eq_neg_of_add_eq_zero_left h1.symm
+  -- 10 条 rfl-桥：外层 4 组 + 括号槽 6 组（algD2 定义逐字展开）
+  have hbT0 : algD2 α ξ₁ ξ₂ ξ₃
+      = fieldDeriv ξ₁ (α ξ₂ ξ₃) - fieldDeriv ξ₂ (α ξ₁ ξ₃)
+        + fieldDeriv ξ₃ (α ξ₁ ξ₂) - α (lieBracket ξ₁ ξ₂) ξ₃
+        + α (lieBracket ξ₁ ξ₃) ξ₂ - α (lieBracket ξ₂ ξ₃) ξ₁ := rfl
+  have hbT1 : algD2 α ξ₀ ξ₂ ξ₃
+      = fieldDeriv ξ₀ (α ξ₂ ξ₃) - fieldDeriv ξ₂ (α ξ₀ ξ₃)
+        + fieldDeriv ξ₃ (α ξ₀ ξ₂) - α (lieBracket ξ₀ ξ₂) ξ₃
+        + α (lieBracket ξ₀ ξ₃) ξ₂ - α (lieBracket ξ₂ ξ₃) ξ₀ := rfl
+  have hbT2 : algD2 α ξ₀ ξ₁ ξ₃
+      = fieldDeriv ξ₀ (α ξ₁ ξ₃) - fieldDeriv ξ₁ (α ξ₀ ξ₃)
+        + fieldDeriv ξ₃ (α ξ₀ ξ₁) - α (lieBracket ξ₀ ξ₁) ξ₃
+        + α (lieBracket ξ₀ ξ₃) ξ₁ - α (lieBracket ξ₁ ξ₃) ξ₀ := rfl
+  have hbT3 : algD2 α ξ₀ ξ₁ ξ₂
+      = fieldDeriv ξ₀ (α ξ₁ ξ₂) - fieldDeriv ξ₁ (α ξ₀ ξ₂)
+        + fieldDeriv ξ₂ (α ξ₀ ξ₁) - α (lieBracket ξ₀ ξ₁) ξ₂
+        + α (lieBracket ξ₀ ξ₂) ξ₁ - α (lieBracket ξ₁ ξ₂) ξ₀ := rfl
+  have hbp01 : algD2 α (lieBracket ξ₀ ξ₁) ξ₂ ξ₃
+      = fieldDeriv (lieBracket ξ₀ ξ₁) (α ξ₂ ξ₃)
+        - fieldDeriv ξ₂ (α (lieBracket ξ₀ ξ₁) ξ₃)
+        + fieldDeriv ξ₃ (α (lieBracket ξ₀ ξ₁) ξ₂)
+        - α (lieBracket (lieBracket ξ₀ ξ₁) ξ₂) ξ₃
+        + α (lieBracket (lieBracket ξ₀ ξ₁) ξ₃) ξ₂
+        - α (lieBracket ξ₂ ξ₃) (lieBracket ξ₀ ξ₁) := rfl
+  have hbp02 : algD2 α (lieBracket ξ₀ ξ₂) ξ₁ ξ₃
+      = fieldDeriv (lieBracket ξ₀ ξ₂) (α ξ₁ ξ₃)
+        - fieldDeriv ξ₁ (α (lieBracket ξ₀ ξ₂) ξ₃)
+        + fieldDeriv ξ₃ (α (lieBracket ξ₀ ξ₂) ξ₁)
+        - α (lieBracket (lieBracket ξ₀ ξ₂) ξ₁) ξ₃
+        + α (lieBracket (lieBracket ξ₀ ξ₂) ξ₃) ξ₁
+        - α (lieBracket ξ₁ ξ₃) (lieBracket ξ₀ ξ₂) := rfl
+  have hbp03 : algD2 α (lieBracket ξ₀ ξ₃) ξ₁ ξ₂
+      = fieldDeriv (lieBracket ξ₀ ξ₃) (α ξ₁ ξ₂)
+        - fieldDeriv ξ₁ (α (lieBracket ξ₀ ξ₃) ξ₂)
+        + fieldDeriv ξ₂ (α (lieBracket ξ₀ ξ₃) ξ₁)
+        - α (lieBracket (lieBracket ξ₀ ξ₃) ξ₁) ξ₂
+        + α (lieBracket (lieBracket ξ₀ ξ₃) ξ₂) ξ₁
+        - α (lieBracket ξ₁ ξ₂) (lieBracket ξ₀ ξ₃) := rfl
+  have hbp12 : algD2 α (lieBracket ξ₁ ξ₂) ξ₀ ξ₃
+      = fieldDeriv (lieBracket ξ₁ ξ₂) (α ξ₀ ξ₃)
+        - fieldDeriv ξ₀ (α (lieBracket ξ₁ ξ₂) ξ₃)
+        + fieldDeriv ξ₃ (α (lieBracket ξ₁ ξ₂) ξ₀)
+        - α (lieBracket (lieBracket ξ₁ ξ₂) ξ₀) ξ₃
+        + α (lieBracket (lieBracket ξ₁ ξ₂) ξ₃) ξ₀
+        - α (lieBracket ξ₀ ξ₃) (lieBracket ξ₁ ξ₂) := rfl
+  have hbp13 : algD2 α (lieBracket ξ₁ ξ₃) ξ₀ ξ₂
+      = fieldDeriv (lieBracket ξ₁ ξ₃) (α ξ₀ ξ₂)
+        - fieldDeriv ξ₀ (α (lieBracket ξ₁ ξ₃) ξ₂)
+        + fieldDeriv ξ₂ (α (lieBracket ξ₁ ξ₃) ξ₀)
+        - α (lieBracket (lieBracket ξ₁ ξ₃) ξ₀) ξ₂
+        + α (lieBracket (lieBracket ξ₁ ξ₃) ξ₂) ξ₀
+        - α (lieBracket ξ₀ ξ₂) (lieBracket ξ₁ ξ₃) := rfl
+  have hbp23 : algD2 α (lieBracket ξ₂ ξ₃) ξ₀ ξ₁
+      = fieldDeriv (lieBracket ξ₂ ξ₃) (α ξ₀ ξ₁)
+        - fieldDeriv ξ₀ (α (lieBracket ξ₂ ξ₃) ξ₁)
+        + fieldDeriv ξ₁ (α (lieBracket ξ₂ ξ₃) ξ₀)
+        - α (lieBracket (lieBracket ξ₂ ξ₃) ξ₀) ξ₁
+        + α (lieBracket (lieBracket ξ₂ ξ₃) ξ₁) ξ₀
+        - α (lieBracket ξ₀ ξ₁) (lieBracket ξ₂ ξ₃) := rfl
+  -- 四组 hfold（每组三场 = 函数层 Jacobi 的组合）
+  have hA := hfold (lieBracket (lieBracket ξ₀ ξ₁) ξ₂)
+    (lieBracket (lieBracket ξ₂ ξ₀) ξ₁) (lieBracket (lieBracket ξ₁ ξ₂) ξ₀) (by
+      intro g
+      show fieldDeriv (lieBracket (lieBracket ξ₀ ξ₁) ξ₂) g
+        + fieldDeriv (lieBracket (lieBracket ξ₂ ξ₀) ξ₁) g
+        + fieldDeriv (lieBracket (lieBracket ξ₁ ξ₂) ξ₀) g = 0
+      funext z
+      have hj := congrFun (fieldDeriv_jacobi ξ₀ ξ₁ ξ₂ g) z
+      simp only [Pi.add_apply, Pi.zero_apply] at hj
+      show fieldDeriv (lieBracket (lieBracket ξ₀ ξ₁) ξ₂) g z
+        + fieldDeriv (lieBracket (lieBracket ξ₂ ξ₀) ξ₁) g z
+        + fieldDeriv (lieBracket (lieBracket ξ₁ ξ₂) ξ₀) g z = 0
+      linear_combination (norm := ring_nf) hj)
+  have hB := hfold (lieBracket (lieBracket ξ₀ ξ₃) ξ₁)
+    (lieBracket (lieBracket ξ₃ ξ₁) ξ₀) (lieBracket (lieBracket ξ₁ ξ₀) ξ₃) (by
+      intro g
+      show fieldDeriv (lieBracket (lieBracket ξ₀ ξ₃) ξ₁) g
+        + fieldDeriv (lieBracket (lieBracket ξ₃ ξ₁) ξ₀) g
+        + fieldDeriv (lieBracket (lieBracket ξ₁ ξ₀) ξ₃) g = 0
+      funext z
+      have hj := congrFun (fieldDeriv_jacobi ξ₀ ξ₃ ξ₁ g) z
+      simp only [Pi.add_apply, Pi.zero_apply] at hj
+      show fieldDeriv (lieBracket (lieBracket ξ₀ ξ₃) ξ₁) g z
+        + fieldDeriv (lieBracket (lieBracket ξ₃ ξ₁) ξ₀) g z
+        + fieldDeriv (lieBracket (lieBracket ξ₁ ξ₀) ξ₃) g z = 0
+      linear_combination (norm := ring_nf) hj)
+  have hC := hfold (lieBracket (lieBracket ξ₀ ξ₂) ξ₃)
+    (lieBracket (lieBracket ξ₂ ξ₃) ξ₀) (lieBracket (lieBracket ξ₃ ξ₀) ξ₂) (by
+      intro g
+      show fieldDeriv (lieBracket (lieBracket ξ₀ ξ₂) ξ₃) g
+        + fieldDeriv (lieBracket (lieBracket ξ₂ ξ₃) ξ₀) g
+        + fieldDeriv (lieBracket (lieBracket ξ₃ ξ₀) ξ₂) g = 0
+      funext z
+      have hj := congrFun (fieldDeriv_jacobi ξ₀ ξ₂ ξ₃ g) z
+      simp only [Pi.add_apply, Pi.zero_apply] at hj
+      show fieldDeriv (lieBracket (lieBracket ξ₀ ξ₂) ξ₃) g z
+        + fieldDeriv (lieBracket (lieBracket ξ₂ ξ₃) ξ₀) g z
+        + fieldDeriv (lieBracket (lieBracket ξ₃ ξ₀) ξ₂) g z = 0
+      linear_combination (norm := ring_nf) hj)
+  have hD := hfold (lieBracket (lieBracket ξ₁ ξ₂) ξ₃)
+    (lieBracket (lieBracket ξ₂ ξ₃) ξ₁) (lieBracket (lieBracket ξ₃ ξ₁) ξ₂) (by
+      intro g
+      show fieldDeriv (lieBracket (lieBracket ξ₁ ξ₂) ξ₃) g
+        + fieldDeriv (lieBracket (lieBracket ξ₂ ξ₃) ξ₁) g
+        + fieldDeriv (lieBracket (lieBracket ξ₃ ξ₁) ξ₂) g = 0
+      funext z
+      have hj := congrFun (fieldDeriv_jacobi ξ₁ ξ₂ ξ₃ g) z
+      simp only [Pi.add_apply, Pi.zero_apply] at hj
+      show fieldDeriv (lieBracket (lieBracket ξ₁ ξ₂) ξ₃) g z
+        + fieldDeriv (lieBracket (lieBracket ξ₂ ξ₃) ξ₁) g z
+        + fieldDeriv (lieBracket (lieBracket ξ₃ ξ₁) ξ₂) g z = 0
+      linear_combination (norm := ring_nf) hj)
+  -- 点态化四组（尾变元 = A:ξ₃, B:ξ₂, C:ξ₁, D:ξ₀——与 hcomb 分组对应）
+  have hAx := congrFun (congrFun hA ξ₃) x
+  simp only [Pi.add_apply, Pi.zero_apply] at hAx
+  have hBx := congrFun (congrFun hB ξ₂) x
+  simp only [Pi.add_apply, Pi.zero_apply] at hBx
+  have hCx := congrFun (congrFun hC ξ₁) x
+  simp only [Pi.add_apply, Pi.zero_apply] at hCx
+  have hDx := congrFun (congrFun hD ξ₀) x
+  simp only [Pi.add_apply, Pi.zero_apply] at hDx
+  -- 交叉对的 halt-点态等式
+  have hx1 : α (lieBracket ξ₂ ξ₃) (lieBracket ξ₀ ξ₁) x
+      = -α (lieBracket ξ₀ ξ₁) (lieBracket ξ₂ ξ₃) x := by
+    have h2a := halt (lieBracket ξ₂ ξ₃) (lieBracket ξ₀ ξ₁)
+    have h2c := congrFun h2a x
+    simpa only [Pi.neg_apply] using h2c
+  have hx2 : α (lieBracket ξ₁ ξ₃) (lieBracket ξ₀ ξ₂) x
+      = -α (lieBracket ξ₀ ξ₂) (lieBracket ξ₁ ξ₃) x := by
+    have h2a := halt (lieBracket ξ₁ ξ₃) (lieBracket ξ₀ ξ₂)
+    have h2c := congrFun h2a x
+    simpa only [Pi.neg_apply] using h2c
+  have hx3 : α (lieBracket ξ₁ ξ₂) (lieBracket ξ₀ ξ₃) x
+      = -α (lieBracket ξ₀ ξ₃) (lieBracket ξ₁ ξ₂) x := by
+    have h2a := halt (lieBracket ξ₁ ξ₂) (lieBracket ξ₀ ξ₃)
+    have h2c := congrFun h2a x
+    simpa only [Pi.neg_apply] using h2c
+  -- 重组桥（bare-原子方向）：负形原子 → hfold-组正形原子
+  have gA : α (lieBracket (lieBracket ξ₀ ξ₂) ξ₁) ξ₃ x
+      = -α (lieBracket (lieBracket ξ₂ ξ₀) ξ₁) ξ₃ x := by
+    have h2a := algForm2_regroup α hneg ξ₀ ξ₂ ξ₁ ξ₃
+    have h2c := congrFun h2a x
+    simpa only [Pi.neg_apply] using h2c
+  have gB1 : α (lieBracket (lieBracket ξ₀ ξ₁) ξ₃) ξ₂ x
+      = -α (lieBracket (lieBracket ξ₁ ξ₀) ξ₃) ξ₂ x := by
+    have h2a := algForm2_regroup α hneg ξ₀ ξ₁ ξ₃ ξ₂
+    have h2c := congrFun h2a x
+    simpa only [Pi.neg_apply] using h2c
+  have gB2 : α (lieBracket (lieBracket ξ₁ ξ₃) ξ₀) ξ₂ x
+      = -α (lieBracket (lieBracket ξ₃ ξ₁) ξ₀) ξ₂ x := by
+    have h2a := algForm2_regroup α hneg ξ₁ ξ₃ ξ₀ ξ₂
+    have h2c := congrFun h2a x
+    simpa only [Pi.neg_apply] using h2c
+  have gC : α (lieBracket (lieBracket ξ₀ ξ₃) ξ₂) ξ₁ x
+      = -α (lieBracket (lieBracket ξ₃ ξ₀) ξ₂) ξ₁ x := by
+    have h2a := algForm2_regroup α hneg ξ₀ ξ₃ ξ₂ ξ₁
+    have h2c := congrFun h2a x
+    simpa only [Pi.neg_apply] using h2c
+  have gD1 : α (lieBracket (lieBracket ξ₁ ξ₃) ξ₂) ξ₀ x
+      = -α (lieBracket (lieBracket ξ₃ ξ₁) ξ₂) ξ₀ x := by
+    have h2a := algForm2_regroup α hneg ξ₁ ξ₃ ξ₂ ξ₀
+    have h2c := congrFun h2a x
+    simpa only [Pi.neg_apply] using h2c
+  -- hcomb：大和 = A(ξ₃) + B(ξ₂) + C(ξ₁) − D(ξ₀) 四组点态和
+  have hcomb : algD3 (algD2 α) ξ₀ ξ₁ ξ₂ ξ₃ x
+      = (α (lieBracket (lieBracket ξ₀ ξ₁) ξ₂) ξ₃ x
+        + α (lieBracket (lieBracket ξ₂ ξ₀) ξ₁) ξ₃ x
+        + α (lieBracket (lieBracket ξ₁ ξ₂) ξ₀) ξ₃ x)
+      + (α (lieBracket (lieBracket ξ₀ ξ₃) ξ₁) ξ₂ x
+        + α (lieBracket (lieBracket ξ₃ ξ₁) ξ₀) ξ₂ x
+        + α (lieBracket (lieBracket ξ₁ ξ₀) ξ₃) ξ₂ x)
+      + (α (lieBracket (lieBracket ξ₀ ξ₂) ξ₃) ξ₁ x
+        + α (lieBracket (lieBracket ξ₂ ξ₃) ξ₀) ξ₁ x
+        + α (lieBracket (lieBracket ξ₃ ξ₀) ξ₂) ξ₁ x)
+      - (α (lieBracket (lieBracket ξ₁ ξ₂) ξ₃) ξ₀ x
+        + α (lieBracket (lieBracket ξ₂ ξ₃) ξ₁) ξ₀ x
+        + α (lieBracket (lieBracket ξ₃ ξ₁) ξ₂) ξ₀ x) := by
+    simp only [algD3, hbT0, hbT1, hbT2, hbT3, hbp01, hbp02, hbp03, hbp12,
+      hbp13, hbp23]
+    simp only [fieldDeriv_add, fieldDeriv_sub]
+    rw [fieldDeriv_lieBracket ξ₀ ξ₁ (α ξ₂ ξ₃), fieldDeriv_lieBracket ξ₀ ξ₂ (α ξ₁ ξ₃),
+        fieldDeriv_lieBracket ξ₀ ξ₃ (α ξ₁ ξ₂), fieldDeriv_lieBracket ξ₁ ξ₂ (α ξ₀ ξ₃),
+        fieldDeriv_lieBracket ξ₁ ξ₃ (α ξ₀ ξ₂), fieldDeriv_lieBracket ξ₂ ξ₃ (α ξ₀ ξ₁)]
+    simp only [Pi.add_apply, Pi.sub_apply]
+    rw [hx1, hx2, hx3, gA, gB1, gB2, gC, gD1]
+    ring
+  rw [hcomb]
+  rw [hAx, hBx, hCx, hDx]
+  simp only [Pi.zero_apply]
+  ring
+
 end AlgebraicForms
 
 end SDG.DifferentialForms

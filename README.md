@@ -4,7 +4,8 @@
 SDG）的核心内容做**构造性、无选择公理**的形式化。目标：完成 Kock
 《Synthetic Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham
 复形链条（含电流层与场变元代数层）。**核心理论闭环已宣告**：de Rham 复形
-正合性（d² = 0）在单纯层与场变元层两层完整证明。
+正合性（d² = 0）在单纯层与场变元层两层完整证明，且场变元层为**全链**
+（0-形式、1-形式、2-形式三层 d² = 0 + 三阶链 d³(d₀f) = 0）。
 
 ## 项目背景与合作
 
@@ -36,7 +37,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 - 禁止 `sorry`、`admit`、裸 `axiom`、`Classical.choice`、`unsafe`；
 - 禁止用 `noncomputable`/`opaque` 绕过证明；
 - `d² = 0`、Stokes 等定理全部给出完整证明，不塞进 typeclass；
-- 每条新声明可由 `#print axioms` 复核（当前 **111 条核心声明**全部为
+- 每条新声明可由 `#print axioms` 复核（当前 **112 条核心声明**全部为
   `[propext, Quot.sound]` 或更少，见 `SDG/AuditSweep.lean`）。
 
 凡 Mathlib 中依赖选择公理的构造（如 `Finset.sum`、
@@ -56,7 +57,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 | `SDG/LieBracket.lean` | 李括号（Property W 因子化路线，Kock I.9） |
 | `SDG/DifferentialForms/Core.lean` | 严格逐点形式层、严格拉回、0-形式外微分 `d₀` 及 Leibniz |
 | `SDG/DifferentialForms/Algebra.lean` | 形式代数主体（置换引擎、楔积 E0-E3、上闭链 de Rham 复形、cup 积、分次 Leibniz、∂²=0） |
-| `SDG/DifferentialForms/AlgebraicForms.lean` | **场变元代数层**：李括号配套、Koszul 外微分 algD0-D3、d²=0 两层闭环、楔积、分次 Leibniz |
+| `SDG/DifferentialForms/AlgebraicForms.lean` | **场变元代数层**：李括号配套、Koszul 外微分 algD0-D3、d²=0 全链（0/1/2-形式层+三阶）、楔积、分次 Leibniz |
 | `SDG/DifferentialForms/Simplicial.lean` | 单纯形面映射 `faceMap i = i.succAbove` |
 | `SDG/DifferentialForms/StokesCup.lean` | 分次 Leibniz（cup 层）、cochainLenCast、cupProduct_isCocycle |
 | `SDG/DifferentialForms/CupAssoc.lean` | cupProduct 结合律（cupProduct_assoc） |
@@ -113,10 +114,14 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 3. **Koszul 外微分**：`algD0`（0-形式）、`algD1`（1-形式 Koszul 公式）、
    `algD2`（2-形式三顶点）、`algD3`（3-形式 4-顶点）——对形式变元
    R-线性（`algD1/2/3_add/smul`）
-4. **⭐ d² = 0（核心理论闭环）**：
+4. **⭐ d² = 0（核心理论闭环，全链收官）**：
    - **d²|₀**：`algD_d2_zero_form`——`d(d₀f) = 0`（交换子公式直推）
    - **d²|₁**：`algD_d2_one_form`——`d(dω) = 0` 对好形式 ω
      （场可加+零保持+三体折叠三假设 → Koszul 展开 → 函数层 Jacobi）
+   - **d²|₂**：`algD_d2_two_form`——`d(dα) = 0` 对好 2-形式 α
+     （可加+零保持+折叠+反对称四假设；72 项 Koszul 4-顶点展开——
+     12 对二阶导数原子 + 12 对导数-括号槽原子 + 6 个 halt 交叉对相消，
+     剩余 12 个二重括号原子按尾参数重组为 4 组 Jacobi 三元组由 hfold 清零）
    - **精确链**：`algD_d2_exact`——`d²(d₀f) = 0` 零假设
    - **三阶链**：`algD_d3_exact`——`d³(d₀f) = 0`
 5. **楔积与交错化**：`wedge11`（1×1 楔积）、`wedge21`/`wedge12`（2+1/1+2
@@ -132,7 +137,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 
 ### E. 审计基建（AuditSweep.lean）
 
-**111 条核心声明**的批量 `#print axioms` 复核——全部
+**112 条核心声明**的批量 `#print axioms` 复核——全部
 `[propext, Quot.sound]` 或更少，**零 `Classical.choice`、零 `sorryAx`**。
 新增声明追加一行即可复验。
 
@@ -143,7 +148,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 | 全量构建目标 | 8732 jobs |
 | Lean 工具链 | v4.34.0-rc1 |
 | Mathlib | v4.34.0-rc1 |
-| 核心声明审计 | 111 条全干净 |
+| 核心声明审计 | 112 条全干净 |
 | 选择公理依赖 | 零 |
 | sorry/admit | 零 |
 | 主力模块 | Algebra.lean（~4700 行）、AlgebraicForms.lean（~1500 行） |
@@ -176,10 +181,8 @@ lake env lean SDG/TestNoChoice.lean # 无选择公理自检
 
 ## 后续路线图
 
-1. **d²|₂**（任意 2-形式 α 的 algD3 (algD2 α) = 0）——WIP 存档，
-   hpair-架构 + 全部桥就绪，差 halt-桥精调
-2. **场变元楔积一般 p×q 分次 Leibniz**——alt2-交错化模板已立
-3. **current-Stokes 定理**——路径-电流模型
-4. **参数化单形积分 n≥3** + Fubini
-5. **商层分次交换律**（shuffle-cup）
-6. **Čech 上同调、de Rham 同构**的 SDG 版本
+1. **场变元楔积一般 p×q 分次 Leibniz**——alt2-交错化模板已立
+2. **current-Stokes 定理**——路径-电流模型
+3. **参数化单形积分 n≥3** + Fubini
+4. **商层分次交换律**（shuffle-cup）
+5. **Čech 上同调、de Rham 同构**的 SDG 版本
