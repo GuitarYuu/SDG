@@ -9,12 +9,13 @@ SDG）的核心内容做**构造性、无选择公理**的形式化。目标：�
 ## 项目背景与合作
 
 本项目起源于 **2026 年上海交通大学 Lean 暑校**（无穷类型咖啡 · AI4Math
-方向），由 **caojiarong** 发起并在暑校期间完成了项目的基础搭建（NoChoice
-审计框架、KL 公理、微线性、切丛、Core 逐点形式层、Algebra 的置换引擎与
-楔积基础）以及 Currents 电流层的初始提交。
+方向），由 **caojiarong** 与 **[GuitarYuu](https://github.com/GuitarYuu)**
+在暑校期间合作搭建，完成了项目的基础设施与初步形式化（NoChoice 审计框架、
+KL 公理、微线性、切丛、Core 逐点形式层、Algebra 的置换引擎与楔积基础、
+Currents 电流层初始提交）。
 
-暑校结束后，由于原维护者选择不再继续，本项目由
-**[GuitarYuu](https://github.com/GuitarYuu)** 接手并完成了剩余部分的
+暑校结束后，caojiarong 选择不再继续维护，本项目由
+**[GuitarYuu](https://github.com/GuitarYuu)** 独立完成了剩余部分的
 全部形式化工作，包括：Algebra.lean 的上闭链 de Rham 复形完整理论（∂²=0、
 cup 积、分次 Leibniz、分次交换律）、Currents.lean 的电流层完整理论
 （Hₙ/Hⁿ 同调群、Stokes 配对、Module R）、Integration.lean 积分层、
