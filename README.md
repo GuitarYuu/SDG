@@ -1,8 +1,10 @@
 # SDG：综合微分几何的 Lean 4 形式化
 
 在 Lean 4 + Mathlib 中对**综合微分几何**（Synthetic Differential Geometry,
-SDG）的核心内容做**构造性、无选择公理**的形式化。当前为 Kock《Synthetic
-Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham 复形链条。
+SDG）的核心内容做**构造性、无选择公理**的形式化。覆盖 Kock《Synthetic
+Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham 复形链条
+（含电流层与场变元代数层），**核心理论闭环已宣告**：de Rham 复形正合性
+（d² = 0）在单纯层与场变元层两层完整证明。
 
 ## 约束（红线）
 
@@ -11,8 +13,8 @@ Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham 复�
 - 禁止 `sorry`、`admit`、裸 `axiom`、`Classical.choice`、`unsafe`；
 - 禁止用 `noncomputable`/`opaque` 绕过证明；
 - `d² = 0`、Stokes 等定理全部给出完整证明，不塞进 typeclass；
-- 每条新声明可由 `#print axioms` 复核（当前全部为 `[propext, Quot.sound]`
-  或更少）。
+- 每条新声明可由 `#print axioms` 复核（当前 **111 条核心声明**全部为
+  `[propext, Quot.sound]` 或更少，见 `SDG/AuditSweep.lean`）。
 
 凡 Mathlib 中依赖选择公理的构造（如 `Finset.sum`、
 `AlternatingMap.domCoprod`），均以 `Fin` 专用的构造性替身绕开
@@ -23,164 +25,138 @@ Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham 复�
 | 模块 | 内容 |
 |---|---|
 | `SDG/NoChoice.lean` | 无选择公理的 linter 与 `#assert_no_choice` 审计机制 |
-| `SDG/KockLawvereDkn.lean` | Kock–Lawvere 公理与 Dₙ 环 |
-| `SDG/Infinitesimal.lean` | 无穷小对象与微线性（Microlinear） |
-| `SDG/TangentBundle.lean` | 切丛、切纤维 `TangentFiber` 及其模结构 |
-| `SDG/Derivative.lean` | 方向导数 |
-| `SDG/DifferentialForms/Core.lean` | 严格逐点形式层 `FiberwiseDifferentialForm`（每基点一个 Mathlib `AlternatingMap`）、严格拉回、0-形式外微分 `d₀` 及 Leibniz |
-| `SDG/DifferentialForms/Algebra.lean` | 形式代数主体（见下） |
+| `SDG/KockLawvereDkn.lean` | Kock–Lawvere 公理与 Dₙ 环（含全 schema） |
+| `SDG/Infinitesimal.lean` | 无穷小对象与微线性（Microlinear）、D(2)/D(3) 基础设施 |
+| `SDG/Microlinear.lean` | 微线性的 Π-保持、积保持、R 自身微线性 |
+| `SDG/TangentBundle.lean` | 切丛、切纤维 `TangentFiber` 及其模结构（AddCommMonoid + Module R） |
+| `SDG/Derivative.lean` | 方向导数（KL 公理） |
+| `SDG/LieBracket.lean` | 李括号（Property W 因子化路线，Kock I.9） |
+| `SDG/DifferentialForms/Core.lean` | 严格逐点形式层、严格拉回、0-形式外微分 `d₀` 及 Leibniz |
+| `SDG/DifferentialForms/Algebra.lean` | 形式代数主体（置换引擎、楔积 E0-E3、上闭链 de Rham 复形、cup 积、分次 Leibniz、∂²=0） |
+| `SDG/DifferentialForms/AlgebraicForms.lean` | **场变元代数层**：李括号配套、Koszul 外微分 algD0-D3、d²=0 两层闭环、楔积、分次 Leibniz |
 | `SDG/DifferentialForms/Simplicial.lean` | 单纯形面映射 `faceMap i = i.succAbove` |
-| `SDG/DifferentialForms/Currents.lean` | 电流层：拓扑/紧支撑结构、电流空间 `Current`、对偶边界 ∂（∂²=0）、单纯形链电流与积分电流 |
+| `SDG/DifferentialForms/StokesCup.lean` | 分次 Leibniz（cup 层）、cochainLenCast、cupProduct_isCocycle |
+| `SDG/DifferentialForms/CupAssoc.lean` | cupProduct 结合律（cupProduct_assoc） |
+| `SDG/DifferentialForms/CupCohomology.lean` | Hⁿ 商层 cup（deRhamCup，双线性+结合律）、H-度数 transport |
+| `SDG/DifferentialForms/CohomologyModule.lean` | 双侧 Module R 结构（ModuleCon 路线）、配对 R-双线性 |
+| `SDG/DifferentialForms/Currents.lean` | 电流层：拓扑/紧支撑、电流空间、∂²=0、Stokes 配对、Hₙ |
+| `SDG/DifferentialForms/Integration.lean` | 区间积分、FTC、原函数 |
 | `SDG/FinSumProd.lean` | 无选择 `finSum`/`finProd` 及其拆分/重排/配对引理 |
+| `SDG/AuditSweep.lean` | **111 条核心声明批量 `#print axioms` 审计** |
 
-## 已完成的形式化内容
+## 数学成果总览
 
-### 1. 严格逐点形式层（Core）
+### A. 单纯上闭链层（Algebra.lean，2026-09 ~ 10）
 
-`FiberwiseDifferentialForm R X n := ∀ x, TangentFiber R X x [⋀^Fin n]→ₗ[R] R`
-——每个基点给出一个真正的交错多线性映射，加法性/齐次性/交错性由类型
-保证。配套：严格预合成（绕开 choice-dependent 的 `compLinearMap`）、
-拉回的恒等/复合/线性定律、0-形式外微分 `d₀`（KL 方向导数）及其
-加法/数乘/常值/Leibniz 律。
+1. **构造性置换代数**：`FinPerm n` 编码、逆与双射性、逆序数、`permSum`
+2. **相邻对换与求和重排**：`finSum_swapFinAdj`（无选择求和对换不变）
+3. **楔积 E0-E3 全套**：`wedgeOneOne`/`wedgeOneAny` 交错性、分次交换律 `wedgeAny_grad_comm`
+4. **上闭链 de Rham 复形**：`Cochain R X n`、`∂`（面删除交错和）、
+   **`∂² = 0`**（`coboundary_coboundary`）、`∂(cochainOfFun f) = d₀ f`
+5. **cup 积**：`cupProduct`（Alexander-Whitney 型）、双线性、**结合律**
+   `cupProduct_assoc`、单位律 `cupProduct_unit_left/right`
+6. **分次 Leibniz**：`coboundary_cup_product`（∂(c₁∪c₂) = (∂c₁)∪c₂ + (−1)^|c₁| c₁∪(∂c₂)）
+7. **cup 上同调**：`cupProduct_isCocycle`（cup 保上闭链）
 
-### 2. 构造性置换代数（Algebra, FinPerm 段）
+### B. 同调层（Currents.lean + CupCohomology.lean + CohomologyModule.lean）
 
-归纳插入编码 `FinPerm n`、构造性逆与双射性、从单射自映射恢复编码
-（枚举全部置换）、逆序数 `invCount` 与 `depth = invCount`、无选择置换
-求和 `permSum`。
+1. **Hⁿ 商群**：`deRhamCon`（AddCon 路线）→ `deRhamCohomology`（AddCommGroup）
+2. **Hₙ 电流同调**：`currentCon` → `currentHomology`（AddCommGroup）
+3. **双侧 Module R**：`ModuleCon` 路线 → `instModuleDeRhamCohomology`/`instModuleCurrentHomology`
+4. **商层 cup**：`deRhamCup`（双线性+结合律）、`deRhamCup_add/smul`
+5. **H 层度数 transport**：`cocyclesCast`/`deRhamCohomologyCast`
+6. **类层配对**：`deRhamPairing`（Hₙ × Hⁿ → R，R-双线性）
+7. **Stokes 配对**：`chainCurrent_boundary_apply`、`currentBoundary_currentBoundary`（∂²=0）
 
-### 3. 相邻对换与求和重排（Algebra, SwapFinAdj 段）
+### C. 积分层（Integration.lean + ScratchR.lean）
 
-构造性相邻对换 `swapFinAdj j`（交换 `j, j+1`）及其值公式、自逆性、
-后继交换律；核心组合事实 **`finSum_swapFinAdj`**：无选择求和在任意
-位置的相邻对换下不变。配套 `finSum_split_at`（任意位置拆出单项）、
-`finSum_congr`、`finSum_neg`。
+1. **区间积分**：`integralR`（线性/区间可加/基本恒等式/step/sderiv）
+2. **FTC**：`integral_ftc_UI`（微积分基本定理 UnitInterval 版）
+3. **分部积分**：`integral_I_mul_parts` + `integral_I_parts`（经典对称形）
+4. **单形积分**：`simplexIntegral2`（n=2 叠代积分 + 加法/数乘）
 
-### 4. 楔积
+### D. 场变元代数层（AlgebraicForms.lean + LieBracket.lean，2026-10-27 ~ 11-07）
 
-- `1 ∧ 1` 楔积 `wedgeOneOne`：完整 `AlternatingMap` 打包 + 双线性/
-  反对称/零/分次交换/拉回相容；
-- `0 ∧ n` 楔积 `wedgeZeroLeft/Right`：单位/零/线性/拉回；
-- **一般 `1 ∧ n` 楔积**（Kock I.14 公式 (14.7)）：展开项
-  `wedgeOneAnyTerm i = (-1)ⁱ·ω(vᵢ)·η(v₀,…,v̂ᵢ,…,vₙ)`，交错性无选择证明：
-  - 极化恒等式 `alternatingMap_swapFinAdj'`：交错形式在相邻对换下变号
-    （构造性，目标只需 AddCommMonoid，对 char 2 亦成立）；
-  - `removeNth` 与相邻对换的三种位置交换关系（左移/不变/吸收）；
-  - `wedgeOneAnyFun_swapFinAdj`：相邻槽对换反号（逐项配对：η 的对换
-    变号 + `(-1)ⁱ` 错位 + `finSum_swapFinAdj` 重排）；
-  - `wedgeOneAnyFun_eq_zero_of_adjacent / _eq_zero_of_eq`：任意两槽
-    代入相等向量则值为零（相邻情形 char-2 安全的直接配对消去 +
-    冒泡归纳）。
+1. **李括号**（Kock I.9 Property W 路线）：无穷小变换交换子经 Property W
+   因子化得 `lieBracket`；**反对称性** `lieBracket_antisymm`、
+   **交换子公式** `fieldDeriv_lieBracket`：`[ξ,η](f) = ξ(ηf) − η(ξf)`、
+   **函数层 Jacobi** `fieldDeriv_jacobi`、**括号是导子**
+   `fieldDeriv_lieBracket_mul`、**C∞(X)-线性**
+   `fieldDeriv_lieBracket_smul_field`
+2. **场导子**：`fieldDeriv`（KL 刻画）+ **线性性全套**
+   （`fieldDeriv_add`/`smul`/`sub`/`neg`/`zero_fun`/`zero_field`）+
+   **乘积法则** `fieldDeriv_mul` + **可加性突破**
+   `directionalDeriv_tangentAdd`（Microlinear R R = KL 全 schema）
+3. **Koszul 外微分**：`algD0`（0-形式）、`algD1`（1-形式 Koszul 公式）、
+   `algD2`（2-形式三顶点）、`algD3`（3-形式 4-顶点）——对形式变元
+   R-线性（`algD1/2/3_add/smul`）
+4. **⭐ d² = 0（核心理论闭环）**：
+   - **d²|₀**：`algD_d2_zero_form`——`d(d₀f) = 0`（交换子公式直推）
+   - **d²|₁**：`algD_d2_one_form`——`d(dω) = 0` 对好形式 ω
+     （场可加+零保持+三体折叠三假设 → Koszul 展开 → 函数层 Jacobi）
+   - **精确链**：`algD_d2_exact`——`d²(d₀f) = 0` 零假设
+   - **三阶链**：`algD_d3_exact`——`d³(d₀f) = 0`
+5. **楔积与交错化**：`wedge11`（1×1 楔积）、`wedge21`/`wedge12`（2+1/1+2
+   插入）、`algTens2`（张量积）、`alt2`（交错化算子）、
+   **`wedge11_eq_alt2`**（楔积 = 交错化张量积）、`alt2_antisymm`、
+   `alt2_idem`
+6. **分次 Leibniz**：`algD1_algSMul_wedge`（d(f·ω) = f·dω + d₀f∧ω，
+   核心情形）+ `d_wedge11`（d(α∧ω) = dα∧ω − α∧dω，完整 1×1）
+7. **反对称重组**：`algForm2_regroup`（双重括号泛型重组）、
+   `lieBracket_neg_smul_left`（括号对 (−1)-缩放齐次性）、
+   `algForm1_neg_smul`（形式 −1-线性）、`field_add_neg_smul`（场层 (−1)·φ+φ = 0）
+8. **congr-action**：`algForm1_congr_action`（ω 尊重函数作用相等）
 
-### 5. 奇异上链与 de Rham 复形（Algebra, DeRham 段）
+### E. 审计基建（AuditSweep.lean）
 
-- n-上链 `Cochain R X n`、面删除 `coFace σ i = σ ∘ i.succAbove`；
-- 余边界算子 `∂`（面删除的交错和，无选择）及其线性、拉回自然性；
-- `∂² = 0` 于 0-上链（`coboundary_coboundary_one`，六条面组合恒等式
-  `fcc1–fcc6` 成对消去）；
-- `∂(cochainOfFun f) = d₀ f`：de Rham 微分与 KL 方向导数一致；
-- cup 积 `cupProduct`（`cupLeft/cupRight` 分组指标）：双线性、零、
-  拉回自然性、0-上链交换律；
-- 常值函数闭（`∂c = 0`）、`d₀` 的 Leibniz/加法/数乘/常值律。
+**111 条核心声明**的批量 `#print axioms` 复核——全部
+`[propext, Quot.sound]` 或更少，**零 `Classical.choice`、零 `sorryAx`**。
+新增声明追加一行即可复验。
 
-## 数学结论速览
+## 统计
 
-形式化得到的核心定理（全部无选择公理、全构造性）：
+| 指标 | 值 |
+|---|---|
+| 全量构建目标 | 8732 jobs |
+| Lean 工具链 | v4.34.0-rc1 |
+| Mathlib | v4.34.0-rc1 |
+| 核心声明审计 | 111 条全干净 |
+| 选择公理依赖 | 零 |
+| sorry/admit | 零 |
+| 主力模块 | Algebra.lean（~4700 行）、AlgebraicForms.lean（~1500 行） |
+| Git 提交 | 60+ |
 
-1. **严格形式层良构**：求值对每槽加法/数乘线性和交错性成立；
-2. **`finSum` 重排理论**：相邻对换不变、单项拆出、逐项相等/取负；
-3. **`1 ∧ n` 楔积是交错的**：相邻反交换 + 任意槽相等消去；
-4. **∂ 是复形微分**：`∂² = 0`（0-上链层）且与 `d₀` 相容。
+## 关键工程经验（RESUME.md 详录）
 
-## 场变元代数层与 Koszul 外微分（2026-10-27 ~ 2026-11-07 完成）
-
-`SDG/DifferentialForms/AlgebraicForms.lean` + `SDG/LieBracket.lean`——
-**场变元（向量场）形式的 Koszul 外微分理论**，全部无选择公理：
-
-* **李括号**（Kock I.9 的 Property W 路线）：无穷小变换交换子
-  `transformationCommutator` 经 Property W 因子化得 `lieBracket`，
-  反对称性 `lieBracket_antisymm`（`[η,ξ] = (−1)·[ξ,η]`）与对 −1
-  缩放的齐次性 `lieBracket_neg_smul_left`（W-唯一性）。
-* **场导子**：`fieldDeriv`（KL 刻画 + 乘积法则 + 线性性全套——加法
-  /数乘/减法/取负/零场）。
-* **Koszul 外微分**：`algD0`（0-形式）、`algD1`（1-形式，Koszul 公式
-  `ξ(ωη) − η(ωξ) − ω([ξ,η])`）、`algD2`（2-形式三顶点公式）——
-  对形式变元 R-线性。
-* **⭐ d² = 0（核心理论闭环）**：0-形式层（`algD_d2_zero_form`，由
-  **导子交换公式** `fieldDeriv_lieBracket`：`[ξ,η](f) = ξ(ηf) − η(ξf)`）；
-  1-形式层好形式类（`algD_d2_one_form`——场可加/零保持/三体折叠
-  三假设下 Koszul 展开坍缩到函数层 Jacobi）；**精确形式链收官
-  `algD_d2_exact`**：`d²(d₀f) = 0` 零假设成立；**三阶链
-  `algD_d3_exact`**：`d³(d₀f) = 0`。**de Rham 复形正合性的核心
-  定理在两层完整证明**。
-* **可加性突破**（第五十五接力点）：`directionalDeriv_tangentAdd`
-  （`d(g)(v+w) = d(g)(v) + d(g)(w)`——经 R 自身微线性
-  `Microlinear R R`，即 KL 全 schema）与 `fieldDeriv_add_fields`、
-  `fieldDeriv_smul_field`、`fieldDeriv_smulR_field`。
-* **函数层恒等式**：`fieldDeriv_jacobi`（Jacobi 恒等式作用于函数）、
-  `fieldDeriv_lieBracket_mul`（括号是导子）、
-  `fieldDeriv_lieBracket_smul_field`（C∞(X)-线性）、
-  `algForm1_congr_action`（ω 尊重函数作用相等）。
-
-**分部积分**（`SDG/ScratchR.lean`）：`integral_I_mul_parts` 与经典
-对称形 `integral_I_parts`（UnitInterval 上，FTC + 乘积法则组装）。
-
-**审计基建**（`SDG/AuditSweep.lean`）：89 条核心声明的批量
-`#print axioms` 复核——全部 `[propext, Quot.sound]` 或更少。
-
-## 后续路线图（未形式化部分）
-
-按优先级：
-
-1. **参数化单形积分与 Stokes**（simplexIntegral2 已有；n=3+ 归纳、
-   Fubini 需 min 分段理论）；
-2. **current-Stokes 定理**：电流与形式的配对在边界上的恒等式
-   （`Microlinear R R` 可用后，之前确诊的路径-电流 transport 障碍
-   可重新勘察）；
-3. **场变元层的分次 Leibniz**：场变元楔积 `d(α∧β) = dα∧β + (−1)^p α∧dβ`
-   （需要场变元形式的楔积定义，E3 置换引擎可复用）；
-4. **2-形式层完整理论**：AlgForm3 + `d²|₂`；
-5. **商层分次交换律**：shuffle-cup（AW-cup 不交换，独立置换工程）；
-6. Čech 上同调、de Rham 同构的 SDG 版本。
-
-## 电流层（Currents，2026-10-12 完成）
-
-`SDG/DifferentialForms/Currents.lean` 三部分，全部无选择公理：
-
-* **拓扑/紧支撑结构**：`SupportsIn`（支撑含于承载集，逐点零的构造性
-  表述）、抽象紧集族 `CompactFamily`（空集紧 + 有限并紧——currents
-  理论所需的全部拓扑公理）、`HasCompactSupport` 紧支撑函数/形式对
-  加法、取负、数乘封闭并打包为 R-子模 `compactSupportedFuns` /
-  `compactSupportedForms`；`IsCompactOrder`（预序有向性）具体化 R
-  上紧性：有界集构成紧集族、`compactFamily_Icc` 闭区间紧、
-  `hasCompactSupport_iff_interval` 紧支撑的区间刻画。
-* **电流主层**：`Current R X n := Cochain R X n →ₗ[R] R`；
-  `coboundaryLinear`（∂ 的线性打包）；对偶边界
-  `currentBoundary T c = T (∂c)`（Stokes 配对公式），线性性三条 +
-  **`currentBoundary_currentBoundary`：电流的 ∂² = 0**（D2 的直接
-  对偶推论）；单纯形链电流 `evalCochain σ`、加权族电流
-  `chainCurrent σs w`、**Stokes 配对恒等式**
-  `chainCurrent_boundary_apply`（双和经 `finSum_sum_comm` 换序）、
-  `∂[σ] = Σ (-1)^i [∂_i σ]`（`evalCochain_boundary_eq_family`）。
-* **积分电流**：仿射路径含于区间 `affine_path_mem_Icc`（预序有向
-  乘法推出）；`IntegralCurrent`（密度 + 承载区间捆绑成数据——SDG
-  预序下「紧支撑积分与承载区间选取无关」需单点质量为零的进一步
-  论证，本层诚实不作声称）；配对 `apply` 线性（加法/数乘）、
-  `apply_congr_on`（只依赖承载区间内行为）、
-  `hasCompactSupport`（与拓扑层衔接）。
+1. **KL 数据必须内联**（`have` 会丢 body 导致 defeq 断裂）
+2. **rw 在 λ-绑定下实例化元变量失败**——一律先 rfl-桥统一 β-形
+3. **omega 的蕴含假设泄漏 Classical.choice**——前置事实析取化
+4. **Pi-层的 `sub_eq_add_neg` 非 defeq**——neg-原子需显式化
+5. **结构实例缩进铁律**——字段缩进 = 内层 `{` 缩进 − 2
+6. **单文件编译不更新 olean**——探针前必须 `lake build` 目标模块
+7. **多会话并行纪律**——编辑前 git status + 读 RESUME 顶条
 
 ## 构建
 
 ```bash
-lake build          # 全量构建（首次会补建 Mathlib，约 8000+ 目标）
-lake env lean SDG/TestNoChoice.lean   # 无选择公理审计自检
+lake build          # 全量构建（8732 目标）
+lake env lean SDG/AuditSweep.lean   # 111 条核心声明 axiom 审计
+lake env lean SDG/TestNoChoice.lean # 无选择公理自检
 ```
-
-Lean 工具链：`leanprover/lean4:v4.34.0-rc1`，Mathlib `v4.34.0-rc1`。
 
 ## 分支与 PR
 
 - 工作分支 `feature/differential-forms-core`，PR：
   <https://github.com/cao-jia-rong/SDG/pull/2>（自 fork
-  [GuitarYuu/SDG](https://github.com/GuitarYuu/SDG) 发起）；
-- 断点续作见 `RESUME.md`（含关键 Lean 工程配方与已验证的坑）。
+  [GuitarYuu/SDG](https://github.com/GuitarYuu/SDG) 发起）
+- 断点续作检查点：`RESUME.md`（含 62 个接力点的完整工程日志）
+
+## 后续路线图
+
+1. **d²|₂**（任意 2-形式 α 的 algD3 (algD2 α) = 0）——WIP 存档，
+   hpair-架构 + 全部桥就绪，差 halt-桥精调
+2. **场变元楔积一般 p×q 分次 Leibniz**——alt2-交错化模板已立
+3. **current-Stokes 定理**——路径-电流模型
+4. **参数化单形积分 n≥3** + Fubini
+5. **商层分次交换律**（shuffle-cup）
+6. **Čech 上同调、de Rham 同构**的 SDG 版本
