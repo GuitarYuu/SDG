@@ -593,6 +593,190 @@ theorem algD2_smul [Microlinear R X] [PropertyW R X] (c : R) (α : AlgForm2 R X)
     Pi.add_apply]
   ring
 
+/-! ### 微线性解锁：导数的可加性与缩放（第五十五接力点）-/
+
+/-- **KL-D(2) 对角引理**：轴上仿射（系数 `c₀`、`c₁`，公共基点 `b`）的
+`D(2) → R` 函数在对角线上取值为 `b + (c₀ + c₁)·d`。
+
+证明：显式仿射映射与 `F` 都是同一轴数据的 `D(2)`-扩张，由 R 自身的
+微线性（`Microlinear R R`，即 KL 全 schema——Kock Axiom 1''，库内
+`IsKockLawvereDkn` 的推论）的唯一性相等，对角求值后交叉项
+`c₁·d·d = 0` 消去。**注意**：切片论证不可用（`D(2)` 内固定第二坐标
+的切片不是完整的 `D`），唯一可走的是扩张唯一性。 -/
+theorem kl_diag_add [Microlinear R R]
+    (F : Dn R 2 → R) (b c₀ c₁ : R)
+    (h0 : ∀ d : D R, F (Dn.embed R 0 d) = b + c₀ * (d : R))
+    (h1 : ∀ d : D R, F (Dn.embed R 1 d) = b + c₁ * (d : R)) :
+    ∀ d : D R, F (Dn.diag R d) = b + (c₀ + c₁) * (d : R) := by
+  set G : Dn R 2 → R :=
+    fun u => b + c₀ * (u.1 (0 : Fin 2)) + c₁ * (u.1 (1 : Fin 2)) with hGdef
+  have hc00 : ∀ d : D R, (Dn.embed R 0 d).1 (0 : Fin 2) = (d : R) := by
+    intro d; simp [Dn.embed]
+  have hc01 : ∀ d : D R, (Dn.embed R 0 d).1 (1 : Fin 2) = 0 := by
+    intro d; simp [Dn.embed]
+  have hc10 : ∀ d : D R, (Dn.embed R 1 d).1 (0 : Fin 2) = 0 := by
+    intro d; simp [Dn.embed]
+  have hc11 : ∀ d : D R, (Dn.embed R 1 d).1 (1 : Fin 2) = (d : R) := by
+    intro d; simp [Dn.embed]
+  have hcd : ∀ (j : Fin 2) (d : D R), (Dn.diag R d).1 j = (d : R) := by
+    intro j d; simp [Dn.diag]
+  have hbase : (fun d : D R => F (Dn.embed R 0 d)) 0
+      = (fun d : D R => F (Dn.embed R 1 d)) 0 := by
+    show F (Dn.embed R 0 0) = F (Dn.embed R 1 0)
+    rw [h0, h1]
+    show b + c₀ * ((0 : D R) : R) = b + c₁ * ((0 : D R) : R)
+    rw [show ((0 : D R) : R) = 0 from rfl, mul_zero, mul_zero]
+  have haxisF : Dn.restrict' R F
+      = mkFiberProduct2 R (fun d : D R => F (Dn.embed R 0 d))
+        (fun d : D R => F (Dn.embed R 1 d)) hbase := by
+    apply Subtype.ext
+    funext i d
+    by_cases hi : i = 0
+    · subst i
+      rfl
+    · have hi1 : i = 1 := fin_two_eq_one_of_ne_zero hi
+      subst i
+      rfl
+  have haxisG : Dn.restrict' R G
+      = mkFiberProduct2 R (fun d : D R => F (Dn.embed R 0 d))
+        (fun d : D R => F (Dn.embed R 1 d)) hbase := by
+    apply Subtype.ext
+    funext i d
+    by_cases hi : i = 0
+    · subst i
+      show b + c₀ * (Dn.embed R 0 d).1 (0 : Fin 2) + c₁ * (Dn.embed R 0 d).1 (1 : Fin 2)
+        = F (Dn.embed R 0 d)
+      rw [hc00, hc01, h0 d]
+      ring
+    · have hi1 : i = 1 := fin_two_eq_one_of_ne_zero hi
+      subst i
+      show b + c₀ * (Dn.embed R 1 d).1 (0 : Fin 2) + c₁ * (Dn.embed R 1 d).1 (1 : Fin 2)
+        = F (Dn.embed R 1 d)
+      rw [hc10, hc11, h1 d]
+      ring
+  obtain ⟨G', hspec', huniq'⟩ := Microlinear.microlinear (R := R) (X := R) (n := 2)
+    (mkFiberProduct2 R (fun d : D R => F (Dn.embed R 0 d))
+      (fun d : D R => F (Dn.embed R 1 d)) hbase)
+  have hFG : F = G := (huniq' F haxisF).trans (huniq' G haxisG).symm
+  intro d
+  rw [hFG]
+  show b + c₀ * (Dn.diag R d).1 (0 : Fin 2) + c₁ * (Dn.diag R d).1 (1 : Fin 2)
+    = b + (c₀ + c₁) * (d : R)
+  rw [hcd 0 d, hcd 1 d]
+  ring
+
+/-- **导数沿切纤维加法的可加性**（MicrolinearD2 障碍的突破）：
+`d(g)(v + w) = d(g)(v) + d(g)(w)`。
+
+证明：和轨道是 `D(2)`-扩张 `E₂` 的对角求值；`g ∘ E₂` 的轴-KL 系数
+即 `d(g)(v)`、`d(g)(w)`（KL 唯一性对齐），由 `kl_diag_add` 得对角
+仿射式，再与 canonical KL 展开联立、零化子引理收尾。前提
+`[Microlinear R R]` = KL 全 schema（Kock Axiom 1''）。 -/
+theorem directionalDeriv_tangentAdd [Microlinear R X] [Microlinear R R]
+    (g : X → R) {x : X} (v w : TangentFiber R X x) :
+    directionalDerivative g (v + w) = directionalDerivative g v + directionalDerivative g w := by
+  obtain ⟨E₂, hspecE, huniqE⟩ := Microlinear.microlinear (R := R) (X := X) (n := 2)
+    (mkFiberProduct2 R v.1 w.1 (v.2.trans w.2.symm))
+  have hax0 : ∀ d : D R, E₂ (Dn.embed R 0 d) = v.1 d := by
+    intro d
+    show E₂ (Dn.embed R 0 d) = v.1 d
+    have h := congrArg (fun t : TangentFiberProduct R X 2 => t.1 (0 : Fin 2) d) hspecE
+    simpa [Dn.restrict', Dn.restrict, mkFiberProduct2] using h
+  have hax1 : ∀ d : D R, E₂ (Dn.embed R 1 d) = w.1 d := by
+    intro d
+    show E₂ (Dn.embed R 1 d) = w.1 d
+    have h := congrArg (fun t : TangentFiberProduct R X 2 => t.1 (1 : Fin 2) d) hspecE
+    simpa [Dn.restrict', Dn.restrict, mkFiberProduct2] using h
+  have haxv : ∀ d : D R, g (E₂ (Dn.embed R 0 d))
+      = g x + directionalDerivative g v * (d : R) := by
+    intro d
+    rw [hax0]
+    exact directionalDerivative_spec g v d
+  have haxw : ∀ d : D R, g (E₂ (Dn.embed R 1 d))
+      = g x + directionalDerivative g w * (d : R) := by
+    intro d
+    rw [hax1]
+    exact directionalDerivative_spec g w d
+  have hdiag := kl_diag_add (F := fun u : Dn R 2 => g (E₂ u))
+    (g x) (directionalDerivative g v) (directionalDerivative g w) haxv haxw
+  have hjoin : ∀ d : D R,
+      (directionalDerivative g (v + w) - (directionalDerivative g v
+        + directionalDerivative g w)) * (d : R) = 0 := by
+    intro d
+    have h1 := directionalDerivative_spec g (v + w) d
+    have h2 : g ((v + w).1 d)
+        = g x + (directionalDerivative g v + directionalDerivative g w) * (d : R) := by
+      have hid : (v + w).1 d = E₂ (Dn.diag R d) := by
+        show tangentAdd R v.1 w.1 (v.2.trans w.2.symm) d = E₂ (Dn.diag R d)
+        show (Microlinear.microlinear (n := 2)
+            (mkFiberProduct2 R v.1 w.1 (v.2.trans w.2.symm))).1 (Dn.diag R d)
+          = E₂ (Dn.diag R d)
+        exact congrArg (fun t => t (Dn.diag R d))
+          (huniqE _ (Microlinear.microlinear (n := 2)
+            (mkFiberProduct2 R v.1 w.1 (v.2.trans w.2.symm))).2.1)
+      rw [hid, hdiag d]
+    rw [h2] at h1
+    have h3 : (directionalDerivative g v + directionalDerivative g w) * (d : R)
+        = directionalDerivative g (v + w) * (d : R) := add_left_cancel h1
+    rw [sub_mul, h3, sub_self]
+  exact sub_eq_zero.mp (kl_annihilator_eq_zero hjoin)
+
+/-- **场和的导数可加性**（可加性墙的推论）：
+`(φ + ψ)(g) = φ(g) + ψ(g)`。 -/
+theorem fieldDeriv_add_fields [Microlinear R X] [Microlinear R R]
+    (φ ψ : TangentVectorField R X) (g : X → R) :
+    fieldDeriv (φ + ψ) g = fieldDeriv φ g + fieldDeriv ψ g := by
+  funext x
+  show directionalDerivative g (toFiber (φ + ψ) x)
+    = directionalDerivative g (toFiber φ x) + directionalDerivative g (toFiber ψ x)
+  rw [toFiber_add]
+  exact directionalDeriv_tangentAdd g (toFiber φ x) (toFiber ψ x)
+
+/-- **缩放场的导数**（只需 KL-1）：`(f·ξ)(g) = f·ξ(g)`——
+缩放场在 `x` 处的轨道是 ξ-轨道在参数 `f(x)·d`（仍属 D），代入
+ξ-KL 展开后系数即 `f·ξ(g)`，零化子引理收尾。 -/
+theorem fieldDeriv_smul_field (f : X → R) (ξ : TangentVectorField R X) (g : X → R) :
+    fieldDeriv (f • ξ) g = f * fieldDeriv ξ g := by
+  funext x
+  simp only [Pi.mul_apply]
+  show directionalDerivative g (toFiber (f • ξ) x) = f x * fieldDeriv ξ g x
+  have hspec : ∀ d : D R, g ((f • ξ).1 x d) = g x + fieldDeriv (f • ξ) g x * (d : R) :=
+    fieldDeriv_spec (f • ξ) g x
+  have hξ : ∀ d : D R, g (ξ.1 x d) = g x + fieldDeriv ξ g x * (d : R) :=
+    fieldDeriv_spec ξ g x
+  have hstep : ∀ d : D R, g ((f • ξ).1 x d)
+      = g x + (f x * fieldDeriv ξ g x) * (d : R) := by
+    intro d
+    have hd : ((f x • d : D R) : R) = f x * (d : R) := rfl
+    calc g ((f • ξ).1 x d) = g (ξ.1 x (f x • d)) := rfl
+      _ = g x + fieldDeriv ξ g x * ((f x • d : D R) : R) := hξ (f x • d)
+      _ = g x + (f x * fieldDeriv ξ g x) * (d : R) := by rw [hd]; ring
+  have hjoin : ∀ d : D R,
+      (fieldDeriv (f • ξ) g x - f x * fieldDeriv ξ g x) * (d : R) = 0 := by
+    intro d
+    have h1 := hspec d
+    rw [hstep d] at h1
+    have h3 : (f x * fieldDeriv ξ g x) * (d : R) = fieldDeriv (f • ξ) g x * (d : R) :=
+      add_left_cancel h1
+    rw [sub_mul, h3, sub_self]
+  have hpt : directionalDerivative g (toFiber (f • ξ) x) = f x * fieldDeriv ξ g x :=
+    sub_eq_zero.mp (kl_annihilator_eq_zero hjoin)
+  rw [hpt]
+
+/-- **C∞(X)-线性（函数作用层面，仅 KL-1）**：
+`[f·ξ,η](g) = f·[ξ,η](g) − η(f)·ξ(g)`——
+第五十二接力点交换子公式 + 缩放场引理 + 乘积法则的纯组装。 -/
+theorem fieldDeriv_lieBracket_smul_field [Microlinear R X] [PropertyW R X]
+    (f : X → R) (ξ η : TangentVectorField R X) (g : X → R) :
+    fieldDeriv (lieBracket (f • ξ) η) g
+      = f * fieldDeriv (lieBracket ξ η) g - fieldDeriv η f * fieldDeriv ξ g := by
+  funext x
+  rw [fieldDeriv_lieBracket (f • ξ) η g, fieldDeriv_smul_field f ξ (fieldDeriv η g),
+    fieldDeriv_smul_field f ξ g, fieldDeriv_mul η f (fieldDeriv ξ g),
+    fieldDeriv_lieBracket ξ η g]
+  simp only [Pi.mul_apply, Pi.sub_apply, Pi.add_apply]
+  ring
+
 end AlgebraicForms
 
 end SDG.DifferentialForms
