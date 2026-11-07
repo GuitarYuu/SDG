@@ -220,6 +220,27 @@ theorem algD1_smul [Microlinear R X] [PropertyW R X]
   simp only [algD1, Pi.smul_apply, Pi.sub_apply, fieldDeriv_smul, smul_eq_mul]
   ring
 
+/-- **场导子的取负**：`ξ(−f) = −ξf`（KL 唯一性）。 -/
+theorem fieldDeriv_neg (ξ : TangentVectorField R X) (f : X → R) :
+    fieldDeriv ξ (-f) = -fieldDeriv ξ f := by
+  funext x
+  have key : ∀ d : D R, (-f) (ξ.1 x d)
+      = (-f) (ξ.1 x 0) + (-fieldDeriv ξ f x) * (d : R) := by
+    intro d
+    have hf := fieldDeriv_spec ξ f x d
+    rw [show ξ.1 x 0 = x from ξ.2 x]
+    show -f (ξ.1 x d) = -f x + -fieldDeriv ξ f x * (d : R)
+    rw [hf]; ring
+  exact ((IsKockLawvere_one.isKockLawvere_one (R := R)
+    (fun d : D R => (-f) ((TangentVectorField.toFiber ξ x).1 d))).property.right _ key).symm
+
+/-- **场导子的减法**：`ξ(f − g) = ξf − ξg`。 -/
+theorem fieldDeriv_sub (ξ : TangentVectorField R X) (f g : X → R) :
+    fieldDeriv ξ (f - g) = fieldDeriv ξ f - fieldDeriv ξ g := by
+  have h : (f - g) = f + (-g) := by funext x; exact sub_eq_add_neg (f x) (g x)
+  rw [h, fieldDeriv_add, fieldDeriv_neg]
+  exact (sub_eq_add_neg _ _).symm
+
 /-! ### M4 核心：导子交换公式与 0-形式层的 d² = 0 -/
 
 /-- **KL 零化子引理**：零化整个 `D` 的环元素为零——KL 公理的
@@ -491,6 +512,24 @@ theorem algD_d2_zero_form [Microlinear R X] [PropertyW R X]
   have h3 : algD0 f (lieBracket ξ η) x = fieldDeriv (lieBracket ξ η) f x := rfl
   rw [h1, h2, h3, fieldDeriv_lieBracket]
   simp only [Pi.sub_apply]
+  ring
+
+/-! ### M1 完成：Jacobi 恒等式（函数作用层面）-/
+
+/-- **Jacobi 恒等式**（作用于函数的层面）：
+`[[ξ,η],ζ](f) + [[η,ζ],ξ](f) + [[ζ,ξ],η](f) = 0` 对任意 `f`。
+
+证明：导子交换公式（第五十二接力点）把三项全部展开为六项二阶复合
+场导数，逐点配对反号相消——纯 ring 计算。这是 1-形式层 Koszul d²=0
+的前置件。 -/
+theorem fieldDeriv_jacobi [Microlinear R X] [PropertyW R X]
+    (ξ η ζ : TangentVectorField R X) (f : X → R) :
+    fieldDeriv (lieBracket (lieBracket ξ η) ζ) f
+      + fieldDeriv (lieBracket (lieBracket η ζ) ξ) f
+      + fieldDeriv (lieBracket (lieBracket ζ ξ) η) f = 0 := by
+  funext x
+  simp only [Pi.add_apply, Pi.zero_apply, fieldDeriv_lieBracket, fieldDeriv_sub,
+    Pi.sub_apply]
   ring
 
 end AlgebraicForms
