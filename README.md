@@ -92,16 +92,54 @@ Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham 复�
 3. **`1 ∧ n` 楔积是交错的**：相邻反交换 + 任意槽相等消去；
 4. **∂ 是复形微分**：`∂² = 0`（0-上链层）且与 `d₀` 相容。
 
+## 场变元代数层与 Koszul 外微分（2026-10-27 ~ 2026-11-07 完成）
+
+`SDG/DifferentialForms/AlgebraicForms.lean` + `SDG/LieBracket.lean`——
+**场变元（向量场）形式的 Koszul 外微分理论**，全部无选择公理：
+
+* **李括号**（Kock I.9 的 Property W 路线）：无穷小变换交换子
+  `transformationCommutator` 经 Property W 因子化得 `lieBracket`，
+  反对称性 `lieBracket_antisymm`（`[η,ξ] = (−1)·[ξ,η]`）与对 −1
+  缩放的齐次性 `lieBracket_neg_smul_left`（W-唯一性）。
+* **场导子**：`fieldDeriv`（KL 刻画 + 乘积法则 + 线性性全套——加法
+  /数乘/减法/取负/零场）。
+* **Koszul 外微分**：`algD0`（0-形式）、`algD1`（1-形式，Koszul 公式
+  `ξ(ωη) − η(ωξ) − ω([ξ,η])`）、`algD2`（2-形式三顶点公式）——
+  对形式变元 R-线性。
+* **d² = 0**：0-形式层（`algD_d2_zero_form`，由**导子交换公式**
+  `fieldDeriv_lieBracket`：`[ξ,η](f) = ξ(ηf) − η(ξf)`）；
+  1-形式层好形式类（`algD_d2_one_form`——场可加/零保持/三体折叠
+  三假设下 Koszul 展开坍缩到函数层 Jacobi）；**精确形式链收官
+  `algD_d2_exact`**：`d²(d₀f) = 0` 零假设成立。
+* **可加性突破**（第五十五接力点）：`directionalDeriv_tangentAdd`
+  （`d(g)(v+w) = d(g)(v) + d(g)(w)`——经 R 自身微线性
+  `Microlinear R R`，即 KL 全 schema）与 `fieldDeriv_add_fields`、
+  `fieldDeriv_smul_field`、`fieldDeriv_smulR_field`。
+* **函数层恒等式**：`fieldDeriv_jacobi`（Jacobi 恒等式作用于函数）、
+  `fieldDeriv_lieBracket_mul`（括号是导子）、
+  `fieldDeriv_lieBracket_smul_field`（C∞(X)-线性）、
+  `algForm1_congr_action`（ω 尊重函数作用相等）。
+
+**分部积分**（`SDG/ScratchR.lean`）：`integral_I_mul_parts` 与经典
+对称形 `integral_I_parts`（UnitInterval 上，FTC + 乘积法则组装）。
+
+**审计基建**（`SDG/AuditSweep.lean`）：89 条核心声明的批量
+`#print axioms` 复核——全部 `[propext, Quot.sound]` 或更少。
+
 ## 后续路线图（未形式化部分）
 
 按优先级：
 
-1. **参数化单形积分与 Stokes**（先 n=1, 2 再归纳；积分电流
-   `IntegralCurrent` 与紧支撑层已就绪，见 `Currents.lean`）；
+1. **参数化单形积分与 Stokes**（simplexIntegral2 已有；n=3+ 归纳、
+   Fubini 需 min 分段理论）；
 2. **current-Stokes 定理**：电流与形式的配对在边界上的恒等式
-   （`currentBoundary` 的配对公式与 `chainCurrent_boundary_apply`
-   Fubini 展开已备好）；
-3. Čech 上同调、de Rham 同构的 SDG 版本。
+   （`Microlinear R R` 可用后，之前确诊的路径-电流 transport 障碍
+   可重新勘察）；
+3. **场变元层的分次 Leibniz**：场变元楔积 `d(α∧β) = dα∧β + (−1)^p α∧dβ`
+   （需要场变元形式的楔积定义，E3 置换引擎可复用）；
+4. **2-形式层完整理论**：AlgForm3 + `d²|₂`；
+5. **商层分次交换律**：shuffle-cup（AW-cup 不交换，独立置换工程）；
+6. Čech 上同调、de Rham 同构的 SDG 版本。
 
 ## 电流层（Currents，2026-10-12 完成）
 
