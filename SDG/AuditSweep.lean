@@ -109,3 +109,10 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.algD2_apply
 #print axioms SDG.DifferentialForms.algD2_add
 #print axioms SDG.DifferentialForms.algD2_smul
+
+-- AlgebraicForms：可加性突破 + C∞-线性（第五十五接力点）
+#print axioms SDG.DifferentialForms.kl_diag_add
+#print axioms SDG.DifferentialForms.directionalDeriv_tangentAdd
+#print axioms SDG.DifferentialForms.fieldDeriv_add_fields
+#print axioms SDG.DifferentialForms.fieldDeriv_smul_field
+#print axioms SDG.DifferentialForms.fieldDeriv_lieBracket_smul_field
