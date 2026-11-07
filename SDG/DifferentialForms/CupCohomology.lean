@@ -208,6 +208,13 @@ lemma deRhamCohomologyCast_apply {n m : ℕ} (H : n = m) {α : Cochain R X (n + 
                rw [coboundary_cochainLenCast, hα, cochainLenCast_zero]
           exact hC) := rfl
 
+/-- H 层 transport 的恒等性：`H = rfl` 时 cast 是恒等映射
+（第五十二接力点：Quotient.inductionOn 路线收口）。 -/
+theorem deRhamCohomologyCast_rfl {n : ℕ}
+    (x : deRhamCohomology (R := R) (X := X) n) :
+    deRhamCohomologyCast (R := R) (X := X) (rfl : n = n) x = x :=
+  Quotient.inductionOn x (fun _a => rfl)
+
 end DegreeTransport
 
 /-- cup 对左因子 cast 的交换：cast 后作 cup = 作 cup 后 cast（度数
