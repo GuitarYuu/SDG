@@ -1,10 +1,28 @@
 # SDG：综合微分几何的 Lean 4 形式化
 
 在 Lean 4 + Mathlib 中对**综合微分几何**（Synthetic Differential Geometry,
-SDG）的核心内容做**构造性、无选择公理**的形式化。覆盖 Kock《Synthetic
-Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham 复形链条
-（含电流层与场变元代数层），**核心理论闭环已宣告**：de Rham 复形正合性
-（d² = 0）在单纯层与场变元层两层完整证明。
+SDG）的核心内容做**构造性、无选择公理**的形式化。目标：完成 Kock
+《Synthetic Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham
+复形链条（含电流层与场变元代数层）。**核心理论闭环已宣告**：de Rham 复形
+正合性（d² = 0）在单纯层与场变元层两层完整证明。
+
+## 项目背景与合作
+
+本项目起源于 **2026 年上海交通大学 Lean 暑校**（无穷类型咖啡 · AI4Math
+方向），由 **caojiarong** 发起并在暑校期间完成了项目的基础搭建（NoChoice
+审计框架、KL 公理、微线性、切丛、Core 逐点形式层、Algebra 的置换引擎与
+楔积基础）以及 Currents 电流层的初始提交。
+
+暑校结束后，由于原维护者选择不再继续，本项目由
+**[GuitarYuu](https://github.com/GuitarYuu)** 接手并完成了剩余部分的
+全部形式化工作，包括：Algebra.lean 的上闭链 de Rham 复形完整理论（∂²=0、
+cup 积、分次 Leibniz、分次交换律）、Currents.lean 的电流层完整理论
+（Hₙ/Hⁿ 同调群、Stokes 配对、Module R）、Integration.lean 积分层、
+场变元代数层全新模块（AlgebraicForms.lean——李括号、Koszul 外微分、
+d²=0 两层闭环、楔积与分次 Leibniz）、以及 AuditSweep.lean 的 111 条
+核心声明批量 axiom 审计基建。
+
+全部工作遵守项目红线：**构造性、零选择公理、零 sorry**。
 
 ## 约束（红线）
 
