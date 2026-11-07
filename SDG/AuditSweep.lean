@@ -138,3 +138,8 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.wedge11_add_left
 #print axioms SDG.DifferentialForms.wedge11_smul_left
 #print axioms SDG.DifferentialForms.algD1_algSMul_wedge
+
+-- AlgebraicForms：分次 Leibniz 完整情形（第五十八接力点续）
+#print axioms SDG.DifferentialForms.wedge21
+#print axioms SDG.DifferentialForms.wedge12
+#print axioms SDG.DifferentialForms.d_wedge11
