@@ -940,6 +940,81 @@ theorem algD_d2_one_form [Microlinear R X] [PropertyW R X] [Microlinear R R]
   simp only [Pi.add_apply, Pi.zero_apply, Pi.smul_apply, smul_eq_mul] at hfold3x
   exact hfold3x
 
+/-! ### 好形式类的实例化：精确形式与完整 d² 链（第五十七接力点）-/
+
+/-- **零场的导数为零**。 -/
+theorem fieldDeriv_zero_field (g : X → R) :
+    fieldDeriv (0 : TangentVectorField R X) g = 0 := by
+  funext x
+  show directionalDerivative g (toFiber (0 : TangentVectorField R X) x) = 0
+  rw [toFiber_zero]
+  exact directionalDerivative_zero g x
+
+/-- **ω 尊重函数作用相等**（好形式假设三件套的推论）：
+若两场的函数作用逐函数相等，则 ω-值相等——
+三场组 `(φ, (−1)·χ, 0)` 的函数作用和为零，hfold 给出
+`ω φ − ω χ = 0`。 -/
+theorem algForm1_congr_action [Microlinear R X] (ω : AlgForm1 R X)
+    (hadd : ∀ φ ψ : TangentVectorField R X, ω (φ + ψ) = ω φ + ω ψ)
+    (hzero : ω 0 = 0)
+    (hfold : ∀ φ₁ φ₂ φ₃ : TangentVectorField R X,
+      (∀ g : X → R, fieldDeriv φ₁ g + fieldDeriv φ₂ g + fieldDeriv φ₃ g = 0) →
+      ω φ₁ + ω φ₂ + ω φ₃ = 0)
+    (hneg : ∀ φ : TangentVectorField R X, ω ((-1 : R) • φ) = -ω φ)
+    (φ χ : TangentVectorField R X)
+    (h : ∀ g : X → R, fieldDeriv φ g = fieldDeriv χ g) :
+    ω φ = ω χ := by
+  funext x
+  have h3 := hfold φ ((-1 : R) • χ) 0 (by
+    intro g
+    show fieldDeriv φ g + fieldDeriv ((-1 : R) • χ) g
+      + fieldDeriv (0 : TangentVectorField R X) g = 0
+    rw [h g, fieldDeriv_smulR_field (-1 : R) χ g, fieldDeriv_zero_field g]
+    funext z
+    simp only [Pi.add_apply, Pi.smul_apply, Pi.neg_apply, Pi.zero_apply, smul_eq_mul]
+    ring)
+  have h3x := congrFun h3 x
+  simp only [Pi.add_apply, Pi.zero_apply] at h3x
+  have hnegx := congrFun (hneg χ) x
+  simp only [Pi.neg_apply] at hnegx
+  have hzx := congrFun hzero x
+  simp only [Pi.zero_apply] at hzx
+  rw [hnegx, hzx, add_zero] at h3x
+  have hfin : ω φ x = -(-ω χ x) := eq_neg_of_add_eq_zero_left h3x
+  rw [hfin, neg_neg]
+
+/-- **d₀f 满足好形式假设·可加性**（fieldDeriv_add_fields 直推）。 -/
+theorem algForm1_good_d0_add [Microlinear R X] [Microlinear R R] (f : X → R)
+    (φ ψ : TangentVectorField R X) :
+    algD0 f (φ + ψ) = algD0 f φ + algD0 f ψ := by
+  show fieldDeriv (φ + ψ) f = fieldDeriv φ f + fieldDeriv ψ f
+  exact fieldDeriv_add_fields φ ψ f
+
+/-- **d₀f 满足好形式假设·零保持**。 -/
+theorem algForm1_good_d0_zero (f : X → R) :
+    algD0 f 0 = 0 := by
+  funext x
+  show fieldDeriv (0 : TangentVectorField R X) f x = 0
+  show directionalDerivative f (toFiber (0 : TangentVectorField R X) x) = 0
+  rw [toFiber_zero]
+  exact directionalDerivative_zero f x
+
+/-- **d₀f 满足好形式假设·三体折叠**（hfold-假设取 `g := f` 直接）。 -/
+theorem algForm1_good_d0_hfold (f : X → R)
+    (φ₁ φ₂ φ₃ : TangentVectorField R X)
+    (h : ∀ g : X → R, fieldDeriv φ₁ g + fieldDeriv φ₂ g + fieldDeriv φ₃ g = 0) :
+    algD0 f φ₁ + algD0 f φ₂ + algD0 f φ₃ = 0 := by
+  show fieldDeriv φ₁ f + fieldDeriv φ₂ f + fieldDeriv φ₃ f = 0
+  exact h f
+
+/-- **⭐ 完整 d² 链（精确形式）**：`d²(d₀f) = 0`——零假设、零选择公理。
+`d₀f` 的好形式三假设由上面三条引理直接供给，`algD_d2_one_form` 收官。 -/
+theorem algD_d2_exact [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (f : X → R) (ξ₀ ξ₁ ξ₂ : TangentVectorField R X) :
+    algD2 (algD1 (algD0 f)) ξ₀ ξ₁ ξ₂ = 0 :=
+  algD_d2_one_form (algD0 f) (algForm1_good_d0_add f) (algForm1_good_d0_zero f)
+    (algForm1_good_d0_hfold f) ξ₀ ξ₁ ξ₂
+
 end AlgebraicForms
 
 end SDG.DifferentialForms

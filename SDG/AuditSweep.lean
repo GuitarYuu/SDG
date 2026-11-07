@@ -123,3 +123,11 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.lieBracket_neg_smul_left
 #print axioms SDG.DifferentialForms.fieldDeriv_smulR_field
 #print axioms SDG.DifferentialForms.algD_d2_one_form
+
+-- AlgebraicForms：精确形式 d² 链收官（第五十七接力点）
+#print axioms SDG.DifferentialForms.fieldDeriv_zero_field
+#print axioms SDG.DifferentialForms.algForm1_congr_action
+#print axioms SDG.DifferentialForms.algForm1_good_d0_add
+#print axioms SDG.DifferentialForms.algForm1_good_d0_zero
+#print axioms SDG.DifferentialForms.algForm1_good_d0_hfold
+#print axioms SDG.DifferentialForms.algD_d2_exact
