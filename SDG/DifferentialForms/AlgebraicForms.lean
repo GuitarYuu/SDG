@@ -1256,7 +1256,7 @@ theorem algD_d3_exact [Microlinear R X] [PropertyW R X] [Microlinear R R]
   rw [h1]
   exact congrArg (fun F => F ξ₀ ξ₁ ξ₂ ξ₃) algD3_zero
 
-/-- **2-形式的双重括号重组**：`α([[ξa,ξb],ξc],ξd) =
+/-- **2-形式的双重括号重组（泛型）**：`α([[ξa,ξb],ξc],ξd) =
 −α([[ξb,ξa],ξc],ξd)`——内层 lieBracket 反对称
 （`lieBracket_antisymm`）+ 括号对 (−1)-缩放的齐次性
 （`lieBracket_neg_smul_left`）+ α-负线性，三引理链。 -/
