@@ -10,18 +10,20 @@ SDG）的核心内容做**构造性、无选择公理**的形式化。目标：�
 
 本项目起源于 **2026 年上海交通大学 Lean 暑校**（无穷类型咖啡 · AI4Math
 方向），由 **caojiarong** 与 **[GuitarYuu](https://github.com/GuitarYuu)**
-在暑校期间合作搭建，完成了项目的基础设施与初步形式化（NoChoice 审计框架、
-KL 公理、微线性、切丛、Core 逐点形式层、Algebra 的置换引擎与楔积基础、
-Currents 电流层初始提交）。
+合作参与。暑校期间，**caojiarong** 搭建了项目的基础设施——NoChoice
+审计框架、KL 公理与无穷小对象、微线性、切丛与切纤维模结构、Core 逐点
+形式层（）及 0-形式外微分 d₀；
+**GuitarYuu** 完成了 **李括号**（Property W 因子化路线，Kock I.9）与
+**部分微分形式**的形式化工作（Currents 电流层初始提交等）。
 
 暑校结束后，caojiarong 选择不再继续维护，本项目由
 **[GuitarYuu](https://github.com/GuitarYuu)** 独立完成了剩余部分的
 全部形式化工作，包括：Algebra.lean 的上闭链 de Rham 复形完整理论（∂²=0、
 cup 积、分次 Leibniz、分次交换律）、Currents.lean 的电流层完整理论
 （Hₙ/Hⁿ 同调群、Stokes 配对、Module R）、Integration.lean 积分层、
-场变元代数层全新模块（AlgebraicForms.lean——李括号、Koszul 外微分、
-d²=0 两层闭环、楔积与分次 Leibniz）、以及 AuditSweep.lean 的 111 条
-核心声明批量 axiom 审计基建。
+**场变元代数层全新模块**（AlgebraicForms.lean——场导子、Koszul 外微分
+algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）、李括号的反对称性
+与交换子公式、以及 AuditSweep.lean 的 111 条核心声明批量 axiom 审计基建。
 
 全部工作遵守项目红线：**构造性、零选择公理、零 sorry**。
 
