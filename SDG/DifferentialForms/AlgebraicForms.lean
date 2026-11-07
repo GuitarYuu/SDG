@@ -1065,6 +1065,60 @@ theorem algD1_algSMul_wedge [Microlinear R X] [PropertyW R X]
   simp only [Pi.add_apply, Pi.mul_apply]
   ring
 
+/-! ### 分次 Leibniz 完整情形（1×1）：d(α∧ω) = dα∧ω − α∧dω（第五十八接力点续）-/
+
+/-- **2-形式×1-形式的插入**：`(β∧ω)(ξ₀,ξ₁,ξ₂) = β(ξ₀,ξ₁)·ω(ξ₂)
+− β(ξ₀,ξ₂)·ω(ξ₁) + β(ξ₁,ξ₂)·ω(ξ₀)`。 -/
+def wedge21 (β : AlgForm2 R X) (ω : AlgForm1 R X) :
+    TangentVectorField R X → TangentVectorField R X → TangentVectorField R X → (X → R) :=
+  fun ξ₀ ξ₁ ξ₂ => fun x =>
+    β ξ₀ ξ₁ x * ω ξ₂ x - β ξ₀ ξ₂ x * ω ξ₁ x + β ξ₁ ξ₂ x * ω ξ₀ x
+
+/-- **1-形式×2-形式的插入**：`(α∧β)(ξ₀,ξ₁,ξ₂) = α(ξ₀)·β(ξ₁,ξ₂)
+− α(ξ₁)·β(ξ₀,ξ₂) + α(ξ₂)·β(ξ₀,ξ₁)`。 -/
+def wedge12 (α : AlgForm1 R X) (β : AlgForm2 R X) :
+    TangentVectorField R X → TangentVectorField R X → TangentVectorField R X → (X → R) :=
+  fun ξ₀ ξ₁ ξ₂ => fun x =>
+    α ξ₀ x * β ξ₁ ξ₂ x - α ξ₁ x * β ξ₀ ξ₂ x + α ξ₂ x * β ξ₀ ξ₁ x
+
+/-- **⭐ 分次 Leibniz（1×1 完整情形）**：
+`d(α∧ω) = dα∧ω − α∧dω`——Koszul 三顶点展开后 **18 对项全部由
+纯 ring 配对相消**（α-括号项与 ω-括号项各自与 wedge-插入项配对，
+无需场层 Jacobi）。工程要点：wedge11-体的 λ-参数先经 rfl-桥统一为
+β-形（`α ξ₁ * ω ξ₂` 的 Π-层），`fieldDeriv_sub/mul` 显式实例化
+（rw 在 λ-绑定下实例化元变量失败的老坑）。 -/
+theorem d_wedge11 [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (α ω : AlgForm1 R X) :
+    algD2 (wedge11 α ω) = wedge21 (algD1 α) ω - wedge12 α (algD1 ω) := by
+  funext ξ₀ ξ₁ ξ₂ x
+  have hpair : algD2 (wedge11 α ω) ξ₀ ξ₁ ξ₂ x
+      = wedge21 (algD1 α) ω ξ₀ ξ₁ ξ₂ x - wedge12 α (algD1 ω) ξ₀ ξ₁ ξ₂ x := by
+    have hb1 : wedge11 α ω ξ₁ ξ₂
+        = α ξ₁ * ω ξ₂ - α ξ₂ * ω ξ₁ := rfl
+    have hb2 : wedge11 α ω ξ₀ ξ₂
+        = α ξ₀ * ω ξ₂ - α ξ₂ * ω ξ₀ := rfl
+    have hb3 : wedge11 α ω ξ₀ ξ₁
+        = α ξ₀ * ω ξ₁ - α ξ₁ * ω ξ₀ := rfl
+    have hb4 : wedge11 α ω (lieBracket ξ₀ ξ₁) ξ₂
+        = α (lieBracket ξ₀ ξ₁) * ω ξ₂ - α ξ₂ * ω (lieBracket ξ₀ ξ₁) := rfl
+    have hb5 : wedge11 α ω (lieBracket ξ₀ ξ₂) ξ₁
+        = α (lieBracket ξ₀ ξ₂) * ω ξ₁ - α ξ₁ * ω (lieBracket ξ₀ ξ₂) := rfl
+    have hb6 : wedge11 α ω (lieBracket ξ₁ ξ₂) ξ₀
+        = α (lieBracket ξ₁ ξ₂) * ω ξ₀ - α ξ₀ * ω (lieBracket ξ₁ ξ₂) := rfl
+    show algD2 (wedge11 α ω) ξ₀ ξ₁ ξ₂ x = _
+    simp only [algD2, hb1, hb2, hb3, hb4, hb5, hb6, Pi.zero_apply]
+    rw [fieldDeriv_sub ξ₀ (α ξ₁ * ω ξ₂) (α ξ₂ * ω ξ₁),
+      fieldDeriv_sub ξ₁ (α ξ₀ * ω ξ₂) (α ξ₂ * ω ξ₀),
+      fieldDeriv_sub ξ₂ (α ξ₀ * ω ξ₁) (α ξ₁ * ω ξ₀),
+      fieldDeriv_mul ξ₀ (α ξ₁) (ω ξ₂), fieldDeriv_mul ξ₀ (α ξ₂) (ω ξ₁),
+      fieldDeriv_mul ξ₁ (α ξ₀) (ω ξ₂), fieldDeriv_mul ξ₁ (α ξ₂) (ω ξ₀),
+      fieldDeriv_mul ξ₂ (α ξ₀) (ω ξ₁), fieldDeriv_mul ξ₂ (α ξ₁) (ω ξ₀)]
+    simp only [algD1, Pi.zero_apply, wedge21, wedge12, Pi.mul_apply, Pi.sub_apply,
+      Pi.add_apply, Pi.smul_apply, smul_eq_mul]
+    ring
+  rw [hpair]
+  simp only [Pi.sub_apply]
+
 end AlgebraicForms
 
 end SDG.DifferentialForms
