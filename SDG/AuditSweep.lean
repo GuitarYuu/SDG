@@ -116,3 +116,10 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.fieldDeriv_add_fields
 #print axioms SDG.DifferentialForms.fieldDeriv_smul_field
 #print axioms SDG.DifferentialForms.fieldDeriv_lieBracket_smul_field
+
+-- AlgebraicForms：d²=0（1-形式层，好形式类）（第五十六接力点）
+#print axioms SDG.DifferentialForms.field_add_neg_smul
+#print axioms SDG.DifferentialForms.algForm1_neg_smul
+#print axioms SDG.DifferentialForms.lieBracket_neg_smul_left
+#print axioms SDG.DifferentialForms.fieldDeriv_smulR_field
+#print axioms SDG.DifferentialForms.algD_d2_one_form
