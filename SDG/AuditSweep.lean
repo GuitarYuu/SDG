@@ -131,3 +131,10 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.algForm1_good_d0_zero
 #print axioms SDG.DifferentialForms.algForm1_good_d0_hfold
 #print axioms SDG.DifferentialForms.algD_d2_exact
+
+-- AlgebraicForms：场变元楔积 + 分次 Leibniz 核心情形（第五十八接力点）
+#print axioms SDG.DifferentialForms.wedge11
+#print axioms SDG.DifferentialForms.wedge11_antisymm
+#print axioms SDG.DifferentialForms.wedge11_add_left
+#print axioms SDG.DifferentialForms.wedge11_smul_left
+#print axioms SDG.DifferentialForms.algD1_algSMul_wedge
