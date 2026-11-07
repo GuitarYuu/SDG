@@ -1015,6 +1015,56 @@ theorem algD_d2_exact [Microlinear R X] [PropertyW R X] [Microlinear R R]
   algD_d2_one_form (algD0 f) (algForm1_good_d0_add f) (algForm1_good_d0_zero f)
     (algForm1_good_d0_hfold f) ξ₀ ξ₁ ξ₂
 
+/-! ### 场变元楔积（1-形式×1-形式）与分次 Leibniz 核心情形（第五十八接力点）-/
+
+/-- **1-形式×1-形式的楔积**：`(α∧ω)(ξ,η) = α(ξ)·ω(η) − α(η)·ω(ξ)`——
+`d₀f ∧ ω` 为特例。 -/
+def wedge11 (α ω : AlgForm1 R X) : AlgForm2 R X :=
+  fun ξ η => fun x => α ξ x * ω η x - α η x * ω ξ x
+
+/-- wedge11 的点态展开。 -/
+theorem wedge11_apply (α ω : AlgForm1 R X) (ξ η : TangentVectorField R X) (x : X) :
+    wedge11 α ω ξ η x = α ξ x * ω η x - α η x * ω ξ x := rfl
+
+/-- **楔积的反对称性**。 -/
+theorem wedge11_antisymm (α ω : AlgForm1 R X) (ξ η : TangentVectorField R X) :
+    wedge11 α ω ξ η = -wedge11 α ω η ξ := by
+  funext x
+  show α ξ x * ω η x - α η x * ω ξ x
+    = -(α η x * ω ξ x - α ξ x * ω η x)
+  ring
+
+/-- 楔积对左变元的加法性。 -/
+theorem wedge11_add_left (α α' ω : AlgForm1 R X) :
+    wedge11 (α + α') ω = wedge11 α ω + wedge11 α' ω := by
+  funext ξ η x
+  simp only [wedge11, Pi.add_apply]
+  show (α ξ x + α' ξ x) * ω η x - (α η x + α' η x) * ω ξ x
+    = (α ξ x * ω η x - α η x * ω ξ x) + (α' ξ x * ω η x - α' η x * ω ξ x)
+  ring
+
+/-- 楔积对左变元的数乘性。 -/
+theorem wedge11_smul_left (c : R) (α ω : AlgForm1 R X) :
+    wedge11 (c • α) ω = c • wedge11 α ω := by
+  funext ξ η x
+  simp only [wedge11, Pi.smul_apply, Pi.smul_apply, smul_eq_mul]
+  show c * α ξ x * ω η x - c * α η x * ω ξ x
+    = c * (α ξ x * ω η x - α η x * ω ξ x)
+  ring
+
+/-- **⭐ 分次 Leibniz（核心情形：0-形式×1-形式）**：
+`d(f·ω) = f·dω + d₀f∧ω`——一般 p×q 分次 Leibniz 的生成元。 -/
+theorem algD1_algSMul_wedge [Microlinear R X] [PropertyW R X]
+    (f : X → R) (ω : AlgForm1 R X) :
+    algD1 (algSMul f ω) = f • algD1 ω + wedge11 (algD0 f) ω := by
+  funext ξ η x
+  show fieldDeriv ξ (f * ω η) x - fieldDeriv η (f * ω ξ) x - f x * ω (lieBracket ξ η) x
+    = f x * (fieldDeriv ξ (ω η) x - fieldDeriv η (ω ξ) x - ω (lieBracket ξ η) x)
+      + (fieldDeriv ξ f x * ω η x - fieldDeriv η f x * ω ξ x)
+  rw [fieldDeriv_mul ξ f (ω η), fieldDeriv_mul η f (ω ξ)]
+  simp only [Pi.add_apply, Pi.mul_apply]
+  ring
+
 end AlgebraicForms
 
 end SDG.DifferentialForms
