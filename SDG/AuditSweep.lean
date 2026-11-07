@@ -153,3 +153,10 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.wedge11_eq_alt2
 #print axioms SDG.DifferentialForms.alt2_antisymm
 #print axioms SDG.DifferentialForms.alt2_idem
+
+-- AlgebraicForms：各层级零引理 + 三阶链（第六十接力点）
+#print axioms SDG.DifferentialForms.fieldDeriv_zero_fun
+#print axioms SDG.DifferentialForms.algD1_zero
+#print axioms SDG.DifferentialForms.algD2_zero
+#print axioms SDG.DifferentialForms.algD3_zero
+#print axioms SDG.DifferentialForms.algD_d3_exact
