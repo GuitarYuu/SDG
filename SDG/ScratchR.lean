@@ -84,6 +84,26 @@ theorem simplexIntegral2_add {R : Type u} [SDG.Integration.IsIntegration R]
   exact congrArg (fun F => SDG.Integration.integralR F 0 1)
     (funext fun t₁ => hinner t₁)
 
+/-- 对第二变量数乘（funext-first 模式：先把内层数乘改写进被积函数，
+再在外层用 integralR_smul——绕开 rw 在 λ-绑定 t₁ 下的作用域逃逸）。 -/
+theorem simplexIntegral2_smul {R : Type u} [SDG.Integration.IsIntegration R]
+    (c : R) (f : R → R → R) :
+    simplexIntegral2 (fun t₁ t₂ => c * f t₁ t₂) = c * simplexIntegral2 f := by
+  have hinner : ∀ t₁ : R,
+      SDG.Integration.integralR (fun t₂ => c * f t₁ t₂) t₁ (1 - t₁)
+        = c * SDG.Integration.integralR (fun t₂ => f t₁ t₂) t₁ (1 - t₁) :=
+    fun t₁ => SDG.Integration.integralR_smul c (fun t₂ => f t₁ t₂) t₁ (1 - t₁)
+  have hstep : SDG.Integration.integralR
+      (fun t₁ => SDG.Integration.integralR (fun t₂ => c * f t₁ t₂) t₁ (1 - t₁)) 0 1
+    = c * SDG.Integration.integralR
+        (fun t₁ => SDG.Integration.integralR (fun t₂ => f t₁ t₂) t₁ (1 - t₁)) 0 1 := by
+    have hF : (fun t₁ => SDG.Integration.integralR (fun t₂ => c * f t₁ t₂) t₁ (1 - t₁))
+        = fun t₁ => c * SDG.Integration.integralR (fun t₂ => f t₁ t₂) t₁ (1 - t₁) :=
+      funext hinner
+    rw [hF, SDG.Integration.integralR_smul]
+  unfold simplexIntegral2
+  exact hstep
+
 end SimplexIntegral
 
 section IBP

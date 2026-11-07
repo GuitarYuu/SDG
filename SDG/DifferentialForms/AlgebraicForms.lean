@@ -220,6 +220,279 @@ theorem algD1_smul [Microlinear R X] [PropertyW R X]
   simp only [algD1, Pi.smul_apply, Pi.sub_apply, fieldDeriv_smul, smul_eq_mul]
   ring
 
+/-! ### M4 核心：导子交换公式与 0-形式层的 d² = 0 -/
+
+/-- **KL 零化子引理**：零化整个 `D` 的环元素为零——KL 公理的
+唯一性子句用于零映射的直接推论（第五十二接力点）。 -/
+theorem kl_zero_map_coeff [IsKockLawvere_one R] :
+    (IsKockLawvere_one.isKockLawvere_one (fun _ : D R => (0 : R))).1 = 0 :=
+  ((IsKockLawvere_one.isKockLawvere_one (fun _ : D R => (0 : R))).2.2
+    (0 : R) (fun e => by show (0 : R) = (0 : R) + (0 : R) * (e : R); ring)).symm
+
+theorem kl_annihilator_eq_zero [IsKockLawvere_one R] {c : R}
+    (h : ∀ d : D R, c * (d : R) = 0) : c = 0 := by
+  obtain ⟨b, hbs, hbu⟩ := IsKockLawvere_one.isKockLawvere_one
+    (fun _ : D R => (0 : R))
+  have h0 : (0 : R) = b := hbu 0 (fun d => by
+    show (0 : R) = (0 : R) + (0 : R) * (d : R)
+    ring)
+  have hc : c = b := hbu c (fun d => by
+    show (0 : R) = (0 : R) + c * (d : R)
+    rw [h d]
+    ring)
+  exact hc.trans h0.symm
+
+/-- **R 自身满足 Property W**（第五十二接力点；KL 公理的定理级
+推论，零新公理）：轴退化的 `τ : D×D → R` 唯一经 `d₁·d₂` 因子化。
+
+存在性：对 `d ↦ τ(d,e)` 与 `e ↦ a(e)` 各用一次 KL；轴条件 +
+KL 唯一性（`d ↦ τ(d,0)` 的系数既是 `a 0` 又是 `0`）给出 `a 0 = 0`。
+唯一性：差函数 `h` 经 KL 是仿射的（系数 `c`）且在 `D·D` 像上为零；
+固定 `d₀` 后 `e ↦ h(d₀·e)` 既是零映射又是系数 `c·d₀` 的仿射映射——
+同一函数的 KL 系数相等 ⟹ `c·d₀ = 0` 对每个 `d₀` ⟹ 零化子引理。
+（全部构造性：KL 数据走子类型投影，不引入 Classical.choice。） -/
+instance instPropertyW_self : PropertyW R R where
+  propertyW τ hRA hLA := by
+    set a : D R → R :=
+      fun e => (IsKockLawvere_one.isKockLawvere_one (fun d : D R => τ d e)).1 with hAdef
+    have ha : ∀ e d : D R, τ d e = τ 0 e + a e * (d : R) := by
+      intro e d
+      exact (IsKockLawvere_one.isKockLawvere_one (fun d : D R => τ d e)).2.1 d
+    obtain ⟨b, hbs, -⟩ := IsKockLawvere_one.isKockLawvere_one a
+    have ha0 : a 0 = 0 := by
+      obtain ⟨â, -, âuniq⟩ := IsKockLawvere_one.isKockLawvere_one (fun d : D R => τ d 0)
+      have h0spec : ∀ d : D R, τ d 0 = τ 0 0 + (0 : R) * (d : R) := by
+        intro d
+        rw [hRA d]
+        ring
+      exact (((âuniq 0 h0spec).trans (âuniq (a 0) (ha 0)).symm)).symm
+    have hfac : ∀ d₁ d₂ : D R, τ d₁ d₂ = τ 0 0 + b * ((d₁ : R) * (d₂ : R)) := by
+      intro d₁ d₂
+      rw [ha d₂ d₁, hLA d₂, hbs d₂, ha0]
+      ring
+    refine ⟨fun t => τ 0 0 + b * (t : R), ?_, ?_⟩
+    · exact fun d₁ d₂ => (hfac d₁ d₂).symm
+    · intro y hy
+      obtain ⟨c, hcs, -⟩ := IsKockLawvere_one.isKockLawvere_one
+        (fun t : D R => y t - (τ 0 0 + b * (t : R)))
+      have hzero0 : y 0 - (τ 0 0 + b * ((0 : D R) : R)) = 0 := by
+        have e1 := hy 0 0
+        rw [D.mul_zero_zero] at e1
+        show y 0 - (τ 0 0 + b * ((0 : D R) : R)) = 0
+        rw [show ((0 : D R) : R) = 0 from rfl, mul_zero, add_zero, e1]
+        ring
+      have hdiff0 : ∀ d₁ d₂ : D R,
+          y (D.mul R d₁ d₂) - (τ 0 0 + b * ((D.mul R d₁ d₂ : D R) : R)) = 0 := by
+        intro d₁ d₂
+        have e1 := hy d₁ d₂
+        show y (D.mul R d₁ d₂) - (τ 0 0 + b * ((D.mul R d₁ d₂ : D R) : R)) = 0
+        rw [e1, D.coe_mul, hfac]
+        ring
+      have hcd : ∀ d₀ : D R, c * (d₀ : R) = 0 := by
+        intro d₀
+        have hz : ∀ e : D R,
+            y (D.mul R d₀ e) - (τ 0 0 + b * ((D.mul R d₀ e : D R) : R)) = 0 :=
+          hdiff0 d₀
+        have e0 : ∀ e : D R,
+            y (D.mul R d₀ e) - (τ 0 0 + b * ((D.mul R d₀ e : D R) : R))
+            = (c * (d₀ : R)) * (e : R) := by
+          intro e
+          have hk := hcs (D.mul R d₀ e)
+          rw [hzero0, D.coe_mul] at hk
+          rw [D.coe_mul, hk]
+          ring
+        have hEqFun : (fun e : D R =>
+              y (D.mul R d₀ e) - (τ 0 0 + b * ((D.mul R d₀ e : D R) : R)))
+            = (fun e : D R => (c * (d₀ : R)) * (e : R)) :=
+          funext e0
+        have hEqZero : (fun e : D R =>
+              y (D.mul R d₀ e) - (τ 0 0 + b * ((D.mul R d₀ e : D R) : R)))
+            = (fun _ : D R => (0 : R)) :=
+          funext hz
+        have hproj : ∀ (f₁ f₂ : D R → R), f₁ = f₂ →
+            (IsKockLawvere_one.isKockLawvere_one f₁).1
+              = (IsKockLawvere_one.isKockLawvere_one f₂).1 :=
+          fun _ _ hf => congrArg (fun f => (IsKockLawvere_one.isKockLawvere_one f).1) hf
+        have hkc : (IsKockLawvere_one.isKockLawvere_one
+              (fun e : D R => (c * (d₀ : R)) * (e : R))).1 = c * (d₀ : R) :=
+          ((IsKockLawvere_one.isKockLawvere_one
+            (fun e : D R => (c * (d₀ : R)) * (e : R))).2.2
+            (c * (d₀ : R)) (fun e => by
+              show (c * (d₀ : R)) * (e : R)
+                = (c * (d₀ : R)) * ((0 : D R) : R) + (c * (d₀ : R)) * (e : R)
+              rw [show ((0 : D R) : R) = 0 from rfl, mul_zero, zero_add])).symm
+        calc c * (d₀ : R)
+            = (IsKockLawvere_one.isKockLawvere_one
+                (fun e : D R => (c * (d₀ : R)) * (e : R))).1 := hkc.symm
+          _ = (IsKockLawvere_one.isKockLawvere_one
+                (fun _ : D R => (0 : R))).1 := by
+                rw [← hproj _ _ hEqFun, hproj _ _ hEqZero]
+          _ = 0 := kl_zero_map_coeff
+      have hcz : c = 0 := kl_annihilator_eq_zero hcd
+      funext t
+      have ht := hcs t
+      rw [hzero0, hcz] at ht
+      have ht2 : y t - (τ 0 0 + b * (t : R)) = 0 := by simpa using ht
+      exact sub_eq_zero.mp ht2
+
+/-- **交换子轨道的四步 KL 展开**（导子交换公式的计算核心）：
+`f` 沿 `ξ_d → η_e → ξ_{-d} → η_{-e}` 无穷小轨道的展开是**精确**仿射式。
+高阶单项（`d²e`、`de²`、`d²e²`）在交换环中全含重复字母，由
+`d² = e² = 0` 恒为零消去，只剩一阶系数 `ξ(ηf) − η(ξf)` 乘 `de`。
+（第五十二接力点：第四十九/五十一接力点记录的"三阶残差"是记账
+错误——`d·e·d = d²·e = 0` 由交换律直接消去。） -/
+theorem fieldDeriv_commutator_expansion (ξ η : TangentVectorField R X) (f : X → R)
+    (x : X) (d e : D R) :
+    f (transformationCommutator ξ η d e x)
+      = f x + (fieldDeriv ξ (fieldDeriv η f) x
+          - fieldDeriv η (fieldDeriv ξ f) x) * ((d : R) * (e : R)) := by
+  have hd2 : (d : R) * (d : R) = 0 := D.mul_eq_zero R d
+  have he2 : (e : R) * (e : R) = 0 := D.mul_eq_zero R e
+  have hd2p : (d : R) ^ 2 = 0 := by rw [pow_two]; exact hd2
+  have he2p : (e : R) ^ 2 = 0 := by rw [pow_two]; exact he2
+  -- 沿轨道的 KL 刻画（每步一阶，参数都在 D 中）
+  have h1 : f (ξ.1 x d) = f x + fieldDeriv ξ f x * (d : R) := fieldDeriv_spec ξ f x d
+  have h2 : f (η.1 (ξ.1 x d) e)
+      = f (ξ.1 x d) + fieldDeriv η f (ξ.1 x d) * (e : R) :=
+    fieldDeriv_spec η f (ξ.1 x d) e
+  have h3 : fieldDeriv η f (ξ.1 x d)
+      = fieldDeriv η f x + fieldDeriv ξ (fieldDeriv η f) x * (d : R) :=
+    fieldDeriv_spec ξ (fieldDeriv η f) x d
+  have h5 : fieldDeriv ξ f (η.1 (ξ.1 x d) e)
+      = fieldDeriv ξ f (ξ.1 x d)
+        + fieldDeriv η (fieldDeriv ξ f) (ξ.1 x d) * (e : R) :=
+    fieldDeriv_spec η (fieldDeriv ξ f) (ξ.1 x d) e
+  have h6 : fieldDeriv ξ f (ξ.1 x d)
+      = fieldDeriv ξ f x + fieldDeriv ξ (fieldDeriv ξ f) x * (d : R) :=
+    fieldDeriv_spec ξ (fieldDeriv ξ f) x d
+  have h7 : fieldDeriv η (fieldDeriv ξ f) (ξ.1 x d)
+      = fieldDeriv η (fieldDeriv ξ f) x
+        + fieldDeriv ξ (fieldDeriv η (fieldDeriv ξ f)) x * (d : R) :=
+    fieldDeriv_spec ξ (fieldDeriv η (fieldDeriv ξ f)) x d
+  have h10 : fieldDeriv η f (η.1 (ξ.1 x d) e)
+      = fieldDeriv η f (ξ.1 x d)
+        + fieldDeriv η (fieldDeriv η f) (ξ.1 x d) * (e : R) :=
+    fieldDeriv_spec η (fieldDeriv η f) (ξ.1 x d) e
+  have h11 : fieldDeriv η (fieldDeriv η f) (ξ.1 x d)
+      = fieldDeriv η (fieldDeriv η f) x
+        + fieldDeriv ξ (fieldDeriv η (fieldDeriv η f)) x * (d : R) :=
+    fieldDeriv_spec ξ (fieldDeriv η (fieldDeriv η f)) x d
+  have h12 : fieldDeriv ξ (fieldDeriv η f) (η.1 (ξ.1 x d) e)
+      = fieldDeriv ξ (fieldDeriv η f) (ξ.1 x d)
+        + fieldDeriv η (fieldDeriv ξ (fieldDeriv η f)) (ξ.1 x d) * (e : R) :=
+    fieldDeriv_spec η (fieldDeriv ξ (fieldDeriv η f)) (ξ.1 x d) e
+  have h13 : fieldDeriv ξ (fieldDeriv η f) (ξ.1 x d)
+      = fieldDeriv ξ (fieldDeriv η f) x
+        + fieldDeriv ξ (fieldDeriv ξ (fieldDeriv η f)) x * (d : R) :=
+    fieldDeriv_spec ξ (fieldDeriv ξ (fieldDeriv η f)) x d
+  have h14 : fieldDeriv η (fieldDeriv ξ (fieldDeriv η f)) (ξ.1 x d)
+      = fieldDeriv η (fieldDeriv ξ (fieldDeriv η f)) x
+        + fieldDeriv ξ (fieldDeriv η (fieldDeriv ξ (fieldDeriv η f))) x * (d : R) :=
+    fieldDeriv_spec ξ (fieldDeriv η (fieldDeriv ξ (fieldDeriv η f))) x d
+  have hnegd : ((-(d : D R) : D R) : R) = -(d : R) := rfl
+  have hnege : ((-(e : D R) : D R) : R) = -(e : R) := rfl
+  -- 第二步（x₂）与第三步（x₃）的已化简形式
+  have hx2 : f (η.1 (ξ.1 x d) e)
+      = f x + fieldDeriv ξ f x * (d : R) + fieldDeriv η f x * (e : R)
+        + fieldDeriv ξ (fieldDeriv η f) x * ((d : R) * (e : R)) := by
+    rw [h2, h1, h3]; ring
+  have hx3 : f (ξ.1 (η.1 (ξ.1 x d) e) (-d))
+      = f x + fieldDeriv η f x * (e : R)
+        + (fieldDeriv ξ (fieldDeriv η f) x
+          - fieldDeriv η (fieldDeriv ξ f) x) * ((d : R) * (e : R)) := by
+    have h4' := fieldDeriv_spec ξ f (η.1 (ξ.1 x d) e) (-d)
+    rw [h4', hx2, h5, h6, h7, hnegd]
+    ring_nf
+    rw [hd2p]
+    ring
+  -- 第四步（x₄ = 交换子轨道终点）
+  have h8' := fieldDeriv_spec η f (ξ.1 (η.1 (ξ.1 x d) e) (-d)) (-e)
+  have h9' := fieldDeriv_spec ξ (fieldDeriv η f) (η.1 (ξ.1 x d) e) (-d)
+  rw [transformationCommutator_apply, h8', h9', h12, h13, h14, h10, h11, hx3, h3,
+    hnegd, hnege]
+  ring_nf
+  rw [hd2p, he2p]
+  ring
+
+/-- **导子交换公式**（Kock I.9 的算子形式，Koszul d² 的核心）：
+`[ξ,η](f) = ξ(ηf) − η(ξf)`。
+
+证明：映射 `T(d₁,d₂) := f(交换子轨道 x (d₁,d₂))` 两轴退化，Property W
+给出唯一因子化。两个候选：① `f ∘ [ξ,η]-轨道`（`lieBracket_spec`）；
+② 系数 `ξ(ηf) − η(ξf)` 的仿射函数（四步展开引理）。因子化唯一性
+给出二者相等，再对 ① 用 KL 唯一性读出系数即得。零新公理。 -/
+theorem fieldDeriv_lieBracket [Microlinear R X] [PropertyW R X]
+    (ξ η : TangentVectorField R X) (f : X → R) :
+    fieldDeriv (lieBracket ξ η) f
+      = fieldDeriv ξ (fieldDeriv η f) - fieldDeriv η (fieldDeriv ξ f) := by
+  funext x
+  show (IsKockLawvere_one.isKockLawvere_one
+      (fun t : D R => f ((lieBracket ξ η).1 x t))).1
+    = fieldDeriv ξ (fieldDeriv η f) x - fieldDeriv η (fieldDeriv ξ f) x
+  -- W-因子化：两轴退化（单轴为零时交换子是恒等变换）
+  have hRA : ∀ d₁ : D R, f (transformationCommutator ξ η d₁ 0 x)
+      = f (transformationCommutator ξ η 0 0 x) := fun d₁ => by
+    rw [transformationCommutator_zero_right, transformationCommutator_zero_zero]
+  have hLA : ∀ d₂ : D R, f (transformationCommutator ξ η 0 d₂ x)
+      = f (transformationCommutator ξ η 0 0 x) := fun d₂ => by
+    rw [transformationCommutator_zero_left, transformationCommutator_zero_zero]
+  obtain ⟨t₀, hspec0, huniq0⟩ := PropertyW.propertyW (R := R) (M := R)
+    (fun d₁ d₂ => f (transformationCommutator ξ η d₁ d₂ x)) hRA hLA
+  -- 候选 1：括号场轨道复合 f（lieBracket_spec 给出因子化）
+  have hw1 : ∀ d₁ d₂ : D R,
+      (fun t : D R => f ((lieBracket ξ η).1 x t)) (D.mul R d₁ d₂)
+        = f (transformationCommutator ξ η d₁ d₂ x) := by
+    intro d₁ d₂
+    show f ((lieBracket ξ η).1 x (D.mul R d₁ d₂))
+      = f (transformationCommutator ξ η d₁ d₂ x)
+    rw [lieBracket_spec ξ η x d₁ d₂]
+    rfl
+  -- 候选 2：仿射函数（四步展开给出因子化）
+  have hw2 : ∀ d₁ d₂ : D R,
+      (fun t : D R => f x + (fieldDeriv ξ (fieldDeriv η f) x
+          - fieldDeriv η (fieldDeriv ξ f) x) * (t : R)) (D.mul R d₁ d₂)
+        = f (transformationCommutator ξ η d₁ d₂ x) := by
+    intro d₁ d₂
+    show f x + (fieldDeriv ξ (fieldDeriv η f) x
+          - fieldDeriv η (fieldDeriv ξ f) x) * ((D.mul R d₁ d₂ : D R) : R)
+      = f (transformationCommutator ξ η d₁ d₂ x)
+    rw [D.coe_mul]
+    exact (fieldDeriv_commutator_expansion ξ η f x d₁ d₂).symm
+  -- 因子化唯一性 ⟹ 两候选作为 D 上的函数相等
+  have hEq : (fun t : D R => f ((lieBracket ξ η).1 x t))
+      = (fun t : D R => f x + (fieldDeriv ξ (fieldDeriv η f) x
+          - fieldDeriv η (fieldDeriv ξ f) x) * (t : R)) :=
+    (huniq0 _ hw1).trans (huniq0 _ hw2).symm
+  -- 对候选 1 用 KL 唯一性读出系数：仿射系数唯一 ⟹ 就是 ξ(ηf) − η(ξf)
+  obtain ⟨b, hbs, hbu⟩ := IsKockLawvere_one.isKockLawvere_one
+    (fun t : D R => f ((lieBracket ξ η).1 x t))
+  have hbase : f ((lieBracket ξ η).1 x 0) = f x := by
+    rw [lieBracket_basePoint]
+  have hCeq : (fieldDeriv ξ (fieldDeriv η f) x
+      - fieldDeriv η (fieldDeriv ξ f) x) = b := by
+    apply hbu
+    intro t
+    show f ((lieBracket ξ η).1 x t)
+      = f ((lieBracket ξ η).1 x 0)
+        + (fieldDeriv ξ (fieldDeriv η f) x
+          - fieldDeriv η (fieldDeriv ξ f) x) * (t : R)
+    rw [congrFun hEq t, hbase]
+  exact hCeq.symm
+
+/-- **0-形式层的 d² = 0**：`d(d f) = 0`——由导子交换公式，
+`d(d₀f)(ξ,η) = ξ(ηf) − η(ξf) − [ξ,η](f) = 0`。 -/
+theorem algD_d2_zero_form [Microlinear R X] [PropertyW R X]
+    (f : X → R) (ξ η : TangentVectorField R X) :
+    algD1 (algD0 f) ξ η = 0 := by
+  funext x
+  simp only [algD1, Pi.zero_apply, Pi.sub_apply]
+  have h1 : fieldDeriv ξ (algD0 f η) x = fieldDeriv ξ (fieldDeriv η f) x := rfl
+  have h2 : fieldDeriv η (algD0 f ξ) x = fieldDeriv η (fieldDeriv ξ f) x := rfl
+  have h3 : algD0 f (lieBracket ξ η) x = fieldDeriv (lieBracket ξ η) f x := rfl
+  rw [h1, h2, h3, fieldDeriv_lieBracket]
+  simp only [Pi.sub_apply]
+  ring
+
 end AlgebraicForms
 
 end SDG.DifferentialForms

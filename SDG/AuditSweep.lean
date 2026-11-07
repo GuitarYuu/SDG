@@ -85,3 +85,15 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.algD0_smul
 #print axioms SDG.DifferentialForms.algD1_add
 #print axioms SDG.DifferentialForms.algD1_smul
+
+-- AlgebraicForms：M4 核心（第五十二接力点：导子交换公式 + 0-形式层 d²=0）
+#print axioms SDG.DifferentialForms.kl_zero_map_coeff
+#print axioms SDG.DifferentialForms.kl_annihilator_eq_zero
+#print axioms SDG.DifferentialForms.instPropertyW_self
+#print axioms SDG.DifferentialForms.fieldDeriv_commutator_expansion
+#print axioms SDG.DifferentialForms.fieldDeriv_lieBracket
+#print axioms SDG.DifferentialForms.algD_d2_zero_form
+
+-- 快捷件：simplexIntegral2 数乘 + H 层 transport 恒等性
+#print axioms SDG.DifferentialForms.simplexIntegral2_smul
+#print axioms SDG.DifferentialForms.deRhamCohomologyCast_rfl
