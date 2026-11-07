@@ -106,11 +106,13 @@ Differential Geometry of Manifolds》第 I 部分的微分形式—de Rham 复�
 * **Koszul 外微分**：`algD0`（0-形式）、`algD1`（1-形式，Koszul 公式
   `ξ(ωη) − η(ωξ) − ω([ξ,η])`）、`algD2`（2-形式三顶点公式）——
   对形式变元 R-线性。
-* **d² = 0**：0-形式层（`algD_d2_zero_form`，由**导子交换公式**
-  `fieldDeriv_lieBracket`：`[ξ,η](f) = ξ(ηf) − η(ξf)`）；
+* **⭐ d² = 0（核心理论闭环）**：0-形式层（`algD_d2_zero_form`，由
+  **导子交换公式** `fieldDeriv_lieBracket`：`[ξ,η](f) = ξ(ηf) − η(ξf)`）；
   1-形式层好形式类（`algD_d2_one_form`——场可加/零保持/三体折叠
   三假设下 Koszul 展开坍缩到函数层 Jacobi）；**精确形式链收官
-  `algD_d2_exact`**：`d²(d₀f) = 0` 零假设成立。
+  `algD_d2_exact`**：`d²(d₀f) = 0` 零假设成立；**三阶链
+  `algD_d3_exact`**：`d³(d₀f) = 0`。**de Rham 复形正合性的核心
+  定理在两层完整证明**。
 * **可加性突破**（第五十五接力点）：`directionalDeriv_tangentAdd`
   （`d(g)(v+w) = d(g)(v) + d(g)(w)`——经 R 自身微线性
   `Microlinear R R`，即 KL 全 schema）与 `fieldDeriv_add_fields`、
