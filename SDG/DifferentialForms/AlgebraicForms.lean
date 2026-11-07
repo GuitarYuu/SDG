@@ -732,6 +732,36 @@ theorem fieldDeriv_add_fields [Microlinear R X] [Microlinear R R]
   rw [toFiber_add]
   exact directionalDeriv_tangentAdd g (toFiber φ x) (toFiber ψ x)
 
+/-- **R-标量缩放场的导数**：`(c·ξ)(g) = c·ξ(g)`（同
+`fieldDeriv_smul_field` 的模板，把 `f x` 换成常数 `c`）。 -/
+theorem fieldDeriv_smulR_field (c : R) (ξ : TangentVectorField R X) (g : X → R) :
+    fieldDeriv (c • ξ) g = c • fieldDeriv ξ g := by
+  funext x
+  simp only [Pi.smul_apply]
+  show directionalDerivative g (toFiber (c • ξ) x) = c * fieldDeriv ξ g x
+  have hspec : ∀ d : D R, g ((c • ξ).1 x d) = g x + fieldDeriv (c • ξ) g x * (d : R) :=
+    fieldDeriv_spec (c • ξ) g x
+  have hξ : ∀ d : D R, g (ξ.1 x d) = g x + fieldDeriv ξ g x * (d : R) :=
+    fieldDeriv_spec ξ g x
+  have hstep : ∀ d : D R, g ((c • ξ).1 x d)
+      = g x + (c * fieldDeriv ξ g x) * (d : R) := by
+    intro d
+    have hd : ((c • d : D R) : R) = c * (d : R) := rfl
+    calc g ((c • ξ).1 x d) = g (ξ.1 x (c • d)) := rfl
+      _ = g x + fieldDeriv ξ g x * ((c • d : D R) : R) := hξ (c • d)
+      _ = g x + (c * fieldDeriv ξ g x) * (d : R) := by rw [hd]; ring
+  have hjoin : ∀ d : D R,
+      (fieldDeriv (c • ξ) g x - c * fieldDeriv ξ g x) * (d : R) = 0 := by
+    intro d
+    have h1 := hspec d
+    rw [hstep d] at h1
+    have h3 : (c * fieldDeriv ξ g x) * (d : R) = fieldDeriv (c • ξ) g x * (d : R) :=
+      add_left_cancel h1
+    rw [sub_mul, h3, sub_self]
+  have hpt : directionalDerivative g (toFiber (c • ξ) x) = c * fieldDeriv ξ g x :=
+    sub_eq_zero.mp (kl_annihilator_eq_zero hjoin)
+  rw [hpt]
+
 /-- **缩放场的导数**（只需 KL-1）：`(f·ξ)(g) = f·ξ(g)`——
 缩放场在 `x` 处的轨道是 ξ-轨道在参数 `f(x)·d`（仍属 D），代入
 ξ-KL 展开后系数即 `f·ξ(g)`，零化子引理收尾。 -/
@@ -776,6 +806,139 @@ theorem fieldDeriv_lieBracket_smul_field [Microlinear R X] [PropertyW R X]
     fieldDeriv_lieBracket ξ η g]
   simp only [Pi.mul_apply, Pi.sub_apply, Pi.add_apply]
   ring
+
+/-! ### d² = 0（1-形式层，好形式类）-/
+
+/-- 场层：(−1)·φ + φ = 0（Module 纤维律直推）。 -/
+theorem field_add_neg_smul [Microlinear R X] (φ : TangentVectorField R X) :
+    (-1 : R) • φ + φ = 0 := by
+  have hfib : ∀ x : X, toFiber ((-1 : R) • φ + φ) x = toFiber (0 : TangentVectorField R X) x := by
+    intro x
+    rw [toFiber_add, toFiber_smulR, toFiber_zero]
+    have h1 : ((-1 : R) + 1) • toFiber φ x
+        = (-1 : R) • toFiber φ x + (1 : R) • toFiber φ x :=
+      add_smul (-1 : R) 1 (toFiber φ x)
+    rw [show ((-1 : R) + 1) = 0 from by ring, zero_smul, one_smul] at h1
+    exact h1.symm
+  apply Subtype.ext
+  funext x d
+  have h := congrArg (fun t : TangentFiber R X x => t.1 d) (hfib x)
+  exact h
+
+/-- 场值形式的 −1-线性（可加性 + 零推出）。 -/
+theorem algForm1_neg_smul [Microlinear R X] (ω : AlgForm1 R X)
+    (hadd : ∀ φ ψ : TangentVectorField R X, ω (φ + ψ) = ω φ + ω ψ)
+    (hzero : ω 0 = 0) (φ : TangentVectorField R X) :
+    ω ((-1 : R) • φ) = -ω φ := by
+  have h1 : ω ((-1 : R) • φ + φ) = ω ((-1 : R) • φ) + ω φ := hadd _ _
+  rw [field_add_neg_smul φ, hzero] at h1
+  exact eq_neg_of_add_eq_zero_left h1.symm
+
+/-- **W-引理：括号对 −1 缩放的齐次性**：`[(−1)·φ, η] = (−1)·[φ, η]`。
+
+证明：`((−1)·φ)` 的轨道是 φ-轨道在参数 `−d`，故交换子
+`K((−1)·φ,η)(d,e) = K(φ,η)(−d,e)`（轨道复合逐点同形）；两侧变换
+`t_{[(−1)φ],η}` 与 `t_{[φ,η]}∘(参数取负)` 都是 `K((−1)·φ,η)` 的
+Property W 因子化，唯一性相等。 -/
+theorem lieBracket_neg_smul_left [Microlinear R X] [PropertyW R X]
+    (φ η : TangentVectorField R X) :
+    lieBracket ((-1 : R) • φ) η = (-1 : R) • lieBracket φ η := by
+  apply Subtype.ext
+  funext x
+  funext d
+  show lieBracketTransform ((-1 : R) • φ) η d x
+    = lieBracketTransform φ η ((-1 : R) • d) x
+  obtain ⟨t'', hspec'', huniq''⟩ := PropertyW.propertyW (R := R) (M := X → X)
+    (fun d₁ d₂ => transformationCommutator ((-1 : R) • φ) η d₁ d₂)
+    (fun d₁ => transformationCommutator_rightAxis ((-1 : R) • φ) η d₁)
+    (fun d₂ => transformationCommutator_leftAxis ((-1 : R) • φ) η d₂)
+  have hK : ∀ d₁ d₂ : D R,
+      lieBracketTransform ((-1 : R) • φ) η (D.mul R d₁ d₂)
+        = transformationCommutator ((-1 : R) • φ) η d₁ d₂ :=
+    fun d₁ d₂ => lieBracketTransform_spec ((-1 : R) • φ) η d₁ d₂
+  have hK2 : ∀ d₁ d₂ : D R,
+      (fun δ : D R => lieBracketTransform φ η ((-1 : R) • δ)) (D.mul R d₁ d₂)
+        = transformationCommutator ((-1 : R) • φ) η d₁ d₂ := by
+    intro d₁ d₂
+    show lieBracketTransform φ η ((-1 : R) • (D.mul R d₁ d₂))
+      = transformationCommutator ((-1 : R) • φ) η d₁ d₂
+    have hsplit : ((-1 : R) • (D.mul R d₁ d₂) : D R) = D.mul R (-d₁) d₂ := by
+      apply Subtype.ext
+      show (-1 : R) * ((d₁ : R) * (d₂ : R)) = -(d₁ : R) * (d₂ : R)
+      ring
+    rw [hsplit, lieBracketTransform_spec φ η (-d₁) d₂]
+    show (fun x' : X => η.1 (φ.1 (η.1 (φ.1 x' (-d₁)) d₂) (-(-d₁))) (-d₂))
+      = (fun x' : X => η.1 (((-1 : R) • φ).1 (η.1 (((-1 : R) • φ).1 x' d₁) d₂) (-d₁)) (-d₂))
+    have hs : ∀ (y : X) (d' : D R), ((-1 : R) • φ).1 y d' = φ.1 y (-d') := by
+      intro y d'
+      show (φ.1 y) ((-1 : R) • d') = φ.1 y (-d')
+      rw [D.neg_one_smul]
+    simp only [hs]
+  have hw1 : lieBracketTransform ((-1 : R) • φ) η = t'' := huniq'' _ hK
+  have hw2 : (fun δ : D R => lieBracketTransform φ η ((-1 : R) • δ)) = t'' := huniq'' _ hK2
+  rw [hw1, ← hw2]
+
+/-- **d² = 0（1-形式层，好形式类）**：对与函数作用相容的 1-形式 ω
+（场可加 `hadd`、零保持 `hzero`、三体折叠 `hfold`——凡三个场的
+函数作用之和为零则 ω-值之和为零），Koszul 外微分的平方为零。
+
+证明：`d(dω)` 的 Koszul 展开中六个二阶导数项对与三个 ω-复合项对
+自动相消（纯 ring），剩余 `ω([[ξ₀,ξ₁],ξ₂]) − ω([[ξ₀,ξ₂],ξ₁])
++ ω([[ξ₁,ξ₂],ξ₀]])`——第二项经 ω-负线性（`algForm1_neg_smul`）与
+括号对 −1 缩放的齐次性（`lieBracket_neg_smul_left`，内层反对称）
+化为 `+ω([[ξ₂,ξ₀],ξ₁]])`，三项恰为函数层 Jacobi（`fieldDeriv_jacobi`）
+的三场组合，由 `hfold` 收尾。 -/
+theorem algD_d2_one_form [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (ω : AlgForm1 R X)
+    (hadd : ∀ φ ψ : TangentVectorField R X, ω (φ + ψ) = ω φ + ω ψ)
+    (hzero : ω 0 = 0)
+    (hfold : ∀ φ₁ φ₂ φ₃ : TangentVectorField R X,
+      (∀ g : X → R, fieldDeriv φ₁ g + fieldDeriv φ₂ g + fieldDeriv φ₃ g = 0) →
+      ω φ₁ + ω φ₂ + ω φ₃ = 0)
+    (ξ₀ ξ₁ ξ₂ : TangentVectorField R X) :
+    algD2 (algD1 ω) ξ₀ ξ₁ ξ₂ = 0 := by
+  funext x
+  have hneg := algForm1_neg_smul ω hadd hzero
+  have hswap : lieBracket (lieBracket ξ₂ ξ₀) ξ₁
+      = (-1 : R) • lieBracket (lieBracket ξ₀ ξ₂) ξ₁ := by
+    rw [lieBracket_antisymm ξ₀ ξ₂, lieBracket_neg_smul_left]
+  have hJ := fieldDeriv_jacobi ξ₀ ξ₁ ξ₂
+  have hswap2 : lieBracket (lieBracket ξ₀ ξ₂) ξ₁
+      = (-1 : R) • lieBracket (lieBracket ξ₂ ξ₀) ξ₁ := by
+    rw [lieBracket_antisymm ξ₂ ξ₀, lieBracket_neg_smul_left]
+  have hfold3 := hfold (lieBracket (lieBracket ξ₀ ξ₁) ξ₂)
+    ((-1 : R) • lieBracket (lieBracket ξ₀ ξ₂) ξ₁) (lieBracket (lieBracket ξ₁ ξ₂) ξ₀) (by
+      intro g
+      have hfs : fieldDeriv ((-1 : R) • lieBracket (lieBracket ξ₀ ξ₂) ξ₁) g
+          = fieldDeriv (lieBracket (lieBracket ξ₂ ξ₀) ξ₁) g := by
+        rw [hswap2, fieldDeriv_smulR_field, fieldDeriv_smulR_field, smul_smul,
+        show ((-1 : R) * (-1) : R) = 1 from by ring, one_smul]
+      rw [hfs]
+      linear_combination (norm := ring_nf) (hJ g))
+  show algD2 (algD1 ω) ξ₀ ξ₁ ξ₂ x = 0
+  have hpair : algD2 (algD1 ω) ξ₀ ξ₁ ξ₂ x
+      = ω (lieBracket (lieBracket ξ₀ ξ₁) ξ₂) x
+        + ω ((-1 : R) • lieBracket (lieBracket ξ₀ ξ₂) ξ₁) x
+        + ω (lieBracket (lieBracket ξ₁ ξ₂) ξ₀) x := by
+    simp only [algD2, algD1, Pi.zero_apply]
+    rw [fieldDeriv_sub ξ₀, fieldDeriv_sub ξ₀, fieldDeriv_sub ξ₁, fieldDeriv_sub ξ₁,
+      fieldDeriv_sub ξ₂, fieldDeriv_sub ξ₂,
+      fieldDeriv_lieBracket ξ₀ ξ₁ (ω ξ₂), fieldDeriv_lieBracket ξ₀ ξ₂ (ω ξ₁),
+      fieldDeriv_lieBracket ξ₁ ξ₂ (ω ξ₀)]
+    simp only [Pi.sub_apply, Pi.add_apply, Pi.zero_apply]
+    have hnegx : -ω (lieBracket (lieBracket ξ₀ ξ₂) ξ₁) x
+        = ω ((-1 : R) • lieBracket (lieBracket ξ₀ ξ₂) ξ₁) x := by
+      have h2 := congrFun (hneg (lieBracket (lieBracket ξ₀ ξ₂) ξ₁)) x
+      simp only [Pi.neg_apply] at h2
+      exact h2.symm
+    ring_nf
+    simp only [sub_eq_add_neg]
+    rw [hnegx]
+    ring
+  rw [hpair]
+  have hfold3x := congrFun hfold3 x
+  simp only [Pi.add_apply, Pi.zero_apply, Pi.smul_apply, smul_eq_mul] at hfold3x
+  exact hfold3x
 
 end AlgebraicForms
 
