@@ -1203,6 +1203,59 @@ theorem alt2_idem (β : AlgForm2 R X) :
     = 2 * (β ξ η x - β η ξ x)
   ring
 
+/-! ### 各层级零引理与三阶链（第六十接力点）-/
+
+/-- **零函数的场导数为零**（KL 唯一性）。 -/
+theorem fieldDeriv_zero_fun (ξ : TangentVectorField R X) :
+    fieldDeriv ξ (0 : X → R) = 0 := by
+  funext x
+  have key : ∀ d : D R, (0 : X → R) (ξ.1 x d)
+      = (0 : X → R) (ξ.1 x 0) + (0 : R) * ((d : D R) : R) := by
+    intro d
+    show (0 : R) = (0 : R) + (0 : R) * ((d : D R) : R)
+    ring
+  exact ((IsKockLawvere_one.isKockLawvere_one (R := R)
+    (fun d : D R => (0 : X → R) ((TangentVectorField.toFiber ξ x).1 d))).property.right _ key).symm
+
+/-- algD1 的零输入。 -/
+theorem algD1_zero [Microlinear R X] [PropertyW R X] :
+    algD1 (0 : AlgForm1 R X) = (0 : AlgForm2 R X) := by
+  funext ξ η x
+  simp only [algD1, Pi.zero_apply, Pi.smul_apply, smul_eq_mul, Pi.sub_apply,
+    Pi.add_apply, fieldDeriv_zero_fun]
+  ring
+
+/-- algD2 的零输入。 -/
+theorem algD2_zero [Microlinear R X] [PropertyW R X] :
+    algD2 (0 : AlgForm2 R X) = (0 : AlgForm3 R X) := by
+  funext ξ₀ ξ₁ ξ₂ x
+  simp only [algD2, Pi.zero_apply, Pi.smul_apply, smul_eq_mul, Pi.sub_apply,
+    Pi.add_apply, fieldDeriv_zero_fun]
+  ring
+
+/-- algD3 的零输入。 -/
+theorem algD3_zero [Microlinear R X] [PropertyW R X] :
+    algD3 (0 : AlgForm3 R X) = 0 := by
+  funext ξ₀ ξ₁ ξ₂ ξ₃ x
+  simp only [algD3, Pi.zero_apply, Pi.smul_apply, smul_eq_mul, Pi.sub_apply,
+    Pi.add_apply, fieldDeriv_zero_fun]
+  ring
+
+/-- **⭐ 三阶链（精确形式）**：`d³(d₀f) = 0`——`d²(d₀f) = 0`
+（第五十六接力点）与各层级零引理的推论：
+`d(d²(d₀f)) = d(0) = 0`。 -/
+theorem algD_d3_exact [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (f : X → R) (ξ₀ ξ₁ ξ₂ ξ₃ : TangentVectorField R X) :
+    algD3 (algD2 (algD1 (algD0 f))) ξ₀ ξ₁ ξ₂ ξ₃ = 0 := by
+  have h0 : algD1 (algD0 f) = (0 : AlgForm2 R X) := by
+    funext φ η
+    exact algD_d2_zero_form f φ η
+  have h1 : algD2 (algD1 (algD0 f)) = (0 : AlgForm3 R X) := by
+    rw [h0]
+    exact algD2_zero
+  rw [h1]
+  exact congrArg (fun F => F ξ₀ ξ₁ ξ₂ ξ₃) algD3_zero
+
 end AlgebraicForms
 
 end SDG.DifferentialForms
