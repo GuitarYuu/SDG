@@ -102,3 +102,10 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.fieldDeriv_neg
 #print axioms SDG.DifferentialForms.fieldDeriv_sub
 #print axioms SDG.DifferentialForms.fieldDeriv_jacobi
+
+-- AlgebraicForms：括号是导子 + 2-形式层 def（第五十四接力点）
+#print axioms SDG.DifferentialForms.fieldDeriv_lieBracket_mul
+#print axioms SDG.DifferentialForms.algD2
+#print axioms SDG.DifferentialForms.algD2_apply
+#print axioms SDG.DifferentialForms.algD2_add
+#print axioms SDG.DifferentialForms.algD2_smul

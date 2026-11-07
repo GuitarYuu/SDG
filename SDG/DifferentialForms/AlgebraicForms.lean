@@ -532,6 +532,67 @@ theorem fieldDeriv_jacobi [Microlinear R X] [PropertyW R X]
     Pi.sub_apply]
   ring
 
+/-! ### M1 收官：李括号是导子 -/
+
+/-- **李括号是导子**：`[ξ,η](f·g) = [ξ,η](f)·g + f·[ξ,η](g)`——
+交换子公式 + 乘积法则展开，交叉项两两相消。 -/
+theorem fieldDeriv_lieBracket_mul [Microlinear R X] [PropertyW R X]
+    (ξ η : TangentVectorField R X) (f g : X → R) :
+    fieldDeriv (lieBracket ξ η) (f * g)
+      = fieldDeriv (lieBracket ξ η) f * g + f * fieldDeriv (lieBracket ξ η) g := by
+  funext x
+  have hηfg : fieldDeriv η (f * g) = f * fieldDeriv η g + g * fieldDeriv η f :=
+    fieldDeriv_mul η f g
+  have hξfg : fieldDeriv ξ (f * g) = f * fieldDeriv ξ g + g * fieldDeriv ξ f :=
+    fieldDeriv_mul ξ f g
+  rw [fieldDeriv_lieBracket, hηfg, hξfg, fieldDeriv_add ξ, fieldDeriv_add η,
+    fieldDeriv_mul ξ f (fieldDeriv η g), fieldDeriv_mul ξ g (fieldDeriv η f),
+    fieldDeriv_mul η f (fieldDeriv ξ g), fieldDeriv_mul η g (fieldDeriv ξ f),
+    fieldDeriv_lieBracket, fieldDeriv_lieBracket]
+  simp only [Pi.sub_apply, Pi.add_apply, Pi.mul_apply]
+  ring
+
+/-! ### 2-形式层与 Koszul 外微分（第二层）-/
+
+/-- 2-形式（场变元）：场对 → 函数。 -/
+abbrev AlgForm2 (R : Type u) [IsKockLawvere_one R] (X : Type u) :=
+  TangentVectorField R X → TangentVectorField R X → (X → R)
+
+/-- **2-形式输入的 Koszul 外微分**（p = 2 顶点公式）：
+`(dα)(ξ₀,ξ₁,ξ₂) = ξ₀(α(ξ₁,ξ₂)) − ξ₁(α(ξ₀,ξ₂)) + ξ₂(α(ξ₀,ξ₁))
+  − α([ξ₀,ξ₁],ξ₂) + α([ξ₀,ξ₂],ξ₁) − α([ξ₁,ξ₂],ξ₀)`。
+（与 `algD1` 的 Koszul 约定一致：p = 1 时给出同一公式。） -/
+def algD2 [Microlinear R X] [PropertyW R X] (α : AlgForm2 R X) :
+    TangentVectorField R X → TangentVectorField R X → TangentVectorField R X → (X → R) :=
+  fun ξ₀ ξ₁ ξ₂ =>
+    fieldDeriv ξ₀ (α ξ₁ ξ₂) - fieldDeriv ξ₁ (α ξ₀ ξ₂) + fieldDeriv ξ₂ (α ξ₀ ξ₁)
+      - α (lieBracket ξ₀ ξ₁) ξ₂ + α (lieBracket ξ₀ ξ₂) ξ₁ - α (lieBracket ξ₁ ξ₂) ξ₀
+
+/-- `algD2` 的点态展开。 -/
+theorem algD2_apply [Microlinear R X] [PropertyW R X] (α : AlgForm2 R X)
+    (ξ₀ ξ₁ ξ₂ : TangentVectorField R X) (x : X) :
+    algD2 α ξ₀ ξ₁ ξ₂ x
+      = fieldDeriv ξ₀ (α ξ₁ ξ₂) x - fieldDeriv ξ₁ (α ξ₀ ξ₂) x + fieldDeriv ξ₂ (α ξ₀ ξ₁) x
+        - α (lieBracket ξ₀ ξ₁) ξ₂ x + α (lieBracket ξ₀ ξ₂) ξ₁ x
+        - α (lieBracket ξ₁ ξ₂) ξ₀ x := rfl
+
+/-- `algD2` 对形式变元的加法性。 -/
+theorem algD2_add [Microlinear R X] [PropertyW R X] (α₁ α₂ : AlgForm2 R X)
+    (ξ₀ ξ₁ ξ₂ : TangentVectorField R X) :
+    algD2 (α₁ + α₂) ξ₀ ξ₁ ξ₂ = algD2 α₁ ξ₀ ξ₁ ξ₂ + algD2 α₂ ξ₀ ξ₁ ξ₂ := by
+  funext x
+  simp only [algD2, Pi.add_apply, Pi.sub_apply, fieldDeriv_add]
+  ring
+
+/-- `algD2` 对形式变元的数乘性。 -/
+theorem algD2_smul [Microlinear R X] [PropertyW R X] (c : R) (α : AlgForm2 R X)
+    (ξ₀ ξ₁ ξ₂ : TangentVectorField R X) :
+    algD2 (c • α) ξ₀ ξ₁ ξ₂ = c • algD2 α ξ₀ ξ₁ ξ₂ := by
+  funext x
+  simp only [algD2, Pi.smul_apply, Pi.sub_apply, fieldDeriv_smul, smul_eq_mul,
+    Pi.add_apply]
+  ring
+
 end AlgebraicForms
 
 end SDG.DifferentialForms
