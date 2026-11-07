@@ -97,3 +97,8 @@ import SDG.ScratchR
 -- 快捷件：simplexIntegral2 数乘 + H 层 transport 恒等性
 #print axioms SDG.DifferentialForms.simplexIntegral2_smul
 #print axioms SDG.DifferentialForms.deRhamCohomologyCast_rfl
+
+-- AlgebraicForms：Jacobi 恒等式（第五十三接力点：M1 函数作用层面收官）
+#print axioms SDG.DifferentialForms.fieldDeriv_neg
+#print axioms SDG.DifferentialForms.fieldDeriv_sub
+#print axioms SDG.DifferentialForms.fieldDeriv_jacobi
