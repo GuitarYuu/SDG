@@ -1256,6 +1256,21 @@ theorem algD_d3_exact [Microlinear R X] [PropertyW R X] [Microlinear R R]
   rw [h1]
   exact congrArg (fun F => F ξ₀ ξ₁ ξ₂ ξ₃) algD3_zero
 
+/-- **2-形式的双重括号重组**：`α([[ξa,ξb],ξc],ξd) =
+−α([[ξb,ξa],ξc],ξd)`——内层 lieBracket 反对称
+（`lieBracket_antisymm`）+ 括号对 (−1)-缩放的齐次性
+（`lieBracket_neg_smul_left`）+ α-负线性，三引理链。 -/
+theorem algForm2_regroup [Microlinear R X] [PropertyW R X] (α : AlgForm2 R X)
+    (hneg : ∀ φ : TangentVectorField R X, α ((-1 : R) • φ) = -α φ)
+    (ξa ξb ξc ξd : TangentVectorField R X) :
+    α (lieBracket (lieBracket ξa ξb) ξc) ξd
+      = -α (lieBracket (lieBracket ξb ξa) ξc) ξd := by
+  have h1 : lieBracket (lieBracket ξa ξb) ξc
+      = (-1 : R) • lieBracket (lieBracket ξb ξa) ξc := by
+    rw [lieBracket_antisymm ξb ξa, lieBracket_neg_smul_left]
+  rw [h1, hneg]
+  simp only [Pi.neg_apply]
+
 end AlgebraicForms
 
 end SDG.DifferentialForms
