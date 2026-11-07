@@ -1134,10 +1134,10 @@ def algD3 [Microlinear R X] [PropertyW R X] (α : AlgForm3 R X) :
   fun ξ₀ ξ₁ ξ₂ ξ₃ => fun x =>
     fieldDeriv ξ₀ (α ξ₁ ξ₂ ξ₃) x - fieldDeriv ξ₁ (α ξ₀ ξ₂ ξ₃) x
       + fieldDeriv ξ₂ (α ξ₀ ξ₁ ξ₃) x - fieldDeriv ξ₃ (α ξ₀ ξ₁ ξ₂) x
-      - α (lieBracket ξ₀ ξ₁) ξ₂ ξ₃ x - α (lieBracket ξ₀ ξ₂) ξ₁ ξ₃ x
+      - α (lieBracket ξ₀ ξ₁) ξ₂ ξ₃ x + α (lieBracket ξ₀ ξ₂) ξ₁ ξ₃ x
       - α (lieBracket ξ₀ ξ₃) ξ₁ ξ₂ x
-      + α (lieBracket ξ₁ ξ₂) ξ₀ ξ₃ x + α (lieBracket ξ₁ ξ₃) ξ₀ ξ₂ x
-      + α (lieBracket ξ₂ ξ₃) ξ₀ ξ₁ x
+      - α (lieBracket ξ₁ ξ₂) ξ₀ ξ₃ x + α (lieBracket ξ₁ ξ₃) ξ₀ ξ₂ x
+      - α (lieBracket ξ₂ ξ₃) ξ₀ ξ₁ x
 
 /-- algD3 的点态展开。 -/
 theorem algD3_apply [Microlinear R X] [PropertyW R X] (α : AlgForm3 R X)
@@ -1145,10 +1145,10 @@ theorem algD3_apply [Microlinear R X] [PropertyW R X] (α : AlgForm3 R X)
     algD3 α ξ₀ ξ₁ ξ₂ ξ₃ x
       = fieldDeriv ξ₀ (α ξ₁ ξ₂ ξ₃) x - fieldDeriv ξ₁ (α ξ₀ ξ₂ ξ₃) x
         + fieldDeriv ξ₂ (α ξ₀ ξ₁ ξ₃) x - fieldDeriv ξ₃ (α ξ₀ ξ₁ ξ₂) x
-        - α (lieBracket ξ₀ ξ₁) ξ₂ ξ₃ x - α (lieBracket ξ₀ ξ₂) ξ₁ ξ₃ x
+        - α (lieBracket ξ₀ ξ₁) ξ₂ ξ₃ x + α (lieBracket ξ₀ ξ₂) ξ₁ ξ₃ x
         - α (lieBracket ξ₀ ξ₃) ξ₁ ξ₂ x
-        + α (lieBracket ξ₁ ξ₂) ξ₀ ξ₃ x + α (lieBracket ξ₁ ξ₃) ξ₀ ξ₂ x
-        + α (lieBracket ξ₂ ξ₃) ξ₀ ξ₁ x := rfl
+        - α (lieBracket ξ₁ ξ₂) ξ₀ ξ₃ x + α (lieBracket ξ₁ ξ₃) ξ₀ ξ₂ x
+        - α (lieBracket ξ₂ ξ₃) ξ₀ ξ₁ x := rfl
 
 /-- algD3 对形式变元的加法性。 -/
 theorem algD3_add [Microlinear R X] [PropertyW R X] (α₁ α₂ : AlgForm3 R X)
