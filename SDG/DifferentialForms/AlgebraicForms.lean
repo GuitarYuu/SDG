@@ -1119,6 +1119,90 @@ theorem d_wedge11 [Microlinear R X] [PropertyW R X] [Microlinear R R]
   rw [hpair]
   simp only [Pi.sub_apply]
 
+/-! ### 3-形式层与交错化算子（第五十九接力点）-/
+
+/-- 3-形式（场变元）。 -/
+abbrev AlgForm3 (R : Type u) [IsKockLawvere_one R] (X : Type u) :=
+  TangentVectorField R X → TangentVectorField R X → TangentVectorField R X → (X → R)
+
+/-- **Koszul 4-顶点外微分**（p = 3；符号约定与 algD1/algD2 一致：
+第一和 `Σ(−1)ⁱ ξᵢ(α(rest))`、第二和 `Σ_{i<j}(−1)^{i+j}
+α([ξᵢ,ξⱼ],rest-rest)`）。 -/
+def algD3 [Microlinear R X] [PropertyW R X] (α : AlgForm3 R X) :
+    TangentVectorField R X → TangentVectorField R X → TangentVectorField R X →
+    TangentVectorField R X → (X → R) :=
+  fun ξ₀ ξ₁ ξ₂ ξ₃ => fun x =>
+    fieldDeriv ξ₀ (α ξ₁ ξ₂ ξ₃) x - fieldDeriv ξ₁ (α ξ₀ ξ₂ ξ₃) x
+      + fieldDeriv ξ₂ (α ξ₀ ξ₁ ξ₃) x - fieldDeriv ξ₃ (α ξ₀ ξ₁ ξ₂) x
+      - α (lieBracket ξ₀ ξ₁) ξ₂ ξ₃ x - α (lieBracket ξ₀ ξ₂) ξ₁ ξ₃ x
+      - α (lieBracket ξ₀ ξ₃) ξ₁ ξ₂ x
+      + α (lieBracket ξ₁ ξ₂) ξ₀ ξ₃ x + α (lieBracket ξ₁ ξ₃) ξ₀ ξ₂ x
+      + α (lieBracket ξ₂ ξ₃) ξ₀ ξ₁ x
+
+/-- algD3 的点态展开。 -/
+theorem algD3_apply [Microlinear R X] [PropertyW R X] (α : AlgForm3 R X)
+    (ξ₀ ξ₁ ξ₂ ξ₃ : TangentVectorField R X) (x : X) :
+    algD3 α ξ₀ ξ₁ ξ₂ ξ₃ x
+      = fieldDeriv ξ₀ (α ξ₁ ξ₂ ξ₃) x - fieldDeriv ξ₁ (α ξ₀ ξ₂ ξ₃) x
+        + fieldDeriv ξ₂ (α ξ₀ ξ₁ ξ₃) x - fieldDeriv ξ₃ (α ξ₀ ξ₁ ξ₂) x
+        - α (lieBracket ξ₀ ξ₁) ξ₂ ξ₃ x - α (lieBracket ξ₀ ξ₂) ξ₁ ξ₃ x
+        - α (lieBracket ξ₀ ξ₃) ξ₁ ξ₂ x
+        + α (lieBracket ξ₁ ξ₂) ξ₀ ξ₃ x + α (lieBracket ξ₁ ξ₃) ξ₀ ξ₂ x
+        + α (lieBracket ξ₂ ξ₃) ξ₀ ξ₁ x := rfl
+
+/-- algD3 对形式变元的加法性。 -/
+theorem algD3_add [Microlinear R X] [PropertyW R X] (α₁ α₂ : AlgForm3 R X)
+    (ξ₀ ξ₁ ξ₂ ξ₃ : TangentVectorField R X) :
+    algD3 (α₁ + α₂) ξ₀ ξ₁ ξ₂ ξ₃ = algD3 α₁ ξ₀ ξ₁ ξ₂ ξ₃ + algD3 α₂ ξ₀ ξ₁ ξ₂ ξ₃ := by
+  funext x
+  simp only [algD3, Pi.add_apply, Pi.sub_apply, fieldDeriv_add]
+  ring
+
+/-- algD3 对形式变元的数乘性。 -/
+theorem algD3_smul [Microlinear R X] [PropertyW R X] (c : R) (α : AlgForm3 R X)
+    (ξ₀ ξ₁ ξ₂ ξ₃ : TangentVectorField R X) :
+    algD3 (c • α) ξ₀ ξ₁ ξ₂ ξ₃ = c • algD3 α ξ₀ ξ₁ ξ₂ ξ₃ := by
+  funext x
+  simp only [algD3, Pi.smul_apply, Pi.sub_apply, fieldDeriv_smul, smul_eq_mul,
+    Pi.add_apply]
+  ring
+
+/-- **1-形式张量积**：`(α⊗ω)(ξ,η) = α(ξ)·ω(η)`（不交错）。 -/
+def algTens2 (α ω : AlgForm1 R X) : AlgForm2 R X :=
+  fun ξ η => fun x => α ξ x * ω η x
+
+/-- **alt2：2-变元交错化算子**（swap-反序和：
+`alt2(β)(ξ,η) = β(ξ,η) − β(η,ξ)`——E3 置换引擎的 permSum 在 q = 2
+的具体化，全部置换 = 恒等与对换）。 -/
+def alt2 (β : AlgForm2 R X) : AlgForm2 R X :=
+  fun ξ η => fun x => β ξ η x - β η ξ x
+
+/-- **楔积 = 交错化张量积**（q = 2 定理）：`α∧ω = alt2(α⊗ω)`——
+连接经典楔积的交错化定义。 -/
+theorem wedge11_eq_alt2 (α ω : AlgForm1 R X) :
+    wedge11 α ω = alt2 (algTens2 α ω) := by
+  funext ξ η x
+  show α ξ x * ω η x - α η x * ω ξ x = _
+  rfl
+
+/-- alt2 的输出是反对称的。 -/
+theorem alt2_antisymm (β : AlgForm2 R X) (ξ η : TangentVectorField R X) :
+    alt2 β ξ η = -alt2 β η ξ := by
+  funext x
+  show β ξ η x - β η ξ x = -(β η ξ x - β ξ η x)
+  ring
+
+/-- **alt2 是投影的倍数**：`alt2(alt2 β) = 2·alt2 β`——
+（除以 2! 需 2 可逆，这里保留倍数形式，与 E2c 的 `h2 : ∃ y, y*2 = 1`
+假设接口相容）。 -/
+theorem alt2_idem (β : AlgForm2 R X) :
+    alt2 (alt2 β) = (2 : R) • alt2 β := by
+  funext ξ η x
+  simp only [alt2, Pi.smul_apply]
+  show (β ξ η x - β η ξ x) - (β η ξ x - β ξ η x)
+    = 2 * (β ξ η x - β η ξ x)
+  ring
+
 end AlgebraicForms
 
 end SDG.DifferentialForms

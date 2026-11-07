@@ -143,3 +143,13 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.wedge21
 #print axioms SDG.DifferentialForms.wedge12
 #print axioms SDG.DifferentialForms.d_wedge11
+
+-- AlgebraicForms：AlgForm3 + algD3 + alt2 交错化（第五十九接力点）
+#print axioms SDG.DifferentialForms.algD3
+#print axioms SDG.DifferentialForms.algD3_add
+#print axioms SDG.DifferentialForms.algD3_smul
+#print axioms SDG.DifferentialForms.algTens2
+#print axioms SDG.DifferentialForms.alt2
+#print axioms SDG.DifferentialForms.wedge11_eq_alt2
+#print axioms SDG.DifferentialForms.alt2_antisymm
+#print axioms SDG.DifferentialForms.alt2_idem
