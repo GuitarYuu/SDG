@@ -577,6 +577,738 @@ theorem deRhamCup_assoc {n m k : ℕ}
     deRhamCup_apply hα hβ, deRhamCup_apply (cupClass hα hβ) hγ]
   exact deRhamClass_congr _ _ (cupCocycleZ_assoc_tree α β γ)
 
+/-! ### 商层 cup 单位律（传播形式）
+
+度数约定 `Hⁿ ← Cochain (n+1)` 下，单位（常值 1 的 0-上链）不单独成类——
+单位律按「与 𝟙 作 cup 不改变类」陈述。右方向免度数 cast
+（`(n+1)+0 ≡ n+1` 由 `Nat.add` 对第二变元递归的定义等价）；左方向需
+度数 cast（`0+(n+1)` 非定义等价）+ 双 cast 塌缩（`funext σ; rfl`，
+`cochainLenCast_trans` 同款点态论证）。全部无选择公理。 -/
+
+/-- 与常值 1 的 0-上链作 cup 后仍为上循环（左，度数 cast 形）。 -/
+theorem isCocycle_cupUnit_left {n : ℕ} {α : Cochain R X (n + 1)} (hα : IsCocycle α) :
+    IsCocycle (cochainLenCast (show 0 + (n + 1) = n + 1 from by omega)
+      (cupProduct (cochainOfFun (fun _ : X => (1 : R))) α)) := by
+  have hOne : coboundary (cochainOfFun (fun _ : X => (1 : R))) = 0 :=
+    cochainOfFun_one_isCocycle
+  show coboundary (cochainLenCast (show 0 + (n + 1) = n + 1 from by omega)
+      (cupProduct (cochainOfFun (fun _ : X => (1 : R))) α)) = 0
+  rw [coboundary_cochainLenCast,
+    cupProduct_isCocycle (cochainOfFun (fun _ : X => (1 : R))) α hOne hα,
+    cochainLenCast_zero]
+
+/-- 与常值 1 的 0-上链作 cup 后仍为上循环（右，免 cast）。 -/
+theorem isCocycle_cupUnit_right {n : ℕ} {α : Cochain R X (n + 1)} (hα : IsCocycle α) :
+    IsCocycle (cupProduct α (cochainOfFun (fun _ : X => (1 : R)))) := by
+  have hOne : coboundary (cochainOfFun (fun _ : X => (1 : R))) = 0 :=
+    cochainOfFun_one_isCocycle
+  exact cupProduct_isCocycle α _ hα hOne
+
+/-- **类层面左单位律（传播形式）**：与常值 1 的 0-上链作 cup 不改变类
+——`[𝟙]∪[α] = [α]`（𝟙 是度 0 上循环，ℕ 度数索引下不单独成类）。 -/
+theorem deRhamCup_unit_left {n : ℕ} {α : Cochain R X (n + 1)} (hα : IsCocycle α) :
+    deRhamClass (n := n) (isCocycle_cupUnit_left hα) = deRhamClass hα := by
+  refine deRhamClass_eq (isCocycle_cupUnit_left hα) hα ?_
+  have hid : cochainLenCast (show 0 + (n + 1) = n + 1 from by omega)
+      (cochainLenCast (show (n + 1 : ℕ) = 0 + (n + 1) from by omega) α) = α := by
+    funext σ
+    rfl
+  show (cochainLenCast (show 0 + (n + 1) = n + 1 from by omega)
+      (cupProduct (cochainOfFun (fun _ : X => (1 : R))) α) - α : Cochain R X (n + 1))
+    ∈ coboundaries (R := R) (X := X) n
+  rw [cupProduct_unit_left α, hid, sub_self]
+  exact zero_mem (coboundaries (R := R) (X := X) n)
+
+/-- **类层面右单位律（传播形式）**：与常值 1 的 0-上链作 cup 不改变类
+——`[α]∪[𝟙] = [α]`。 -/
+theorem deRhamCup_unit_right {n : ℕ} {α : Cochain R X (n + 1)} (hα : IsCocycle α) :
+    deRhamClass (n := n) (isCocycle_cupUnit_right hα) = deRhamClass hα := by
+  refine deRhamClass_eq (isCocycle_cupUnit_right hα) hα ?_
+  show (cupProduct α (cochainOfFun (fun _ : X => (1 : R))) - α : Cochain R X (n + 1))
+    ∈ coboundaries (R := R) (X := X) n
+  rw [cupProduct_unit_right α, sub_self]
+  exact zero_mem (coboundaries (R := R) (X := X) n)
+
+/-! ### 商层 cup 的 (1,1) 反交换（shuffle-cup 阶梯第一级）
+
+数学：对 1-上闭链 α β，`h(σ) := −α(σ)·β(σ)` 满足链级恒等式
+`∂h = α∪β + β∪α`（δh = −α₁₂β₁₂ + α₀₂β₀₂ − α₀₁β₀₁ = α₀₁β₁₂ + α₁₂β₀₁，
+用两次闭链条件 α₀₂ = α₁₂ + α₀₁、β₀₂ = β₁₂ + β₀₁）⟹ 和类为零 ⟹
+`[α]∪[β] = −[β]∪[α]`。工程：finSum 展开后的 Fin 系数幂 `(−1)^(↑i)`
+需 val-rfl 改写（∂²=₀ 战役记录的「Fin 系数幂墙」）。 -/
+
+/-- (1,1) 面引理：cupLeft 1 1 的顶点选择 = 第 2 个余面（(σ₀,σ₁)）。 -/
+theorem cupLeft_one_one_eq (σ : SimplexPts X 2) :
+    (fun k : Fin 2 => σ (cupLeft 1 1 k)) = coFace σ (2 : Fin 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (1,1) 面引理：cupRight 1 1 的顶点选择 = 第 0 个余面（(σ₁,σ₂)）。 -/
+theorem cupRight_one_one_eq (σ : SimplexPts X 2) :
+    (fun k : Fin 2 => σ (cupRight 1 1 k)) = coFace σ (0 : Fin 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- **cup 的 (1,1) 反交换链级恒等式**：对 1-上闭链 α β，
+`∂h = α∪β + β∪α`，其中 `h(σ) := −α(σ)·β(σ)`（点态）。 -/
+theorem coboundary_cup_add_cup {α β : Cochain R X 1}
+    (hα : coboundary α = 0) (hβ : coboundary β = 0) :
+    coboundary (fun τ : SimplexPts X 1 => -(α τ * β τ))
+      = cupProduct α β + cupProduct β α := by
+  funext σ
+  have hασ' : α (coFace σ (0 : Fin 3)) - α (coFace σ (1 : Fin 3))
+      + α (coFace σ (2 : Fin 3)) = 0 := by
+    have h2 := congrFun hα σ
+    rw [coboundary_apply, finSum_three] at h2
+    rw [show ((0 : Fin 3) : ℕ) = 0 from rfl, show ((1 : Fin 3) : ℕ) = 1 from rfl,
+        show ((2 : Fin 3) : ℕ) = 2 from rfl] at h2
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h2
+    linear_combination (norm := ring_nf) h2
+  have hβσ' : β (coFace σ (0 : Fin 3)) - β (coFace σ (1 : Fin 3))
+      + β (coFace σ (2 : Fin 3)) = 0 := by
+    have h2 := congrFun hβ σ
+    rw [coboundary_apply, finSum_three] at h2
+    rw [show ((0 : Fin 3) : ℕ) = 0 from rfl, show ((1 : Fin 3) : ℕ) = 1 from rfl,
+        show ((2 : Fin 3) : ℕ) = 2 from rfl] at h2
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h2
+    linear_combination (norm := ring_nf) h2
+  have eα : α (coFace σ (1 : Fin 3)) = α (coFace σ (2 : Fin 3)) + α (coFace σ (0 : Fin 3)) := by
+    linear_combination (norm := ring_nf) -hασ'
+  have eβ : β (coFace σ (1 : Fin 3)) = β (coFace σ (2 : Fin 3)) + β (coFace σ (0 : Fin 3)) := by
+    linear_combination (norm := ring_nf) -hβσ'
+  show finSum R 3 (fun i : Fin 3 => (-1 : R) ^ (i : ℕ) * -(α (coFace σ i) * β (coFace σ i)))
+    = α (fun k : Fin 2 => σ (cupLeft 1 1 k)) * β (fun k : Fin 2 => σ (cupRight 1 1 k))
+      + β (fun k : Fin 2 => σ (cupLeft 1 1 k)) * α (fun k : Fin 2 => σ (cupRight 1 1 k))
+  rw [cupLeft_one_one_eq, cupRight_one_one_eq, finSum_three,
+    show ((0 : Fin 3) : ℕ) = 0 from rfl, show ((1 : Fin 3) : ℕ) = 1 from rfl,
+    show ((2 : Fin 3) : ℕ) = 2 from rfl, eα, eβ]
+  ring
+
+/-- **⭐ 商层 cup 的 (1,1) 反交换**：`[α]∪[β] = −[β]∪[α]`（deRhamCup 0 0 :
+H⁰×H⁰ → H¹——经典 H¹ 上积的反对称性，shuffle-cup 阶梯第一级）。
+证明：链级 `∂h = α∪β + β∪α` ⟹ 和类为零（h 为上边缘见证）⟹ 反交换。 -/
+theorem deRhamCup_antisymm_zero {α β : Cochain R X 1} (hα : IsCocycle α)
+    (hβ : IsCocycle β) :
+    deRhamCup 0 0 (deRhamClass hα) (deRhamClass hβ)
+      = -deRhamCup 0 0 (deRhamClass hβ) (deRhamClass hα) := by
+  have hsum : deRhamCup 0 0 (deRhamClass hα) (deRhamClass hβ)
+      + deRhamCup 0 0 (deRhamClass hβ) (deRhamClass hα) = 0 := by
+    rw [deRhamCup_apply hα hβ, deRhamCup_apply hβ hα,
+      deRhamClass_add (cupClass hα hβ) (cupClass hβ hα), deRhamClass_zero]
+    refine deRhamClass_eq _ isCocycle_zero ?_
+    refine ⟨fun τ : SimplexPts X 1 => -(α τ * β τ), ?_⟩
+    rw [sub_zero]
+    funext σ
+    rw [Pi.add_apply, cochainLenCast_apply, cochainLenCast_apply]
+    exact congrFun (coboundary_cup_add_cup hα hβ) σ
+  exact eq_neg_of_add_eq_zero_left hsum
+
+/-! ### 商层 cup 的 (0,q) 交换（传播形式，shuffle-cup 阶梯第二级）
+
+数学：0-上闭链 f 与任意上闭链 β 的 cup 交换——链级差恒为零：
+`(f∪β − β∪f)(σ) = (f(σ₀) − f(σ_last))·β(σ) = 0`
+（d₀f = 0 在对角边 (σ₀,σ_last) 上直接收口，无需 β 闭、无需归纳）。
+工程：cast-证明显式参数化（Nat.zero_add / Nat.add_zero 命名引理，
+保证证明项全局同一、rw 可匹配）；对角边经桥引理
+`coboundary_cochainZero_eq_d0` 直读 d₀-形（避开 coFace 的 succAbove
+管道）；hfx/hfy 的 σ₀/σ_last 项序不可对易，linear_combination 补号。 -/
+
+/-- **桥引理：一般 0-上链的余边界即 d₀**（`f ↦ f ∘ (单点元组)` 的
+d₀——与 cochainOfFun-版互补，覆盖任意 0-上链）。 -/
+theorem coboundary_cochainZero_eq_d0 (f : Cochain R X 0) :
+    coboundary f = d0 (fun x => f (fun _ : Fin 1 => x)) := by
+  funext σ
+  rw [coboundary_apply, finSum_two, d0]
+  have e0 : coFace σ (0 : Fin 2) = (fun _ : Fin 1 => σ 1) := by
+    funext k; refine Fin.cases ?_ (fun j => Fin.elim0 j) k; rfl
+  have e1 : coFace σ (1 : Fin 2) = (fun _ : Fin 1 => σ 0) := by
+    funext k; refine Fin.cases ?_ (fun j => Fin.elim0 j) k; rfl
+  rw [e0, e1]
+  rw [show ((0 : Fin 2) : ℕ) = 0 from rfl, show ((1 : Fin 2) : ℕ) = 1 from rfl]
+  simp only [pow_zero, pow_one]
+  ring
+
+/-- (0,q) 交换的 IsCocycle 助手（左）。 -/
+theorem isCocycle_cupZero_left {r : ℕ} (f : Cochain R X 0) (hf : coboundary f = 0)
+    {β : Cochain R X (r + 1)} (hβ : IsCocycle β) (H₁ : 0 + (r + 1) = r + 1) :
+    IsCocycle (cochainLenCast H₁ (cupProduct f β)) := by
+  show coboundary (cochainLenCast H₁ (cupProduct f β)) = 0
+  rw [coboundary_cochainLenCast, cupProduct_isCocycle f β hf hβ, cochainLenCast_zero]
+
+/-- (0,q) 交换的 IsCocycle 助手（右）。 -/
+theorem isCocycle_cupZero_right {r : ℕ} (f : Cochain R X 0) (hf : coboundary f = 0)
+    {β : Cochain R X (r + 1)} (hβ : IsCocycle β) (H₂ : (r + 1) + 0 = r + 1) :
+    IsCocycle (cochainLenCast H₂ (cupProduct β f)) := by
+  show coboundary (cochainLenCast H₂ (cupProduct β f)) = 0
+  rw [coboundary_cochainLenCast, cupProduct_isCocycle β f hβ hf, cochainLenCast_zero]
+
+/-- (0,q) 交换的链级恒等式：链级差恒为零（对角边论证）。 -/
+theorem cup_zero_cocycle_comm {r : ℕ} (f : Cochain R X 0) (hf : coboundary f = 0)
+    (β : Cochain R X (r + 1)) (H₁ : 0 + (r + 1) = r + 1) (H₂ : (r + 1) + 0 = r + 1) :
+    cochainLenCast H₁ (cupProduct f β) = cochainLenCast H₂ (cupProduct β f) := by
+  funext σ
+  show (cupProduct f β) (fun k : Fin (0 + (r + 1) + 1) =>
+      σ (Fin.cast (show 0 + (r + 1) + 1 = (r + 1) + 1 from by rw [H₁]) k))
+    = cupProduct β f σ
+  rw [cupProduct_apply, cupProduct_apply]
+  -- 左 f-元组（带 Fin.cast 包装）= (σ₀) 单点元组
+  have e0 : (fun k : Fin 1 => σ (Fin.cast (show 0 + (r + 1) + 1 = (r + 1) + 1 from by
+        rw [H₁]) (cupLeft 0 (r + 1) k))) = (fun _ : Fin 1 => σ 0) := by
+    funext k
+    apply congrArg σ
+    apply Fin.ext
+    show (Fin.cast (show 0 + (r + 1) + 1 = (r + 1) + 1 from by rw [H₁])
+        (cupLeft 0 (r + 1) k)).val = (0 : Fin (r + 2)).val
+    rw [Fin.val_cast]
+    refine Fin.cases ?_ (fun j => Fin.elim0 j) k
+    rfl
+  -- 左 β-元组（带包装）= σ 本身
+  have eB : (fun k : Fin (r + 2) => σ (Fin.cast (show 0 + (r + 1) + 1 = (r + 1) + 1 from by
+        rw [H₁]) (cupRight 0 (r + 1) k))) = σ := by
+    funext k
+    apply congrArg σ
+    apply Fin.ext
+    show (Fin.cast (show 0 + (r + 1) + 1 = (r + 1) + 1 from by rw [H₁])
+        (cupRight 0 (r + 1) k)).val = k.val
+    show (Fin.cast (show 0 + ((r + 1) + 1) = 0 + (r + 1) + 1 from by omega)
+        (Fin.natAdd 0 k)).val = k.val
+    rw [Fin.val_cast, Fin.val_natAdd, Nat.zero_add]
+  -- 右 β-元组 = σ 本身
+  have eB2 : (fun k : Fin (r + 2) => σ (cupLeft (r + 1) 0 k)) = σ := by
+    funext k
+    apply congrArg σ
+    apply Fin.ext
+    show (cupLeft (r + 1) 0 k).val = k.val
+    rfl
+  -- 右 f-元组 = (σ_last) 单点元组
+  have e1 : (fun k : Fin 1 => σ (cupRight (r + 1) 0 k)) =
+      (fun _ : Fin 1 => σ (Fin.last (r + 1))) := by
+    funext k
+    apply congrArg σ
+    apply Fin.ext
+    show (Fin.cast (show (r + 1) + 1 + 0 = (r + 1) + 0 + 1 from by omega)
+        (Fin.natAdd (r + 1) k)).val = (Fin.last (r + 1)).val
+    rw [Fin.val_cast, Fin.val_natAdd, Fin.val_last]
+    refine Fin.cases ?_ (fun j => Fin.elim0 j) k
+    rfl
+  rw [e0, eB, eB2, e1]
+  -- 对角边论证：d₀f = 0 在 (σ₀, σ_last) 上（hf 点态 + 桥引理传递）
+  have hd := congrFun (coboundary_cochainZero_eq_d0 f)
+      (fun k : Fin 2 => if k = 0 then σ 0 else σ (Fin.last (r + 1)))
+  rw [d0] at hd
+  have hfy : f (fun _ : Fin 1 => σ (Fin.last (r + 1)))
+      - f (fun _ : Fin 1 => σ 0) = 0 :=
+    hd.symm.trans (congrFun hf _)
+  have hfx : f (fun _ : Fin 1 => σ 0)
+      - f (fun _ : Fin 1 => σ (Fin.last (r + 1))) = 0 := by
+    linear_combination (norm := ring_nf) -hfy
+  linear_combination (norm := ring_nf) hfx * (β σ)
+
+/-- **⭐ 商层 cup 的 (0,q) 交换（传播形式）**：0-上闭链 f 与任意上闭链 β
+的 cup 交换（链级差恒为零——d₀f = 0 在对角边 (σ₀,σ_last) 上直接收口）。 -/
+theorem deRhamCup_comm_zero {r : ℕ} (f : Cochain R X 0) (hf : coboundary f = 0)
+    {β : Cochain R X (r + 1)} (hβ : IsCocycle β) :
+    deRhamClass (n := r) (isCocycle_cupZero_left f hf hβ (Nat.zero_add (r + 1)))
+      = deRhamClass (n := r) (isCocycle_cupZero_right f hf hβ (Nat.add_zero (r + 1))) := by
+  have H₁ : 0 + (r + 1) = r + 1 := Nat.zero_add (r + 1)
+  have H₂ : (r + 1) + 0 = r + 1 := Nat.add_zero (r + 1)
+  refine deRhamClass_eq (isCocycle_cupZero_left f hf hβ H₁)
+    (isCocycle_cupZero_right f hf hβ H₂) ?_
+  refine ⟨0, ?_⟩
+  rw [← coboundaryLinear_apply, coboundaryLinear.map_zero,
+    cup_zero_cocycle_comm f hf β H₁ H₂, sub_self]
+
+/-! ### 商层 cup 的 (1,2) 反交换同伦（shuffle-cup 阶梯第三级）
+
+数学：对 1-上闭链 α、2-上闭链 β，h(τ) := −α(τ₀,τ₂)·β(τ)（α 取跳边
+(τ₀,τ₂)——头 (τ₀) + 尾 (τ₂) 跳过中段 τ₁）满足链级恒等式
+∂h = α∪β − β∪α（经典度数 (1,2)，分级符号 (−1)² = +1）。
+数值验证：s = −1 唯一（一般 φ-cocycle 网格全点态）。工程：Fin 3-元组
+需三层 Fin.cases 嵌套；h 的 α-跳边经 skipEdge-面引理 ×4 与四面体四面对齐。 -/
+
+/-- (1,2) 面引理：h 的 α-跳边在四面体的四个面上的一致性（每面一条）。 -/
+theorem skipEdge_face0 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (0 : Fin 4)) 0 else (coFace σ (0 : Fin 4)) 2)
+      = (fun k : Fin 2 => if k = 0 then σ 1 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+theorem skipEdge_face1 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (1 : Fin 4)) 0 else (coFace σ (1 : Fin 4)) 2)
+      = (fun k : Fin 2 => if k = 0 then σ 0 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+theorem skipEdge_face2 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (2 : Fin 4)) 0 else (coFace σ (2 : Fin 4)) 2)
+      = (fun k : Fin 2 => if k = 0 then σ 0 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+theorem skipEdge_face3 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (3 : Fin 4)) 0 else (coFace σ (3 : Fin 4)) 2)
+      = (fun k : Fin 2 => if k = 0 then σ 0 else σ 2) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- **cup 的 (1,2) 反交换同伦链级恒等式**：对 1-上闭链 α、2-上闭链 β，
+`∂h = α∪β − β∪α`，其中 `h(τ) := −α(τ₀,τ₂)·β(τ)`（α 取跳边）。 -/
+theorem coboundary_cupSkip_12 (α : Cochain R X 1) (β : Cochain R X 2)
+    (hα : coboundary α = 0) (hβ : coboundary β = 0) :
+    coboundary (fun τ : SimplexPts X 2 =>
+        -(α (fun k : Fin 2 => if k = 0 then τ 0 else τ 2) * β τ))
+      = cupProduct α β - cupProduct β α := by
+  funext σ
+  -- β-面桥引理：coFace σ i 元组 = if-形元组（×4）
+  have bB0 : β (coFace σ (0 : Fin 4)) = β (fun k : Fin 3 => if k = 0 then σ 1
+      else if k = 1 then σ 2 else σ 3) := by
+    apply congrArg β
+    funext k
+    refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+    · rfl
+    · rfl
+    · rfl
+  have bB1 : β (coFace σ (1 : Fin 4)) = β (fun k : Fin 3 => if k = 0 then σ 0
+      else if k = 1 then σ 2 else σ 3) := by
+    apply congrArg β
+    funext k
+    refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+    · rfl
+    · rfl
+    · rfl
+  have bB2 : β (coFace σ (2 : Fin 4)) = β (fun k : Fin 3 => if k = 0 then σ 0
+      else if k = 1 then σ 1 else σ 3) := by
+    apply congrArg β
+    funext k
+    refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+    · rfl
+    · rfl
+    · rfl
+  have bB3 : β (coFace σ (3 : Fin 4)) = β (fun k : Fin 3 => if k = 0 then σ 0
+      else if k = 1 then σ 1 else σ 2) := by
+    apply congrArg β
+    funext k
+    refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+    · rfl
+    · rfl
+    · rfl
+  -- cup-元组桥引理（×4）：cupLeft/cupRight 元组 = if-形元组
+  have eL : (fun k : Fin 2 => σ (cupLeft 1 2 k)) = (fun k : Fin 2 =>
+      if k = 0 then σ 0 else σ 1) := by
+    funext k
+    refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+    · rfl
+    · rfl
+  have eR : (fun k : Fin 3 => σ (cupRight 1 2 k)) = (fun k : Fin 3 =>
+      if k = 0 then σ 1 else if k = 1 then σ 2 else σ 3) := by
+    funext k
+    refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+    · rfl
+    · rfl
+    · rfl
+  have eL2 : (fun k : Fin 3 => σ (cupLeft 2 1 k)) = (fun k : Fin 3 =>
+      if k = 0 then σ 0 else if k = 1 then σ 1 else σ 2) := by
+    funext k
+    refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+    · rfl
+    · rfl
+    · rfl
+  have eR2 : (fun k : Fin 2 => σ (cupRight 2 1 k)) = (fun k : Fin 2 =>
+      if k = 0 then σ 2 else σ 3) := by
+    funext k
+    refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+    · rfl
+    · rfl
+  -- δβ-关系的 if-形代入式（经 coFace-桥 + h4 线性组合）
+  have hβrelsub : β (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 2 else σ 3)
+      = β (fun k : Fin 3 => if k = 0 then σ 1 else if k = 1 then σ 2 else σ 3)
+        + β (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 1 else σ 3)
+        - β (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 1 else σ 2) := by
+    have h4 := congrFun hβ σ
+    rw [coboundary_apply, finSum_four] at h4
+    rw [show ((0 : Fin 4) : ℕ) = 0 from rfl, show ((1 : Fin 4) : ℕ) = 1 from rfl,
+        show ((2 : Fin 4) : ℕ) = 2 from rfl, show ((3 : Fin 4) : ℕ) = 3 from rfl] at h4
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h4
+    rw [bB0, bB1, bB2, bB3] at h4
+    linear_combination (norm := ring_nf) -h4
+  have hα012 : α (fun k : Fin 2 => if k = 0 then σ 0 else σ 2)
+      = α (fun k : Fin 2 => if k = 0 then σ 1 else σ 2)
+        + α (fun k : Fin 2 => if k = 0 then σ 0 else σ 1) := by
+    have h2 := congrFun hα (coFace σ (3 : Fin 4))
+    rw [coboundary_apply, finSum_three] at h2
+    have e0 : coFace (coFace σ (3 : Fin 4)) (0 : Fin 3) =
+        (fun k : Fin 2 => if k = 0 then σ 1 else σ 2) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e1 : coFace (coFace σ (3 : Fin 4)) (1 : Fin 3) =
+        (fun k : Fin 2 => if k = 0 then σ 0 else σ 2) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e2 : coFace (coFace σ (3 : Fin 4)) (2 : Fin 3) =
+        (fun k : Fin 2 => if k = 0 then σ 0 else σ 1) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    rw [e0, e1, e2, show ((0 : Fin 3) : ℕ) = 0 from rfl,
+        show ((1 : Fin 3) : ℕ) = 1 from rfl, show ((2 : Fin 3) : ℕ) = 2 from rfl] at h2
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h2
+    linear_combination (norm := ring_nf) -h2
+  have hα023 : α (fun k : Fin 2 => if k = 0 then σ 0 else σ 3)
+      = α (fun k : Fin 2 => if k = 0 then σ 0 else σ 2)
+        + α (fun k : Fin 2 => if k = 0 then σ 2 else σ 3) := by
+    have h2 := congrFun hα (coFace σ (1 : Fin 4))
+    rw [coboundary_apply, finSum_three] at h2
+    have e0 : coFace (coFace σ (1 : Fin 4)) (0 : Fin 3) =
+        (fun k : Fin 2 => if k = 0 then σ 2 else σ 3) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e1 : coFace (coFace σ (1 : Fin 4)) (1 : Fin 3) =
+        (fun k : Fin 2 => if k = 0 then σ 0 else σ 3) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e2 : coFace (coFace σ (1 : Fin 4)) (2 : Fin 3) =
+        (fun k : Fin 2 => if k = 0 then σ 0 else σ 2) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    rw [e0, e1, e2, show ((0 : Fin 3) : ℕ) = 0 from rfl,
+        show ((1 : Fin 3) : ℕ) = 1 from rfl, show ((2 : Fin 3) : ℕ) = 2 from rfl] at h2
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h2
+    linear_combination (norm := ring_nf) -h2
+  have hα123 : α (fun k : Fin 2 => if k = 0 then σ 1 else σ 3)
+      = α (fun k : Fin 2 => if k = 0 then σ 1 else σ 2)
+        + α (fun k : Fin 2 => if k = 0 then σ 2 else σ 3) := by
+    have h2 := congrFun hα (coFace σ (0 : Fin 4))
+    rw [coboundary_apply, finSum_three] at h2
+    have e0 : coFace (coFace σ (0 : Fin 4)) (0 : Fin 3) =
+        (fun k : Fin 2 => if k = 0 then σ 2 else σ 3) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e1 : coFace (coFace σ (0 : Fin 4)) (1 : Fin 3) =
+        (fun k : Fin 2 => if k = 0 then σ 1 else σ 3) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e2 : coFace (coFace σ (0 : Fin 4)) (2 : Fin 3) =
+        (fun k : Fin 2 => if k = 0 then σ 1 else σ 2) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    rw [e0, e1, e2, show ((0 : Fin 3) : ℕ) = 0 from rfl,
+        show ((1 : Fin 3) : ℕ) = 1 from rfl, show ((2 : Fin 3) : ℕ) = 2 from rfl] at h2
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h2
+    linear_combination (norm := ring_nf) -h2
+  -- β-四面关系（δβ-点态）
+  have hβσ : β (coFace σ (1 : Fin 4))
+      = β (coFace σ (0 : Fin 4)) + β (coFace σ (2 : Fin 4))
+        - β (coFace σ (3 : Fin 4)) := by
+    have h4 := congrFun hβ σ
+    rw [coboundary_apply, finSum_four] at h4
+    rw [show ((0 : Fin 4) : ℕ) = 0 from rfl, show ((1 : Fin 4) : ℕ) = 1 from rfl,
+        show ((2 : Fin 4) : ℕ) = 2 from rfl, show ((3 : Fin 4) : ℕ) = 3 from rfl] at h4
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h4
+    linear_combination (norm := ring_nf) -h4
+  show finSum R 4 (fun i : Fin 4 => (-1 : R) ^ (i : ℕ) *
+      -(α (fun k : Fin 2 => if k = 0 then (coFace σ i) 0 else (coFace σ i) 2)
+        * β (coFace σ i)))
+    = (cupProduct α β - cupProduct β α) σ
+  rw [Pi.sub_apply, cupProduct_apply, cupProduct_apply, finSum_four,
+    show ((0 : Fin 4) : ℕ) = 0 from rfl, show ((1 : Fin 4) : ℕ) = 1 from rfl,
+    show ((2 : Fin 4) : ℕ) = 2 from rfl, show ((3 : Fin 4) : ℕ) = 3 from rfl,
+    skipEdge_face0, skipEdge_face1, skipEdge_face2, skipEdge_face3,
+    eL, eR, eL2, eR2,
+    hα023, hα012, hα123,
+    bB0, bB1, bB2, bB3,
+    hβrelsub]
+  simp only [pow_zero, pow_one]
+  ring
+
+-- ======== shuffle-cup (2,1) anticommutativity homotopy (rung 4) ========
+
+/-- (2,1) 面引理：face₀ = (σ₁,σ₂,σ₃) 的 (0,1)-边 = (σ₁,σ₂)。 -/
+theorem edge01_face0 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (0 : Fin 4)) 0 else (coFace σ (0 : Fin 4)) 1)
+      = (fun k : Fin 2 => if k = 0 then σ 1 else σ 2) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) 面引理：face₀ 的 (1,2)-边 = (σ₂,σ₃)。 -/
+theorem edge12_face0 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (0 : Fin 4)) 1 else (coFace σ (0 : Fin 4)) 2)
+      = (fun k : Fin 2 => if k = 0 then σ 2 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) 面引理：face₁ = (σ₀,σ₂,σ₃) 的 (0,1)-边 = (σ₀,σ₂)。 -/
+theorem edge01_face1 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (1 : Fin 4)) 0 else (coFace σ (1 : Fin 4)) 1)
+      = (fun k : Fin 2 => if k = 0 then σ 0 else σ 2) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) 面引理：face₁ 的 (1,2)-边 = (σ₂,σ₃)。 -/
+theorem edge12_face1 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (1 : Fin 4)) 1 else (coFace σ (1 : Fin 4)) 2)
+      = (fun k : Fin 2 => if k = 0 then σ 2 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) 面引理：face₂ = (σ₀,σ₁,σ₃) 的 (0,1)-边 = (σ₀,σ₁)。 -/
+theorem edge01_face2 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (2 : Fin 4)) 0 else (coFace σ (2 : Fin 4)) 1)
+      = (fun k : Fin 2 => if k = 0 then σ 0 else σ 1) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) 面引理：face₂ 的 (1,2)-边 = (σ₁,σ₃)。 -/
+theorem edge12_face2 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (2 : Fin 4)) 1 else (coFace σ (2 : Fin 4)) 2)
+      = (fun k : Fin 2 => if k = 0 then σ 1 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) 面引理：face₃ = (σ₀,σ₁,σ₂) 的 (0,1)-边 = (σ₀,σ₁)。 -/
+theorem edge01_face3 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (3 : Fin 4)) 0 else (coFace σ (3 : Fin 4)) 1)
+      = (fun k : Fin 2 => if k = 0 then σ 0 else σ 1) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) 面引理：face₃ 的 (1,2)-边 = (σ₁,σ₂)。 -/
+theorem edge12_face3 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => if k = 0 then (coFace σ (3 : Fin 4)) 1 else (coFace σ (3 : Fin 4)) 2)
+      = (fun k : Fin 2 => if k = 0 then σ 1 else σ 2) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) cup-元组桥：cupLeft 2 1 元组 = (σ₀,σ₁,σ₂)。 -/
+theorem cupL21 (σ : SimplexPts X 3) :
+    (fun k : Fin 3 => σ (cupLeft 2 1 k))
+      = (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 1 else σ 2) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+  · rfl
+  · rfl
+  · rfl
+
+/-- (2,1) cup-元组桥：cupRight 2 1 元组 = (σ₂,σ₃)。 -/
+theorem cupR21 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => σ (cupRight 2 1 k))
+      = (fun k : Fin 2 => if k = 0 then σ 2 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) cup-元组桥：cupLeft 1 2 元组 = (σ₀,σ₁)。 -/
+theorem cupL12 (σ : SimplexPts X 3) :
+    (fun k : Fin 2 => σ (cupLeft 1 2 k))
+      = (fun k : Fin 2 => if k = 0 then σ 0 else σ 1) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+  · rfl
+  · rfl
+
+/-- (2,1) cup-元组桥：cupRight 1 2 元组 = (σ₁,σ₂,σ₃)。 -/
+theorem cupR12 (σ : SimplexPts X 3) :
+    (fun k : Fin 3 => σ (cupRight 1 2 k))
+      = (fun k : Fin 3 => if k = 0 then σ 1 else if k = 1 then σ 2 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+  · rfl
+  · rfl
+  · rfl
+
+/-- (2,1) α-面桥：coFace σ 0 元组 = if-形元组（元组等价形，rw 可匹配）。 -/
+theorem alphaFace0 (σ : SimplexPts X 3) :
+    (coFace σ (0 : Fin 4))
+      = (fun k : Fin 3 => if k = 0 then σ 1 else if k = 1 then σ 2 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+  · rfl
+  · rfl
+  · rfl
+
+/-- (2,1) α-面桥：coFace σ 1 元组 = if-形元组。 -/
+theorem alphaFace1 (σ : SimplexPts X 3) :
+    (coFace σ (1 : Fin 4))
+      = (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 2 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+  · rfl
+  · rfl
+  · rfl
+
+/-- (2,1) α-面桥：coFace σ 2 元组 = if-形元组。 -/
+theorem alphaFace2 (σ : SimplexPts X 3) :
+    (coFace σ (2 : Fin 4))
+      = (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 1 else σ 3) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+  · rfl
+  · rfl
+  · rfl
+
+/-- (2,1) α-面桥：coFace σ 3 元组 = if-形元组。 -/
+theorem alphaFace3 (σ : SimplexPts X 3) :
+    (coFace σ (3 : Fin 4))
+      = (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 1 else σ 2) := by
+  funext k
+  refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun k'' => Fin.cases ?_ (fun j => Fin.elim0 j) k'') k') k
+  · rfl
+  · rfl
+  · rfl
+
+/-- **cup 的 (2,1) 交换同伦链级恒等式**：对 2-上闭链 α、1-上闭链 β，
+`∂h = α∪β − β∪α`，其中 `h(τ) := α(τ)·(β(τ₀,τ₁) + β(τ₁,τ₂))`
+（Steenrod ⋃₁ 的 (2,1)-特例：全 α 扫掠 × β 前向边对）。 -/
+theorem coboundary_cupSweep_21 (α : Cochain R X 2) (β : Cochain R X 1)
+    (hα : coboundary α = 0) (hβ : coboundary β = 0) :
+    coboundary (fun τ : SimplexPts X 2 =>
+        α τ * (β (fun k : Fin 2 => if k = 0 then τ 0 else τ 1)
+          + β (fun k : Fin 2 => if k = 0 then τ 1 else τ 2)))
+      = cupProduct α β - cupProduct β α := by
+  funext σ
+  -- δβ-边关系 1（δβ 点态于 coFace σ 3 = (σ₀,σ₁,σ₂)）：β(σ₁,σ₂) = β(σ₀,σ₂) − β(σ₀,σ₁)
+  have hβ12 : β (fun k : Fin 2 => if k = 0 then σ 1 else σ 2)
+      = β (fun k : Fin 2 => if k = 0 then σ 0 else σ 2)
+        - β (fun k : Fin 2 => if k = 0 then σ 0 else σ 1) := by
+    have h3 := congrFun hβ (coFace σ (3 : Fin 4))
+    rw [coboundary_apply, finSum_three] at h3
+    rw [show ((0 : Fin 3) : ℕ) = 0 from rfl, show ((1 : Fin 3) : ℕ) = 1 from rfl,
+        show ((2 : Fin 3) : ℕ) = 2 from rfl] at h3
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h3
+    have e0 : coFace (coFace σ (3 : Fin 4)) (0 : Fin 3)
+        = (fun k : Fin 2 => if k = 0 then σ 1 else σ 2) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e1 : coFace (coFace σ (3 : Fin 4)) (1 : Fin 3)
+        = (fun k : Fin 2 => if k = 0 then σ 0 else σ 2) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e2 : coFace (coFace σ (3 : Fin 4)) (2 : Fin 3)
+        = (fun k : Fin 2 => if k = 0 then σ 0 else σ 1) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    rw [e0, e1, e2] at h3
+    linear_combination (norm := ring_nf) h3
+  -- δβ-边关系 2（δβ 点态于 coFace σ 1 = (σ₀,σ₂,σ₃)）：β(σ₂,σ₃) = β(σ₀,σ₃) − β(σ₀,σ₂)
+  have hβ23 : β (fun k : Fin 2 => if k = 0 then σ 2 else σ 3)
+      = β (fun k : Fin 2 => if k = 0 then σ 0 else σ 3)
+        - β (fun k : Fin 2 => if k = 0 then σ 0 else σ 2) := by
+    have h3 := congrFun hβ (coFace σ (1 : Fin 4))
+    rw [coboundary_apply, finSum_three] at h3
+    rw [show ((0 : Fin 3) : ℕ) = 0 from rfl, show ((1 : Fin 3) : ℕ) = 1 from rfl,
+        show ((2 : Fin 3) : ℕ) = 2 from rfl] at h3
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h3
+    have e0 : coFace (coFace σ (1 : Fin 4)) (0 : Fin 3)
+        = (fun k : Fin 2 => if k = 0 then σ 2 else σ 3) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e1 : coFace (coFace σ (1 : Fin 4)) (1 : Fin 3)
+        = (fun k : Fin 2 => if k = 0 then σ 0 else σ 3) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e2 : coFace (coFace σ (1 : Fin 4)) (2 : Fin 3)
+        = (fun k : Fin 2 => if k = 0 then σ 0 else σ 2) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    rw [e0, e1, e2] at h3
+    linear_combination (norm := ring_nf) h3
+  -- δβ-边关系 3（δβ 点态于 coFace σ 2 = (σ₀,σ₁,σ₃)）：β(σ₁,σ₃) = β(σ₀,σ₃) − β(σ₀,σ₁)
+  have hβ13 : β (fun k : Fin 2 => if k = 0 then σ 1 else σ 3)
+      = β (fun k : Fin 2 => if k = 0 then σ 0 else σ 3)
+        - β (fun k : Fin 2 => if k = 0 then σ 0 else σ 1) := by
+    have h3 := congrFun hβ (coFace σ (2 : Fin 4))
+    rw [coboundary_apply, finSum_three] at h3
+    rw [show ((0 : Fin 3) : ℕ) = 0 from rfl, show ((1 : Fin 3) : ℕ) = 1 from rfl,
+        show ((2 : Fin 3) : ℕ) = 2 from rfl] at h3
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h3
+    have e0 : coFace (coFace σ (2 : Fin 4)) (0 : Fin 3)
+        = (fun k : Fin 2 => if k = 0 then σ 1 else σ 3) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e1 : coFace (coFace σ (2 : Fin 4)) (1 : Fin 3)
+        = (fun k : Fin 2 => if k = 0 then σ 0 else σ 3) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    have e2 : coFace (coFace σ (2 : Fin 4)) (2 : Fin 3)
+        = (fun k : Fin 2 => if k = 0 then σ 0 else σ 1) := by
+      funext k; refine Fin.cases ?_ (fun k' => Fin.cases ?_ (fun j => Fin.elim0 j) k') k
+      · rfl
+      · rfl
+    rw [e0, e1, e2] at h3
+    linear_combination (norm := ring_nf) h3
+  -- δα(σ) = 0（if-形原子；α-面桥消 coFace-形）
+  have hαD : α (fun k : Fin 3 => if k = 0 then σ 1 else if k = 1 then σ 2 else σ 3)
+      - α (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 2 else σ 3)
+      + α (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 1 else σ 3)
+      - α (fun k : Fin 3 => if k = 0 then σ 0 else if k = 1 then σ 1 else σ 2) = 0 := by
+    have h4 := congrFun hα σ
+    rw [coboundary_apply, finSum_four] at h4
+    rw [show ((0 : Fin 4) : ℕ) = 0 from rfl, show ((1 : Fin 4) : ℕ) = 1 from rfl,
+        show ((2 : Fin 4) : ℕ) = 2 from rfl, show ((3 : Fin 4) : ℕ) = 3 from rfl] at h4
+    simp only [pow_zero, pow_one, pow_two, Pi.zero_apply] at h4
+    rw [alphaFace0, alphaFace1, alphaFace2, alphaFace3] at h4
+    linear_combination (norm := ring_nf) h4
+  show finSum R 4 (fun i : Fin 4 => (-1 : R) ^ (i : ℕ) *
+      (α (coFace σ i)
+      * (β (fun k : Fin 2 => if k = 0 then (coFace σ i) 0 else (coFace σ i) 1)
+        + β (fun k : Fin 2 => if k = 0 then (coFace σ i) 1 else (coFace σ i) 2))))
+    = (cupProduct α β - cupProduct β α) σ
+  rw [Pi.sub_apply, cupProduct_apply, cupProduct_apply, finSum_four,
+    show ((0 : Fin 4) : ℕ) = 0 from rfl, show ((1 : Fin 4) : ℕ) = 1 from rfl,
+    show ((2 : Fin 4) : ℕ) = 2 from rfl, show ((3 : Fin 4) : ℕ) = 3 from rfl,
+    edge01_face0, edge12_face0, edge01_face1, edge12_face1,
+    edge01_face2, edge12_face2, edge01_face3, edge12_face3,
+    cupL21, cupR21, cupL12, cupR12,
+    alphaFace0, alphaFace1, alphaFace2, alphaFace3,
+    hβ23, hβ12, hβ13]
+  simp only [pow_zero, pow_one]
+  linear_combination (norm := ring_nf)
+    (β (fun k : Fin 2 => if k = 0 then σ 0 else σ 3)) • hαD
+
 end CupCohomologyQuotient
 
 end SDG.DifferentialForms

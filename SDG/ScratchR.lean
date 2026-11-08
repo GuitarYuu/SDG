@@ -104,6 +104,116 @@ theorem simplexIntegral2_smul {R : Type u} [SDG.Integration.IsIntegration R]
   unfold simplexIntegral2
   exact hstep
 
+/-- 二维版被积函数相等则积分相等。 -/
+theorem simplexIntegral2_congr {R : Type u} [SDG.Integration.IsIntegration R]
+    (f g : R → R → R) (h : ∀ t₁ t₂ : R, f t₁ t₂ = g t₁ t₂) :
+    simplexIntegral2 f = simplexIntegral2 g := by
+  unfold simplexIntegral2
+  exact congrArg (fun F => SDG.Integration.integralR F 0 1)
+    (funext fun t₁ => congrArg (fun w => SDG.Integration.integralR w t₁ (1 - t₁))
+      (funext fun t₂ => h t₁ t₂))
+
+/-- **三维单纯形积分**（叠代版）：
+`∫₀¹ ∫_{t₁}^{1-t₁} ∫_{t₂}^{1-t₂} f(t₁,t₂,t₃) dt₃ dt₂ dt₁`——内两层界
+经 `integralR` 的定向积分语义合法。 -/
+def simplexIntegral3 {R : Type u} [SDG.Integration.IsIntegration R]
+    (f : R → R → R → R) : R :=
+  SDG.Integration.integralR
+    (fun t₁ => SDG.Integration.integralR
+      (fun t₂ => SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂))
+      t₁ (1 - t₁)) 0 1
+
+/-- 三维版被积函数相等则积分相等。 -/
+theorem simplexIntegral3_congr {R : Type u} [SDG.Integration.IsIntegration R]
+    (f g : R → R → R → R) (h : ∀ t₁ t₂ t₃ : R, f t₁ t₂ t₃ = g t₁ t₂ t₃) :
+    simplexIntegral3 f = simplexIntegral3 g := by
+  unfold simplexIntegral3
+  exact congrArg (fun F => SDG.Integration.integralR F 0 1)
+    (funext fun t₁ => congrArg (fun w => SDG.Integration.integralR w t₁ (1 - t₁))
+      (funext fun t₂ => congrArg (fun w => SDG.Integration.integralR w t₂ (1 - t₂))
+        (funext fun t₃ => h t₁ t₂ t₃)))
+
+/-- 三维单纯形积分对被积函数的加法性（integralR_add 三层组装）。 -/
+theorem simplexIntegral3_add {R : Type u} [SDG.Integration.IsIntegration R]
+    (f g h : R → R → R → R)
+    (hfg : ∀ t₁ t₂ t₃ : R, f t₁ t₂ t₃ + g t₁ t₂ t₃ = h t₁ t₂ t₃) :
+    simplexIntegral3 f + simplexIntegral3 g = simplexIntegral3 h := by
+  have h3 : ∀ t₁ t₂ : R,
+      SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂)
+        + SDG.Integration.integralR (fun t₃ => g t₁ t₂ t₃) t₂ (1 - t₂)
+      = SDG.Integration.integralR (fun t₃ => h t₁ t₂ t₃) t₂ (1 - t₂) := by
+    intro t₁ t₂
+    rw [← SDG.Integration.integralR_add
+        (f := fun t₃ => f t₁ t₂ t₃) (g := fun t₃ => g t₁ t₂ t₃)
+        (a := t₂) (b := 1 - t₂)]
+    exact congrArg (fun w => SDG.Integration.integralR w t₂ (1 - t₂))
+      (funext fun t₃ => hfg t₁ t₂ t₃)
+  have h2 : ∀ t₁ : R,
+      SDG.Integration.integralR
+          (fun t₂ => SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂))
+          t₁ (1 - t₁)
+        + SDG.Integration.integralR
+          (fun t₂ => SDG.Integration.integralR (fun t₃ => g t₁ t₂ t₃) t₂ (1 - t₂))
+          t₁ (1 - t₁)
+      = SDG.Integration.integralR
+          (fun t₂ => SDG.Integration.integralR (fun t₃ => h t₁ t₂ t₃) t₂ (1 - t₂))
+          t₁ (1 - t₁) := by
+    intro t₁
+    rw [← SDG.Integration.integralR_add
+        (f := fun t₂ => SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂))
+        (g := fun t₂ => SDG.Integration.integralR (fun t₃ => g t₁ t₂ t₃) t₂ (1 - t₂))
+        (a := t₁) (b := 1 - t₁)]
+    exact congrArg (fun w => SDG.Integration.integralR w t₁ (1 - t₁))
+      (funext fun t₂ => h3 t₁ t₂)
+  unfold simplexIntegral3
+  rw [← SDG.Integration.integralR_add
+      (f := fun t₁ => SDG.Integration.integralR
+        (fun t₂ => SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂))
+        t₁ (1 - t₁))
+      (g := fun t₁ => SDG.Integration.integralR
+        (fun t₂ => SDG.Integration.integralR (fun t₃ => g t₁ t₂ t₃) t₂ (1 - t₂))
+        t₁ (1 - t₁))]
+  exact congrArg (fun F => SDG.Integration.integralR F 0 1) (funext fun t₁ => h2 t₁)
+
+/-- 三维单纯形积分对被积函数的数乘性（funext-first 三层模式）。 -/
+theorem simplexIntegral3_smul {R : Type u} [SDG.Integration.IsIntegration R]
+    (c : R) (f : R → R → R → R) :
+    simplexIntegral3 (fun t₁ t₂ t₃ => c * f t₁ t₂ t₃) = c * simplexIntegral3 f := by
+  have h3 : ∀ t₁ t₂ : R,
+      SDG.Integration.integralR (fun t₃ => c * f t₁ t₂ t₃) t₂ (1 - t₂)
+        = c * SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂) :=
+    fun t₁ t₂ => SDG.Integration.integralR_smul c (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂)
+  have h2 : ∀ t₁ : R,
+      SDG.Integration.integralR
+        (fun t₂ => SDG.Integration.integralR (fun t₃ => c * f t₁ t₂ t₃) t₂ (1 - t₂))
+        t₁ (1 - t₁)
+        = c * SDG.Integration.integralR
+        (fun t₂ => SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂))
+        t₁ (1 - t₁) := by
+    intro t₁
+    have hF : (fun t₂ => SDG.Integration.integralR (fun t₃ => c * f t₁ t₂ t₃) t₂ (1 - t₂))
+        = fun t₂ => c * SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂) :=
+      funext (h3 t₁)
+    rw [hF, SDG.Integration.integralR_smul]
+  have h1 : SDG.Integration.integralR
+      (fun t₁ => SDG.Integration.integralR
+        (fun t₂ => SDG.Integration.integralR (fun t₃ => c * f t₁ t₂ t₃) t₂ (1 - t₂))
+        t₁ (1 - t₁)) 0 1
+      = c * SDG.Integration.integralR
+      (fun t₁ => SDG.Integration.integralR
+        (fun t₂ => SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂))
+        t₁ (1 - t₁)) 0 1 := by
+    have hF : (fun t₁ => SDG.Integration.integralR
+          (fun t₂ => SDG.Integration.integralR (fun t₃ => c * f t₁ t₂ t₃) t₂ (1 - t₂))
+          t₁ (1 - t₁))
+        = fun t₁ => c * SDG.Integration.integralR
+          (fun t₂ => SDG.Integration.integralR (fun t₃ => f t₁ t₂ t₃) t₂ (1 - t₂))
+          t₁ (1 - t₁) :=
+      funext h2
+    rw [hF, SDG.Integration.integralR_smul]
+  unfold simplexIntegral3
+  exact h1
+
 end SimplexIntegral
 
 section IBP

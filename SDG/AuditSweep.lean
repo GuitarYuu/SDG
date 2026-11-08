@@ -166,3 +166,67 @@ import SDG.ScratchR
 
 -- AlgebraicForms：d²|₂（2-形式层好形式类，d² 全链收官，第六十三接力点）
 #print axioms SDG.DifferentialForms.algD_d2_two_form
+
+-- AlgebraicForms：(p,q)-插入层 + 2×1/1×2 分次 Leibniz（第六十四接力点）
+#print axioms SDG.DifferentialForms.wedge12_eq_wedge21_swap
+#print axioms SDG.DifferentialForms.d_wedge21
+#print axioms SDG.DifferentialForms.d_wedge12
+
+-- CupCohomology：商层 cup 单位律（传播形式，第六十四接力点续）
+#print axioms SDG.DifferentialForms.isCocycle_cupUnit_left
+#print axioms SDG.DifferentialForms.isCocycle_cupUnit_right
+#print axioms SDG.DifferentialForms.deRhamCup_unit_left
+#print axioms SDG.DifferentialForms.deRhamCup_unit_right
+
+-- AlgebraicForms：楔积低维代数补全 + 闭形式封闭性（第六十四接力点续 2）
+#print axioms SDG.DifferentialForms.wedge21_eq_wedge12_swap
+#print axioms SDG.DifferentialForms.wedge_assoc_111
+#print axioms SDG.DifferentialForms.wedge21_antisymm_swap12
+#print axioms SDG.DifferentialForms.d_wedge11_closed
+#print axioms SDG.DifferentialForms.d_wedge21_closed
+#print axioms SDG.DifferentialForms.d_wedge12_closed
+
+-- ScratchR：simplexIntegral3 + congr（第六十四接力点续 3）
+#print axioms SDG.DifferentialForms.simplexIntegral2_congr
+#print axioms SDG.DifferentialForms.simplexIntegral3_congr
+#print axioms SDG.DifferentialForms.simplexIntegral3_add
+#print axioms SDG.DifferentialForms.simplexIntegral3_smul
+
+-- CupCohomology：商层 cup (1,1) 反交换（shuffle-cup 阶梯第一级）
+#print axioms SDG.DifferentialForms.cupLeft_one_one_eq
+#print axioms SDG.DifferentialForms.cupRight_one_one_eq
+#print axioms SDG.DifferentialForms.coboundary_cup_add_cup
+#print axioms SDG.DifferentialForms.deRhamCup_antisymm_zero
+
+-- CupCohomology：商层 cup (0,q) 交换（传播形式，shuffle-cup 阶梯第二级）
+#print axioms SDG.DifferentialForms.coboundary_cochainZero_eq_d0
+#print axioms SDG.DifferentialForms.isCocycle_cupZero_left
+#print axioms SDG.DifferentialForms.isCocycle_cupZero_right
+#print axioms SDG.DifferentialForms.cup_zero_cocycle_comm
+#print axioms SDG.DifferentialForms.deRhamCup_comm_zero
+
+-- CupCohomology: (1,2) anticommutativity homotopy (shuffle-cup rung 3)
+#print axioms SDG.DifferentialForms.skipEdge_face0
+#print axioms SDG.DifferentialForms.skipEdge_face1
+#print axioms SDG.DifferentialForms.skipEdge_face2
+#print axioms SDG.DifferentialForms.skipEdge_face3
+#print axioms SDG.DifferentialForms.coboundary_cupSkip_12
+
+-- CupCohomology: (2,1) anticommutativity homotopy (shuffle-cup rung 4)
+#print axioms SDG.DifferentialForms.edge01_face0
+#print axioms SDG.DifferentialForms.edge12_face0
+#print axioms SDG.DifferentialForms.edge01_face1
+#print axioms SDG.DifferentialForms.edge12_face1
+#print axioms SDG.DifferentialForms.edge01_face2
+#print axioms SDG.DifferentialForms.edge12_face2
+#print axioms SDG.DifferentialForms.edge01_face3
+#print axioms SDG.DifferentialForms.edge12_face3
+#print axioms SDG.DifferentialForms.cupL21
+#print axioms SDG.DifferentialForms.cupR21
+#print axioms SDG.DifferentialForms.cupL12
+#print axioms SDG.DifferentialForms.cupR12
+#print axioms SDG.DifferentialForms.alphaFace0
+#print axioms SDG.DifferentialForms.alphaFace1
+#print axioms SDG.DifferentialForms.alphaFace2
+#print axioms SDG.DifferentialForms.alphaFace3
+#print axioms SDG.DifferentialForms.coboundary_cupSweep_21

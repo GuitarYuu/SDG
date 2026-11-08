@@ -1490,6 +1490,210 @@ theorem algD_d2_two_form [Microlinear R X] [PropertyW R X] [Microlinear R R]
   simp only [Pi.zero_apply]
   ring
 
+/-! ### (p,q)-插入层的完善与一般分次 Leibniz（第六十四接力点）-/
+
+/-- **3-形式×1-形式的插入**（(3,1)-shuffle 和，符号 + − + −）：
+`(γ∧ω)(ξ₀,ξ₁,ξ₂,ξ₃) = γ(ξ₀,ξ₁,ξ₂)·ω(ξ₃) − γ(ξ₀,ξ₁,ξ₃)·ω(ξ₂)
++ γ(ξ₀,ξ₂,ξ₃)·ω(ξ₁) − γ(ξ₁,ξ₂,ξ₃)·ω(ξ₀)`。 -/
+def wedge31 (γ : AlgForm3 R X) (ω : AlgForm1 R X) :
+    TangentVectorField R X → TangentVectorField R X → TangentVectorField R X →
+      TangentVectorField R X → (X → R) :=
+  fun ξ₀ ξ₁ ξ₂ ξ₃ => fun x =>
+    γ ξ₀ ξ₁ ξ₂ x * ω ξ₃ x - γ ξ₀ ξ₁ ξ₃ x * ω ξ₂ x
+      + γ ξ₀ ξ₂ ξ₃ x * ω ξ₁ x - γ ξ₁ ξ₂ ξ₃ x * ω ξ₀ x
+
+/-- **2-形式×2-形式的插入**（(2,2)-shuffle 和，符号 + − + + − +）：
+`(β∧γ)(ξ₀,ξ₁,ξ₂,ξ₃) = β(ξ₀,ξ₁)·γ(ξ₂,ξ₃) − β(ξ₀,ξ₂)·γ(ξ₁,ξ₃)
++ β(ξ₀,ξ₃)·γ(ξ₁,ξ₂) + β(ξ₁,ξ₂)·γ(ξ₀,ξ₃) − β(ξ₁,ξ₃)·γ(ξ₀,ξ₂)
++ β(ξ₂,ξ₃)·γ(ξ₀,ξ₁)`。 -/
+def wedge22 (β γ : AlgForm2 R X) :
+    TangentVectorField R X → TangentVectorField R X → TangentVectorField R X →
+      TangentVectorField R X → (X → R) :=
+  fun ξ₀ ξ₁ ξ₂ ξ₃ => fun x =>
+    β ξ₀ ξ₁ x * γ ξ₂ ξ₃ x - β ξ₀ ξ₂ x * γ ξ₁ ξ₃ x + β ξ₀ ξ₃ x * γ ξ₁ ξ₂ x
+      + β ξ₁ ξ₂ x * γ ξ₀ ξ₃ x - β ξ₁ ξ₃ x * γ ξ₀ ξ₂ x + β ξ₂ ξ₃ x * γ ξ₀ ξ₁ x
+
+/-- **1-形式×3-形式的插入**（(1,3)-shuffle 和，符号 + − + −）：
+`(α∧γ)(ξ₀,ξ₁,ξ₂,ξ₃) = α(ξ₀)·γ(ξ₁,ξ₂,ξ₃) − α(ξ₁)·γ(ξ₀,ξ₂,ξ₃)
++ α(ξ₂)·γ(ξ₀,ξ₁,ξ₃) − α(ξ₃)·γ(ξ₀,ξ₁,ξ₂)`。 -/
+def wedge13 (α : AlgForm1 R X) (γ : AlgForm3 R X) :
+    TangentVectorField R X → TangentVectorField R X → TangentVectorField R X →
+      TangentVectorField R X → (X → R) :=
+  fun ξ₀ ξ₁ ξ₂ ξ₃ => fun x =>
+    α ξ₀ x * γ ξ₁ ξ₂ ξ₃ x - α ξ₁ x * γ ξ₀ ξ₂ ξ₃ x
+      + α ξ₂ x * γ ξ₀ ξ₁ ξ₃ x - α ξ₃ x * γ ξ₀ ξ₁ ξ₂ x
+
+/-- **1×2 与 2×1 插入的分次交换**：`α∧β = β∧α`（(−1)¹˙² = +1，纯 ring）。 -/
+theorem wedge12_eq_wedge21_swap (α : AlgForm1 R X) (β : AlgForm2 R X) :
+    wedge12 α β = wedge21 β α := by
+  funext ξ₀ ξ₁ ξ₂ x
+  show α ξ₀ x * β ξ₁ ξ₂ x - α ξ₁ x * β ξ₀ ξ₂ x + α ξ₂ x * β ξ₀ ξ₁ x
+    = β ξ₀ ξ₁ x * α ξ₂ x - β ξ₀ ξ₂ x * α ξ₁ x + β ξ₁ ξ₂ x * α ξ₀ x
+  ring
+
+/-- **⭐ 分次 Leibniz（2×1 完整情形）**：
+`d(β∧ω) = dβ∧ω + β∧dω`（deg β = 2 ⟹ (−1)² = +1）。
+
+证明：Koszul 4-顶点展开——4 个导数槽经积法则拆为 24 个一阶导数原子、
+6 个括号槽 18 个值原子；右端 `wedge31 (algD2 β) ω`（24 原子）与
+`wedge22 β (algD1 ω)`（18 原子）逐项配平，纯 ring 收官（无需 Jacobi）。 -/
+theorem d_wedge21 [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (β : AlgForm2 R X) (ω : AlgForm1 R X) :
+    algD3 (wedge21 β ω) = wedge31 (algD2 β) ω + wedge22 β (algD1 ω) := by
+  funext ξ₀ ξ₁ ξ₂ ξ₃ x
+  -- 10 条 rfl-桥：4 导数槽 + 6 括号槽（wedge21-体逐字展开）
+  have hb1 : wedge21 β ω ξ₁ ξ₂ ξ₃
+      = β ξ₁ ξ₂ * ω ξ₃ - β ξ₁ ξ₃ * ω ξ₂ + β ξ₂ ξ₃ * ω ξ₁ := rfl
+  have hb2 : wedge21 β ω ξ₀ ξ₂ ξ₃
+      = β ξ₀ ξ₂ * ω ξ₃ - β ξ₀ ξ₃ * ω ξ₂ + β ξ₂ ξ₃ * ω ξ₀ := rfl
+  have hb3 : wedge21 β ω ξ₀ ξ₁ ξ₃
+      = β ξ₀ ξ₁ * ω ξ₃ - β ξ₀ ξ₃ * ω ξ₁ + β ξ₁ ξ₃ * ω ξ₀ := rfl
+  have hb4 : wedge21 β ω ξ₀ ξ₁ ξ₂
+      = β ξ₀ ξ₁ * ω ξ₂ - β ξ₀ ξ₂ * ω ξ₁ + β ξ₁ ξ₂ * ω ξ₀ := rfl
+  have hbp01 : wedge21 β ω (lieBracket ξ₀ ξ₁) ξ₂ ξ₃
+      = β (lieBracket ξ₀ ξ₁) ξ₂ * ω ξ₃ - β (lieBracket ξ₀ ξ₁) ξ₃ * ω ξ₂
+        + β ξ₂ ξ₃ * ω (lieBracket ξ₀ ξ₁) := rfl
+  have hbp02 : wedge21 β ω (lieBracket ξ₀ ξ₂) ξ₁ ξ₃
+      = β (lieBracket ξ₀ ξ₂) ξ₁ * ω ξ₃ - β (lieBracket ξ₀ ξ₂) ξ₃ * ω ξ₁
+        + β ξ₁ ξ₃ * ω (lieBracket ξ₀ ξ₂) := rfl
+  have hbp03 : wedge21 β ω (lieBracket ξ₀ ξ₃) ξ₁ ξ₂
+      = β (lieBracket ξ₀ ξ₃) ξ₁ * ω ξ₂ - β (lieBracket ξ₀ ξ₃) ξ₂ * ω ξ₁
+        + β ξ₁ ξ₂ * ω (lieBracket ξ₀ ξ₃) := rfl
+  have hbp12 : wedge21 β ω (lieBracket ξ₁ ξ₂) ξ₀ ξ₃
+      = β (lieBracket ξ₁ ξ₂) ξ₀ * ω ξ₃ - β (lieBracket ξ₁ ξ₂) ξ₃ * ω ξ₀
+        + β ξ₀ ξ₃ * ω (lieBracket ξ₁ ξ₂) := rfl
+  have hbp13 : wedge21 β ω (lieBracket ξ₁ ξ₃) ξ₀ ξ₂
+      = β (lieBracket ξ₁ ξ₃) ξ₀ * ω ξ₂ - β (lieBracket ξ₁ ξ₃) ξ₂ * ω ξ₀
+        + β ξ₀ ξ₂ * ω (lieBracket ξ₁ ξ₃) := rfl
+  have hbp23 : wedge21 β ω (lieBracket ξ₂ ξ₃) ξ₀ ξ₁
+      = β (lieBracket ξ₂ ξ₃) ξ₀ * ω ξ₁ - β (lieBracket ξ₂ ξ₃) ξ₁ * ω ξ₀
+        + β ξ₀ ξ₁ * ω (lieBracket ξ₂ ξ₃) := rfl
+  show algD3 (wedge21 β ω) ξ₀ ξ₁ ξ₂ ξ₃ x
+    = wedge31 (algD2 β) ω ξ₀ ξ₁ ξ₂ ξ₃ x + wedge22 β (algD1 ω) ξ₀ ξ₁ ξ₂ ξ₃ x
+  simp only [algD3, hb1, hb2, hb3, hb4, hbp01, hbp02, hbp03, hbp12, hbp13, hbp23]
+  simp only [fieldDeriv_add, fieldDeriv_sub, fieldDeriv_mul]
+  simp only [wedge31, wedge22, algD2, algD1]
+  simp only [Pi.add_apply, Pi.sub_apply, Pi.mul_apply]
+  ring
+
+/-- **⭐ 分次 Leibniz（1×2 完整情形）**：
+`d(α∧β) = dα∧β − α∧dβ`（deg α = 1 ⟹ (−1)¹ = −1）。
+
+语句用显式 `Sub.sub`：4-变元函数层的 `HSub` 实例解析有怪癖
+（`Add`/`Sub` 都在而 `HSub` 解析失败；`Sub.sub a b` 与 `a - b` 展开
+后是同一项，rw 兼容）。证明同 d_wedge21 模板：10 条 rfl-桥 +
+积法则拆分 + Pi 点态化 + 纯 ring（84 项直接闭合）。 -/
+theorem d_wedge12 [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (α : AlgForm1 R X) (β : AlgForm2 R X) :
+    algD3 (wedge12 α β)
+      = Sub.sub (wedge22 (algD1 α) β) (wedge13 α (algD2 β)) := by
+  funext ξ₀ ξ₁ ξ₂ ξ₃ x
+  -- 10 条 rfl-桥：4 导数槽 + 6 括号槽（wedge12-体逐字展开）
+  have hb1 : wedge12 α β ξ₁ ξ₂ ξ₃
+      = α ξ₁ * β ξ₂ ξ₃ - α ξ₂ * β ξ₁ ξ₃ + α ξ₃ * β ξ₁ ξ₂ := rfl
+  have hb2 : wedge12 α β ξ₀ ξ₂ ξ₃
+      = α ξ₀ * β ξ₂ ξ₃ - α ξ₂ * β ξ₀ ξ₃ + α ξ₃ * β ξ₀ ξ₂ := rfl
+  have hb3 : wedge12 α β ξ₀ ξ₁ ξ₃
+      = α ξ₀ * β ξ₁ ξ₃ - α ξ₁ * β ξ₀ ξ₃ + α ξ₃ * β ξ₀ ξ₁ := rfl
+  have hb4 : wedge12 α β ξ₀ ξ₁ ξ₂
+      = α ξ₀ * β ξ₁ ξ₂ - α ξ₁ * β ξ₀ ξ₂ + α ξ₂ * β ξ₀ ξ₁ := rfl
+  have hbp01 : wedge12 α β (lieBracket ξ₀ ξ₁) ξ₂ ξ₃
+      = α (lieBracket ξ₀ ξ₁) * β ξ₂ ξ₃ - α ξ₂ * β (lieBracket ξ₀ ξ₁) ξ₃
+        + α ξ₃ * β (lieBracket ξ₀ ξ₁) ξ₂ := rfl
+  have hbp02 : wedge12 α β (lieBracket ξ₀ ξ₂) ξ₁ ξ₃
+      = α (lieBracket ξ₀ ξ₂) * β ξ₁ ξ₃ - α ξ₁ * β (lieBracket ξ₀ ξ₂) ξ₃
+        + α ξ₃ * β (lieBracket ξ₀ ξ₂) ξ₁ := rfl
+  have hbp03 : wedge12 α β (lieBracket ξ₀ ξ₃) ξ₁ ξ₂
+      = α (lieBracket ξ₀ ξ₃) * β ξ₁ ξ₂ - α ξ₁ * β (lieBracket ξ₀ ξ₃) ξ₂
+        + α ξ₂ * β (lieBracket ξ₀ ξ₃) ξ₁ := rfl
+  have hbp12 : wedge12 α β (lieBracket ξ₁ ξ₂) ξ₀ ξ₃
+      = α (lieBracket ξ₁ ξ₂) * β ξ₀ ξ₃ - α ξ₀ * β (lieBracket ξ₁ ξ₂) ξ₃
+        + α ξ₃ * β (lieBracket ξ₁ ξ₂) ξ₀ := rfl
+  have hbp13 : wedge12 α β (lieBracket ξ₁ ξ₃) ξ₀ ξ₂
+      = α (lieBracket ξ₁ ξ₃) * β ξ₀ ξ₂ - α ξ₀ * β (lieBracket ξ₁ ξ₃) ξ₂
+        + α ξ₂ * β (lieBracket ξ₁ ξ₃) ξ₀ := rfl
+  have hbp23 : wedge12 α β (lieBracket ξ₂ ξ₃) ξ₀ ξ₁
+      = α (lieBracket ξ₂ ξ₃) * β ξ₀ ξ₁ - α ξ₀ * β (lieBracket ξ₂ ξ₃) ξ₁
+        + α ξ₁ * β (lieBracket ξ₂ ξ₃) ξ₀ := rfl
+  show algD3 (wedge12 α β) ξ₀ ξ₁ ξ₂ ξ₃ x
+    = wedge22 (algD1 α) β ξ₀ ξ₁ ξ₂ ξ₃ x - wedge13 α (algD2 β) ξ₀ ξ₁ ξ₂ ξ₃ x
+  simp only [algD3, hb1, hb2, hb3, hb4, hbp01, hbp02, hbp03, hbp12, hbp13, hbp23]
+  simp only [fieldDeriv_add, fieldDeriv_sub, fieldDeriv_mul]
+  simp only [wedge22, wedge13, algD2, algD1]
+  simp only [Pi.add_apply, Pi.sub_apply, Pi.mul_apply]
+  ring
+
+/-! ### 楔积的低维代数补全与闭形式封闭性（第六十四接力点续 2）-/
+
+/-- **2×1 与 1×2 插入的分次交换**：`β∧ω = ω∧β`（(−1)²˙¹ = +1，纯 ring）。 -/
+theorem wedge21_eq_wedge12_swap (β : AlgForm2 R X) (ω : AlgForm1 R X) :
+    wedge21 β ω = wedge12 ω β := by
+  funext ξ₀ ξ₁ ξ₂ x
+  show β ξ₀ ξ₁ x * ω ξ₂ x - β ξ₀ ξ₂ x * ω ξ₁ x + β ξ₁ ξ₂ x * ω ξ₀ x
+    = ω ξ₀ x * β ξ₁ ξ₂ x - ω ξ₁ x * β ξ₀ ξ₂ x + ω ξ₂ x * β ξ₀ ξ₁ x
+  ring
+
+/-- **楔积结合律（(1×1)×1 = 1×(1×1)）**：
+`(α∧ω)∧ω' = α∧(ω∧ω')`——2×1 插入与 1×2 插入经 wedge11 的一致性，纯 ring。 -/
+theorem wedge_assoc_111 (α ω ω' : AlgForm1 R X) :
+    wedge21 (wedge11 α ω) ω' = wedge12 α (wedge11 ω ω') := by
+  funext ξ₀ ξ₁ ξ₂ x
+  show (α ξ₀ x * ω ξ₁ x - α ξ₁ x * ω ξ₀ x) * ω' ξ₂ x
+      - (α ξ₀ x * ω ξ₂ x - α ξ₂ x * ω ξ₀ x) * ω' ξ₁ x
+      + (α ξ₁ x * ω ξ₂ x - α ξ₂ x * ω ξ₁ x) * ω' ξ₀ x
+    = α ξ₀ x * (ω ξ₁ x * ω' ξ₂ x - ω ξ₂ x * ω' ξ₁ x)
+      - α ξ₁ x * (ω ξ₀ x * ω' ξ₂ x - ω ξ₂ x * ω' ξ₀ x)
+      + α ξ₂ x * (ω ξ₀ x * ω' ξ₁ x - ω ξ₁ x * ω' ξ₀ x)
+  ring
+
+/-- **好 2-形式的楔积对前两变元交错**（halt 直推，纯 ring）。 -/
+theorem wedge21_antisymm_swap12 (β : AlgForm2 R X) (ω : AlgForm1 R X)
+    (halt : ∀ φ ψ : TangentVectorField R X, β φ ψ = -β ψ φ)
+    (ξ₀ ξ₁ ξ₂ : TangentVectorField R X) :
+    wedge21 β ω ξ₁ ξ₀ ξ₂ = -wedge21 β ω ξ₀ ξ₁ ξ₂ := by
+  funext x
+  show β ξ₁ ξ₀ x * ω ξ₂ x - β ξ₁ ξ₂ x * ω ξ₀ x + β ξ₀ ξ₂ x * ω ξ₁ x
+    = -(β ξ₀ ξ₁ x * ω ξ₂ x - β ξ₀ ξ₂ x * ω ξ₁ x + β ξ₁ ξ₂ x * ω ξ₀ x)
+  rw [halt ξ₁ ξ₀]
+  simp only [Pi.neg_apply]
+  ring
+
+/-- **闭形式的楔积仍闭（1×1）**：`dα = 0 → dω = 0 → d(α∧ω) = 0`——
+分次 Leibniz 直推（楔积下降到上同调的场变元版本）。 -/
+theorem d_wedge11_closed [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (α ω : AlgForm1 R X) (hα : algD1 α = 0) (hω : algD1 ω = 0) :
+    algD2 (wedge11 α ω) = 0 := by
+  have h := d_wedge11 α ω
+  rw [hα, hω] at h
+  rw [h]
+  funext ξ₀ ξ₁ ξ₂ x
+  simp only [wedge21, wedge12, Pi.zero_apply, Pi.sub_apply, zero_mul, mul_zero]
+  ring
+
+/-- **闭形式的楔积仍闭（2×1）**：`dβ = 0 → dω = 0 → d(β∧ω) = 0`。 -/
+theorem d_wedge21_closed [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (β : AlgForm2 R X) (ω : AlgForm1 R X) (hβ : algD2 β = 0) (hω : algD1 ω = 0) :
+    algD3 (wedge21 β ω) = 0 := by
+  have h := d_wedge21 β ω
+  rw [hβ, hω] at h
+  rw [h]
+  funext ξ₀ ξ₁ ξ₂ ξ₃ x
+  simp only [wedge31, wedge22, Pi.zero_apply, Pi.add_apply, zero_mul, mul_zero]
+  ring
+
+/-- **闭形式的楔积仍闭（1×2）**：`dα = 0 → dβ = 0 → d(α∧β) = 0`。 -/
+theorem d_wedge12_closed [Microlinear R X] [PropertyW R X] [Microlinear R R]
+    (α : AlgForm1 R X) (β : AlgForm2 R X) (hα : algD1 α = 0) (hβ : algD2 β = 0) :
+    algD3 (wedge12 α β) = 0 := by
+  have h := d_wedge12 α β
+  rw [hα, hβ] at h
+  rw [h]
+  funext ξ₀ ξ₁ ξ₂ ξ₃ x
+  show wedge22 (0 : AlgForm2 R X) β ξ₀ ξ₁ ξ₂ ξ₃ x
+      - wedge13 α (0 : AlgForm3 R X) ξ₀ ξ₁ ξ₂ ξ₃ x = 0
+  simp only [wedge22, wedge13, Pi.zero_apply, zero_mul, mul_zero]
+  ring
+
 end AlgebraicForms
 
 end SDG.DifferentialForms

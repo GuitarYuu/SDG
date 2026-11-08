@@ -37,7 +37,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 - 禁止 `sorry`、`admit`、裸 `axiom`、`Classical.choice`、`unsafe`；
 - 禁止用 `noncomputable`/`opaque` 绕过证明；
 - `d² = 0`、Stokes 等定理全部给出完整证明，不塞进 typeclass；
-- 每条新声明可由 `#print axioms` 复核（当前 **112 条核心声明**全部为
+- 每条新声明可由 `#print axioms` 复核（当前 **160 条核心声明**全部为
   `[propext, Quot.sound]` 或更少，见 `SDG/AuditSweep.lean`）。
 
 凡 Mathlib 中依赖选择公理的构造（如 `Finset.sum`、
@@ -57,11 +57,11 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 | `SDG/LieBracket.lean` | 李括号（Property W 因子化路线，Kock I.9） |
 | `SDG/DifferentialForms/Core.lean` | 严格逐点形式层、严格拉回、0-形式外微分 `d₀` 及 Leibniz |
 | `SDG/DifferentialForms/Algebra.lean` | 形式代数主体（置换引擎、楔积 E0-E3、上闭链 de Rham 复形、cup 积、分次 Leibniz、∂²=0） |
-| `SDG/DifferentialForms/AlgebraicForms.lean` | **场变元代数层**：李括号配套、Koszul 外微分 algD0-D3、d²=0 全链（0/1/2-形式层+三阶）、楔积、分次 Leibniz |
+| `SDG/DifferentialForms/AlgebraicForms.lean` | **场变元代数层**：李括号配套、Koszul 外微分 algD0-D3、d²=0 全链（0/1/2-形式层+三阶）、楔积（E0-E3 插入层）、分次 Leibniz（0×1/1×1/2×1/1×2） |
 | `SDG/DifferentialForms/Simplicial.lean` | 单纯形面映射 `faceMap i = i.succAbove` |
 | `SDG/DifferentialForms/StokesCup.lean` | 分次 Leibniz（cup 层）、cochainLenCast、cupProduct_isCocycle |
 | `SDG/DifferentialForms/CupAssoc.lean` | cupProduct 结合律（cupProduct_assoc） |
-| `SDG/DifferentialForms/CupCohomology.lean` | Hⁿ 商层 cup（deRhamCup，双线性+结合律）、H-度数 transport |
+| `SDG/DifferentialForms/CupCohomology.lean` | Hⁿ 商层 cup（deRhamCup，双线性+结合律+**单位律**）、H-度数 transport |
 | `SDG/DifferentialForms/CohomologyModule.lean` | 双侧 Module R 结构（ModuleCon 路线）、配对 R-双线性 |
 | `SDG/DifferentialForms/Currents.lean` | 电流层：拓扑/紧支撑、电流空间、∂²=0、Stokes 配对、Hₙ |
 | `SDG/DifferentialForms/Integration.lean` | 区间积分、FTC、原函数 |
@@ -87,7 +87,22 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 1. **Hⁿ 商群**：`deRhamCon`（AddCon 路线）→ `deRhamCohomology`（AddCommGroup）
 2. **Hₙ 电流同调**：`currentCon` → `currentHomology`（AddCommGroup）
 3. **双侧 Module R**：`ModuleCon` 路线 → `instModuleDeRhamCohomology`/`instModuleCurrentHomology`
-4. **商层 cup**：`deRhamCup`（双线性+结合律）、`deRhamCup_add/smul`
+4. **商层 cup**：`deRhamCup`（双线性+结合律）、`deRhamCup_add/smul`、
+   **单位律（传播形式）** `deRhamCup_unit_left/right`——Hⁿ ← Cochain (n+1)
+   度数约定下单位（度 0 上循环）不单独成类，按「与 𝟙 作 cup 不改变类」陈述；
+   **⭐ (1,1) 反交换** `deRhamCup_antisymm_zero`：`[α]∪[β] = −[β]∪[α]`
+   （链级 `∂h = α∪β + β∪α`，h = −α·β 点态——shuffle-cup 阶梯第一级）；
+   **⭐ (0,q) 交换（传播形式）** `deRhamCup_comm_zero`：0-上闭链 f 与任意
+   上闭链 β 的 cup 交换（链级差恒为零——d₀f = 0 在对角边 (σ₀,σ_last)
+   上直接收口；配套桥引理 `coboundary_cochainZero_eq_d0`：
+   一般 0-上链的余边界即 d₀）——shuffle-cup 阶梯第二级;
+   **⭐ (1,2) 反交换同伦** `coboundary_cupSkip_12`：`∂h = α∪β − β∪α`
+   （h = −α(τ₀,τ₂)·β(τ)，α 取跳边——join-形 ⋃₁，数值验证 s = −1 唯一）
+   ——shuffle-cup 阶梯第三级；
+   **⭐ (2,1) 交换同伦** `coboundary_cupSweep_21`：`∂h = α∪β − β∪α`
+   （h = α(τ)·(β(τ₀,τ₁)+β(τ₁,τ₂))——Steenrod ⋃₁ 的 (2,1)-特例，全 α 扫掠 ×
+   β 前向边对；δβ 三边关系消元后差 = β(σ₀,σ₃)·δα(σ) 在四面体收口）
+   ——shuffle-cup 阶梯第四级
 5. **H 层度数 transport**：`cocyclesCast`/`deRhamCohomologyCast`
 6. **类层配对**：`deRhamPairing`（Hₙ × Hⁿ → R，R-双线性）
 7. **Stokes 配对**：`chainCurrent_boundary_apply`、`currentBoundary_currentBoundary`（∂²=0）
@@ -97,7 +112,8 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 1. **区间积分**：`integralR`（线性/区间可加/基本恒等式/step/sderiv）
 2. **FTC**：`integral_ftc_UI`（微积分基本定理 UnitInterval 版）
 3. **分部积分**：`integral_I_mul_parts` + `integral_I_parts`（经典对称形）
-4. **单形积分**：`simplexIntegral2`（n=2 叠代积分 + 加法/数乘）
+4. **单形积分**：`simplexIntegral2`/`simplexIntegral3`（n=2/3 叠代积分 +
+   加法/数乘/congr——真 Fubini 需 2D 结构，已识别为独立课题）
 
 ### D. 场变元代数层（AlgebraicForms.lean + LieBracket.lean，2026-10-27 ~ 11-07）
 
@@ -129,7 +145,14 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
    **`wedge11_eq_alt2`**（楔积 = 交错化张量积）、`alt2_antisymm`、
    `alt2_idem`
 6. **分次 Leibniz**：`algD1_algSMul_wedge`（d(f·ω) = f·dω + d₀f∧ω，
-   核心情形）+ `d_wedge11`（d(α∧ω) = dα∧ω − α∧dω，完整 1×1）
+   核心情形）+ `d_wedge11`（1×1 完整）+ `d_wedge21`（2×1 完整，d(β∧ω) =
+   dβ∧ω + β∧dω）+ `d_wedge12`（1×2 完整，d(α∧β) = dα∧β − α∧dβ）+
+   `wedge12_eq_wedge21_swap`（1×2 = 2×1 分次交换）+
+   `wedge21_eq_wedge12_swap`（2×1 = 1×2）+ `wedge_assoc_111`（(1×1)×1 =
+   1×(1×1) 结合律）+ `wedge21_antisymm_swap12`（好形式楔积的交错性）；
+   插入层补全 `wedge31`/`wedge22`/`wedge13`（(p,q)-shuffle 和符号逐项手算）
+7. **闭形式的楔积仍闭**：`d_wedge11_closed`/`d_wedge21_closed`/
+   `d_wedge12_closed`（分次 Leibniz 直推——楔积下降到上同调的场变元版）
 7. **反对称重组**：`algForm2_regroup`（双重括号泛型重组）、
    `lieBracket_neg_smul_left`（括号对 (−1)-缩放齐次性）、
    `algForm1_neg_smul`（形式 −1-线性）、`field_add_neg_smul`（场层 (−1)·φ+φ = 0）
@@ -137,7 +160,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 
 ### E. 审计基建（AuditSweep.lean）
 
-**112 条核心声明**的批量 `#print axioms` 复核——全部
+**160 条核心声明**的批量 `#print axioms` 复核——全部
 `[propext, Quot.sound]` 或更少，**零 `Classical.choice`、零 `sorryAx`**。
 新增声明追加一行即可复验。
 
@@ -148,7 +171,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 | 全量构建目标 | 8732 jobs |
 | Lean 工具链 | v4.34.0-rc1 |
 | Mathlib | v4.34.0-rc1 |
-| 核心声明审计 | 112 条全干净 |
+| 核心声明审计 | 160 条全干净 |
 | 选择公理依赖 | 零 |
 | sorry/admit | 零 |
 | 主力模块 | Algebra.lean（~4700 行）、AlgebraicForms.lean（~1500 行） |
@@ -184,5 +207,5 @@ lake env lean SDG/TestNoChoice.lean # 无选择公理自检
 1. **场变元楔积一般 p×q 分次 Leibniz**——alt2-交错化模板已立
 2. **current-Stokes 定理**——路径-电流模型
 3. **参数化单形积分 n≥3** + Fubini
-4. **商层分次交换律**（shuffle-cup）
+4. **商层分次交换律**（shuffle-cup）——低维四级 (1,1)/(0,q)/(1,2)/(2,1) 已入库，一般 (p,q) 需带符号 ⋃ᵢ 文献
 5. **Čech 上同调、de Rham 同构**的 SDG 版本
