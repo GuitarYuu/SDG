@@ -37,7 +37,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 - 禁止 `sorry`、`admit`、裸 `axiom`、`Classical.choice`、`unsafe`；
 - 禁止用 `noncomputable`/`opaque` 绕过证明；
 - `d² = 0`、Stokes 等定理全部给出完整证明，不塞进 typeclass；
-- 每条新声明可由 `#print axioms` 复核（当前 **232 条核心声明**全部为
+- 每条新声明可由 `#print axioms` 复核（当前 **238 条核心声明**全部为
   `[propext, Quot.sound]` 或更少，见 `SDG/AuditSweep.lean`）。
 
 凡 Mathlib 中依赖选择公理的构造（如 `Finset.sum`、
@@ -110,6 +110,11 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
    `coboundary_lift0_eq_d0`：点函数的余边界即 d₀）；**三角闭合**
    `pathIntegral_eq_integral_stokes`：沿路径 (a,b) 的 d₀-线积分（电流配对）
    = ∫_a^b h'（FTC）= h(b) − h(a)）；
+   **⭐ 矩形 Green 定理（无 Fubini）** `green_rect`：∫₀¹∫₀¹ (∂₁ω₂−∂₂ω₁) du dv
+   = 四边定向积分之和（∂₁ 项内层 FTC + ∂₂ 项经跨变量导数-积分交换
+   `sderiv_intR_swap` 化到外层 FTC——同一外层序收口，完全避开 Fubini；
+   偏导 def `pd1/pd2` + 截面 FTC `pd1_ftc/pd2_ftc`）；三角形（单纯形）
+   完全版阻塞在 Fubini（积分换序）——Kock I.11 k=2 完全版需补公理；
 6. **H 层度数 transport**：`cocyclesCast`/`deRhamCohomologyCast`
 6. **类层配对**：`deRhamPairing`（Hₙ × Hⁿ → R，R-双线性）
 7. **Stokes 配对**：`chainCurrent_boundary_apply`、`currentBoundary_currentBoundary`（∂²=0）
@@ -167,7 +172,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 
 ### E. 审计基建（AuditSweep.lean）
 
-**232 条核心声明**的批量 `#print axioms` 复核——全部
+**238 条核心声明**的批量 `#print axioms` 复核——全部
 `[propext, Quot.sound]` 或更少，**零 `Classical.choice`、零 `sorryAx`**。
 新增声明追加一行即可复验。
 
@@ -178,7 +183,7 @@ Koszul 外微分 algD0-D3、**d²=0 两层闭环**、楔积与分次 Leibniz）�
 | 全量构建目标 | 8732 jobs |
 | Lean 工具链 | v4.34.0-rc1 |
 | Mathlib | v4.34.0-rc1 |
-| 核心声明审计 | 232 条全干净 |
+| 核心声明审计 | 238 条全干净 |
 | 选择公理依赖 | 零 |
 | sorry/admit | 零 |
 | 主力模块 | Algebra.lean（~4700 行）、AlgebraicForms.lean（~1500 行） |

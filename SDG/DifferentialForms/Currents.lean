@@ -1084,6 +1084,74 @@ theorem pathIntegral_eq_integral_stokes (h : R → R) (a b : R) :
 
 end IntegralStokes
 
+/-! ### 矩形 Green 定理（无 Fubini 版）——外层序统一 (v-外, u-内)：
+∂₁ω₂ 项内层 FTC 直接；∂₂ω₁ 项经跨变量导数-积分交换（sderiv_intR_swap）
+化到外层 FTC。三角形（单纯形）完全版阻塞在 Fubini（积分换序）——
+项目积分公理不含换序，Kock I.11 k=2 完全版需补公理。 -/
+
+section RectGreen
+
+variable {R : Type u} [SDG.Integration.IsIntegration R]
+
+/-- 偏导数（第一变量截面导数）：`∂₁ω(u,v) = (ω(·,v))'(u)`。 -/
+def pd1 (ω : R → R → R) (u v : R) : R := sderiv (fun u' => ω u' v) u
+
+/-- 偏导数（第二变量截面导数）：`∂₂ω(u,v) = (ω(u,·))'(v)`。 -/
+def pd2 (ω : R → R → R) (u v : R) : R := sderiv (fun v' => ω u v') v
+
+/-- 偏导数的 FTC（第一变量）：`∫₀¹ ∂₁ω(u,v) du = ω(1,v) − ω(0,v)`。 -/
+theorem pd1_ftc (ω : R → R → R) (v : R) :
+    integralR (fun u => pd1 ω u v) 0 1 = ω 1 v - ω 0 v :=
+  integral_stokes_R (fun u => ω u v) 0 1
+
+/-- 偏导数的 FTC（第二变量）：`∫₀¹ ∂₂ω(u,v) dv = ω(u,1) − ω(u,0)`。 -/
+theorem pd2_ftc (ω : R → R → R) (u : R) :
+    integralR (fun v => pd2 ω u v) 0 1 = ω u 1 - ω u 0 :=
+  integral_stokes_R (fun v => ω u v) 0 1
+
+/-- **跨变量导数-积分交换**：`∂₂(∫₀¹ ω(u,v) du) = ∫₀¹ ∂₂ω(u,v) du`——
+由逐点 sderiv_spec（截面 `ω(u,·)` 的无穷小展开）+ integralR 线性
+（integralR_add/integralR_smul）+ KL 唯一性收口。 -/
+theorem sderiv_intR_swap (ω : R → R → R) (v : R) :
+    sderiv (fun v' => integralR (fun u => ω u v') 0 1) v
+      = integralR (fun u => pd2 ω u v) 0 1 := by
+  symm
+  refine (IsKockLawvere_one.isKockLawvere_one
+    (fun d : D R => integralR (fun u => ω u (v + (d : R))) 0 1)).2.2
+    (integralR (fun u => pd2 ω u v) 0 1) ?_
+  intro d
+  simp only [zero_coeD, add_zero]
+  have hpt : ∀ u : R, ω u (v + (d : R)) = ω u v + pd2 ω u v * (d : R) :=
+    fun u => sderiv_spec (fun v' => ω u v') v d
+  have hfun : (fun u => ω u (v + (d : R)))
+      = (fun u => ω u v + (d : R) * pd2 ω u v) := by
+    funext u
+    rw [hpt u]
+    ring
+  rw [hfun, integralR_add, integralR_smul]
+  ring
+
+/-- **⭐ 矩形 Green 定理（无 Fubini）**：`∫₀¹∫₀¹ (∂₁ω₂ − ∂₂ω₁) du dv`
+= 四边定向积分之和（底 + 右 − 顶 − 左）。 -/
+theorem green_rect (ω₁ ω₂ : R → R → R) :
+    integralR (fun v => integralR (fun u => pd1 ω₂ u v - pd2 ω₁ u v) 0 1) 0 1
+      = (integralR (fun u => ω₁ u 0) 0 1 + integralR (fun v => ω₂ 1 v) 0 1)
+        - (integralR (fun u => ω₁ u 1) 0 1 + integralR (fun v => ω₂ 0 v) 0 1) := by
+  have hpt : ∀ v : R, integralR (fun u => pd1 ω₂ u v - pd2 ω₁ u v) 0 1
+      = (ω₂ 1 v - ω₂ 0 v)
+        - sderiv (fun v' => integralR (fun u => ω₁ u v') 0 1) v := by
+    intro v
+    rw [integralR_sub, pd1_ftc, ← sderiv_intR_swap ω₁ v]
+  have hL : (fun v => integralR (fun u => pd1 ω₂ u v - pd2 ω₁ u v) 0 1)
+      = (fun v => (ω₂ 1 v - ω₂ 0 v)
+          - sderiv (fun v' => integralR (fun u => ω₁ u v') 0 1) v) := by
+    funext v
+    exact hpt v
+  rw [hL, integralR_sub, integralR_sub, integral_stokes_R]
+  ring
+
+end RectGreen
+
 end StokesPairing
 
 #print axioms SDG.DifferentialForms.IsChainCycle

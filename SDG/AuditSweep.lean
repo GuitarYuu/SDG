@@ -240,3 +240,11 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.sderiv_I_comp_affine
 #print axioms SDG.DifferentialForms.integral_stokes_R
 #print axioms SDG.DifferentialForms.pathIntegral_eq_integral_stokes
+
+-- Currents: rectangular Green theorem (Fubini-free; triangle blocked on Fubini axiom)
+#print axioms SDG.DifferentialForms.pd1
+#print axioms SDG.DifferentialForms.pd2
+#print axioms SDG.DifferentialForms.pd1_ftc
+#print axioms SDG.DifferentialForms.pd2_ftc
+#print axioms SDG.DifferentialForms.sderiv_intR_swap
+#print axioms SDG.DifferentialForms.green_rect
