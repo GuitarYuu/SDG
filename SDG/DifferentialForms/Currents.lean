@@ -1,6 +1,7 @@
 import SDG.DifferentialForms.Algebra
 import SDG.Order
 import SDG.Integration
+import SDG.ScratchR
 
 /-!
 # SDG.DifferentialForms.Currents
@@ -971,6 +972,119 @@ theorem deRhamPairing_add_right {n : ℕ} {T : Current R X (n + 1)} (hT : IsChai
         rw [key c₁ hc₁, key c₂ hc₂]
 
 end Cohomology
+
+/-! ## section StokesPairing：current-Stokes（Kock I.11 k=1 + I.12 配对）
+
+一维 Stokes（R 上定向积分）+ 电流配对 Stokes（路径/链电流版）+ 三角闭合。
+
+-/
+
+section StokesPairing
+
+open SDG.Integration SDG.Order
+
+section PathStokes
+
+variable {R : Type u} [CommRing R] {X : Type u}
+
+/-- **0 层桥**：点函数提升为 0-上链后的余边界即 d₀——
+`∂(fun τ => h(τ 0)) = d₀h`（finSum 两项面和 + succAbove 面计算逐字核验）。 -/
+theorem coboundary_lift0_eq_d0 (h : X → R) :
+    coboundary (fun τ : SimplexPts X 0 => h (τ 0)) = d0 h := by
+  funext σ
+  rw [coboundary_apply, finSum_two, d0_apply,
+    show ((0 : Fin 2) : ℕ) = 0 from rfl, show ((1 : Fin 2) : ℕ) = 1 from rfl]
+  simp only [pow_zero, pow_one, neg_one_mul]
+  rw [show coFace σ 0 0 = σ 1 from rfl, show coFace σ 1 0 = σ 0 from rfl]
+  ring
+
+/-- **路径积分的 Stokes（锚点）**：d₀-线积分 = 终点减起点。 -/
+theorem pathIntegral_d0 (h : X → R) (σ : SimplexPts X 1) :
+    evalCochain σ (d0 h) = h (σ 1) - h (σ 0) := rfl
+
+/-- **电流配对 Stokes（路径电流版）**：`⟨∂T, ħ⟩ = ⟨T, d₀h⟩`——
+对偶边界定义经 0 层桥。 -/
+theorem currentStokes_path (h : X → R) (σ : SimplexPts X 1) :
+    currentBoundary (evalCochain σ) (fun τ : SimplexPts X 0 => h (τ 0))
+      = evalCochain σ (d0 h) := by
+  rw [currentBoundary_apply, coboundary_lift0_eq_d0]
+
+/-- **电流配对 Stokes（链电流版）**：`⟨∂C, ħ⟩ = Σ wᵢ (h(σᵢ₁) − h(σᵢ₀))`。 -/
+theorem currentStokes_chain {m : ℕ} (h : X → R)
+    (σs : Fin m → SimplexPts X 1) (w : Fin m → R) :
+    currentBoundary (chainCurrent σs w) (fun τ : SimplexPts X 0 => h (τ 0))
+      = finSum R m (fun i => w i * (h (σs i 1) - h (σs i 0))) := by
+  rw [currentBoundary_apply, coboundary_lift0_eq_d0, chainCurrent_apply]
+  rfl
+
+end PathStokes
+
+section IntegralStokes
+
+variable {R : Type u} [SDG.Integration.IsIntegration R]
+
+/-- **工具：sderiv 的 D-倍数平移**：`h(x + d·c) = h(x) + h'(x)·d·c`
+（d ∈ D 对数乘封闭：d·c 的平方 = d²·c² = 0）。 -/
+theorem sderiv_shift_dsmul (h : R → R) (x c : R) (d : D R) :
+    h (x + (d : R) * c) = h x + sderiv h x * (d : R) * c := by
+  have hD : ((d : R) * c) * ((d : R) * c) = 0 := by
+    have hd0 := D.mul_eq_zero R d
+    calc ((d : R) * c) * ((d : R) * c)
+        = (d : R) * (d : R) * (c * c) := by ring
+      _ = 0 := by rw [hd0]; simp
+  have hs : h (x + (d : R) * c) = h x + sderiv h x * ((d : R) * c) :=
+    sderiv_spec h x (D.ofMul R ((d : R) * c) hD)
+  rw [show h x + sderiv h x * ((d : R) * c) = h x + sderiv h x * (d : R) * c from by ring] at hs
+  exact hs
+
+/-- **工具：仿射复合的区间导数**：h∘(t ↦ a+t(b−a)) 的区间导数 =
+h'(a+t(b−a))·(b−a)（KL 唯一性：两者满足同一无穷小平移方程）。 -/
+theorem sderiv_I_comp_affine (h : R → R) (a b : R) (t : UnitInterval R) :
+    sderiv_I (fun t : UnitInterval R => h (a + (t : R) * (b - a))) t
+      = sderiv h (a + (t : R) * (b - a)) * (b - a) := by
+  symm
+  refine (IsKockLawvere_one.isKockLawvere_one
+    (fun d : D R => h (a + ((UnitInterval.add_d R t d : UnitInterval R) : R) * (b - a)))).2.2
+    (sderiv h (a + (t : R) * (b - a)) * (b - a)) ?_
+  intro d
+  have key := sderiv_shift_dsmul h (a + (t : R) * (b - a)) (b - a) d
+  have hco : ((UnitInterval.add_d R t d : UnitInterval R) : R) = (t : R) + (d : R) := rfl
+  have hco0 : ((UnitInterval.add_d R t 0 : UnitInterval R) : R) = (t : R) + 0 := rfl
+  rw [hco, hco0,
+    show a + ((t : R) + (d : R)) * (b - a)
+      = a + (t : R) * (b - a) + (d : R) * (b - a) from by ring,
+    key]
+  ring
+
+/-- **⭐ 一维 Stokes（Kock I.11 的 k=1，R 上定向积分）**：
+`∫_a^b h' = h(b) − h(a)`——b < a 时积分公理的 (b−a) 因子给出负向
+（定向语义定义级）。 -/
+theorem integral_stokes_R (h : R → R) (a b : R) :
+    integralR (sderiv h) a b = h b - h a := by
+  rw [integralR, ← integral_smul]
+  have hfun : (fun t : UnitInterval R => (b - a) * sderiv h (a + (t : R) * (b - a)))
+      = (fun t : UnitInterval R => sderiv_I (fun t : UnitInterval R =>
+          h (a + (t : R) * (b - a))) t) := by
+    funext t
+    rw [sderiv_I_comp_affine]
+    ring
+  rw [hfun, integral_ftc_UI]
+  show h (a + (1 : R) * (b - a)) - h (a + (0 : R) * (b - a)) = h b - h a
+  rw [show a + (1 : R) * (b - a) = b from by ring,
+      show a + (0 : R) * (b - a) = a from by ring]
+
+/-- **⭐ 三角闭合（路径-积分-电流）**：沿路径 (a,b) 的 d₀-线积分
+（电流配对）= sderiv h 的定向积分（FTC）= h(b) − h(a)。 -/
+theorem pathIntegral_eq_integral_stokes (h : R → R) (a b : R) :
+    evalCochain (fun k : Fin 2 => if k = 0 then a else b) (d0 h)
+      = integralR (sderiv h) a b := by
+  rw [evalCochain_apply, d0_apply, integral_stokes_R]
+  show h b - h a = h b - h a
+  rfl
+
+end IntegralStokes
+
+end StokesPairing
 
 #print axioms SDG.DifferentialForms.IsChainCycle
 #print axioms SDG.DifferentialForms.IsChainBoundary

@@ -230,3 +230,13 @@ import SDG.ScratchR
 #print axioms SDG.DifferentialForms.alphaFace2
 #print axioms SDG.DifferentialForms.alphaFace3
 #print axioms SDG.DifferentialForms.coboundary_cupSweep_21
+
+-- Currents: current-Stokes (1-dim Stokes + current pairing, Kock I.11 k=1 / I.12)
+#print axioms SDG.DifferentialForms.coboundary_lift0_eq_d0
+#print axioms SDG.DifferentialForms.pathIntegral_d0
+#print axioms SDG.DifferentialForms.currentStokes_path
+#print axioms SDG.DifferentialForms.currentStokes_chain
+#print axioms SDG.DifferentialForms.sderiv_shift_dsmul
+#print axioms SDG.DifferentialForms.sderiv_I_comp_affine
+#print axioms SDG.DifferentialForms.integral_stokes_R
+#print axioms SDG.DifferentialForms.pathIntegral_eq_integral_stokes
